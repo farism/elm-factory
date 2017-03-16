@@ -1,7 +1,13 @@
 module Main exposing (..)
 
-import Html exposing (text)
+import Html exposing (..)
+import Html.Attributes
+import Css
+
+
+styles =
+    Css.asPairs >> Html.Attributes.style
 
 
 main =
-    text "Hello, World!"
+    div [ styles [ Css.color (Css.hex "#ff0000") ] ] [ Html.text "Hello, World!" ]

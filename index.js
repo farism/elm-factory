@@ -3,28 +3,38 @@ const express = require('express')
 const request = require('request-promise')
 
 // init elm-reactor
-const reactor = child_process.exec('elm-reactor --address=127.0.0.1 --port=8001')
+const reactor = child_process.exec(
+  `elm-reactor
+  --address=127.0.0.1
+  --port=8001`
+)
 
 // init express server
 const app = new express()
 
-// catch all route, proxied to elm-reactor server
-app.get('*', function(clientRequest, clientResponse) {
-    request(`http://localhost:8001${clientRequest.url}`)
+// catch all route, proxied first to elm-reactor server
+// and then to a user defined proxy
+app.get('*', function(req, res) {
+    request(`http://localhost:8001${req.url}`)
       .then(reactorResponse => {
-        console.log('reactor 200: ', clientRequest.url)
-        clientResponse.send(reactorResponse)
+        console.log('reactor 200:', req.url)
+
+        res.send(reactorResponse)
       })
       .catch(reactorError => {
-        console.log(`reactor ${reactorError.statusCode}: `, clientRequest.url)
-        return request(`http://localhost:3000${clientRequest.url}`)
-      })
-      .then(proxyResponse => {
-        console.log('proxy 200: ', clientRequest.url)
-        clientResponse.send(proxyResponse)
-      })
-      .catch(proxyError => {
-        console.log(`proxy ${proxyError.statusCode}: `, clientRequest.url)
+        console.log(`reactor ${reactorError.statusCode}:`, req.url)
+
+        return request(`http://localhost:3000${req.url}`)
+          .then(proxyResponse => {
+            console.log('proxy 200:', req.url)
+
+            res.send(proxyResponse)
+          })
+          .catch(proxyError => {
+            console.log(`proxy ${proxyError.statusCode}:`, req.url)
+
+            res.send(proxyError)
+          })
       })
 })
 
@@ -37,13 +47,13 @@ process.on('exit', code => {
   process.exit (code)
 })
 
-// Catch CTRL+C
+// catch ctrl+c
 process.on('SIGINT', () => {
   reactor.kill('SIGINT')
   process.exit (0)
 })
 
-// Catch uncaught exception
+// catch uncaught exception
 process.on('uncaughtException', err => {
   reactor.kill('SIGINT')
   process.exit (1)
