@@ -12,14 +12,19 @@ const app = new express()
 app.get('*', function(clientRequest, clientResponse) {
     request(`http://localhost:8001${clientRequest.url}`)
       .then(reactorResponse => {
+        console.log('reactor 200: ', clientRequest.url)
         clientResponse.send(reactorResponse)
       })
       .catch(reactorError => {
-        return request(`http://localhost:8001${clientRequest.url}`)
+        console.log(`reactor ${reactorError.statusCode}: `, clientRequest.url)
+        return request(`http://localhost:3000${clientRequest.url}`)
       })
       .then(proxyResponse => {
+        console.log('proxy 200: ', clientRequest.url)
+        clientResponse.send(proxyResponse)
       })
       .catch(proxyError => {
+        console.log(`proxy ${proxyError.statusCode}: `, clientRequest.url)
       })
 })
 
