@@ -1,9 +1,8 @@
-module MyCss exposing (..)
+module MyCss2 exposing (..)
 
 import Css exposing (..)
 import Css.Elements exposing (body, li)
 import Css.Namespace exposing (namespace)
-import MyCss2
 
 
 type CssClasses
@@ -15,7 +14,7 @@ type CssIds
 
 
 css =
-    (stylesheet << namespace "helloworld2")
+    (stylesheet << namespace "helloworld")
         [ body
             [ overflowX auto
             , minWidth (px 1280)

@@ -4,44 +4,51 @@ const express = require('express')
 const request = require('request-promise')
 const findElmDeps = require('find-elm-dependencies')
 
-const entry = './src/Stylesheets.elm'
+const ENTRY = './src/Stylesheets.elm'
 
-const addElmDependencies = (entry, watcher) => {
-  findElmDeps.findAllDependencies(entry)
-    .then((files) => {
-      watcher.add(files)
-    })
-    .catch((err) => {
-      console.log(err)
-      reject(err)
-    })
-}
-
-const watcher = chokidar.watch('./src/Stylesheets.elm', {
-})
-
-watcher.on('add', (path) => console.log('added: ', path))
-
-watcher.on('unlink', (path) => console.log('unlinked: ', path))
-
-watcher.on('change', (path) => {
-  console.log('changed: ', path)
-
+const getElmDependencies = async (entry) => {
   try {
-    watcher
-      .unwatch('src/**/*.elm')
+    return await findElmDeps.findAllDependencies(entry)
   } catch (e) {
-    console.log(e)
+    console.error(e)
   }
 
-  setTimeout(() => {
-    // watcher
-    //   .add('./src/Stylesheets.elm')
-  }, 150)
-})
+  return []
+}
+
+const addOnChange = async (entry, watcher) => {
+  watcher.on('change', async (path) => {
+    console.log('changed: ', path)
+
+    const newFiles = await getElmDependencies(entry)
+
+    try {
+      watcher.close()
+      addOnChange(entry, watcher)
+      watcher.add([entry, ...newFiles])
+    } catch (e) {
+      console.log(e)
+    }
+  })
+}
+
+const initWatcher = async (entry) => {
+  const files = await getElmDependencies(entry)
+
+  const watcher = chokidar.watch([entry, ...files], {
+    awaitWriteFinish: {
+      stabilityThreshold: 500,
+      pollInterval: 100
+    },
+  })
+
+  addOnChange(entry, watcher)
+}
+
+initWatcher(ENTRY)
 
 // start css watching
-addElmDependencies(entry, watcher)
+// addElmDependencies(entry, watcher)
 
 // init express server
 const app = new express()
@@ -50,19 +57,24 @@ const app = new express()
 // and then to a user defined proxy
 app.get('*', function(req, res) {
   requestFromElmReactor(req, res)
-})
-
-const requestFromElmReactor = (req, res) => {
-  request(`http://localhost:8001${req.url}`)
-    .then(reactorResponse => {
-      console.log('reactor 200:', req.url)
-
-      res.send(reactorResponse)
-    })
     .catch(reactorError => {
       console.log(`reactor ${reactorError.statusCode}:`, req.url)
 
       return requestFromProxy(req, res)
+    })
+    .catch(proxyError => {
+      console.log(`proxy ${proxyError.statusCode}:`, req.url)
+
+      res.send(proxyError)
+    })
+})
+
+const requestFromElmReactor = (req, res) => {
+  return request(`http://localhost:8001${req.url}`)
+    .then(reactorResponse => {
+      console.log('reactor 200:', req.url)
+
+      res.send(reactorResponse)
     })
 }
 
@@ -73,54 +85,41 @@ const requestFromProxy = (req, res) => {
 
       res.send(proxyResponse)
     })
-    .catch(proxyError => {
-      console.log(`proxy ${proxyError.statusCode}:`, req.url)
-
-      res.send(proxyError)
-    })
 }
 
 
-
-
 // start elm-reactor
-const reactor = child_process.exec(
-  `elm-reactor
-  --address=127.0.0.1
-  --port=8001`
-)
+// const reactor = child_process.spawn('elm-reactor', [
+//   '--address=127.0.0.1',
+//   '--port=8001',
+// ])
+
+// console.log('here', reactor.stderr)
 
 // start express
-app.listen(8000, () => {
-  console.log('elm-reactor-proxy listening on port 8001!')
-})
+// app.listen(8000, () => {
+//   console.log('elm-reactor-proxy listening on port 8001!')
+// })
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-process.on('exit', code => {
-  reactor.kill('SIGINT')
-  process.exit (code)
-})
-
-// catch ctrl+c
-process.on('SIGINT', () => {
-  reactor.kill('SIGINT')
-  process.exit (0)
-})
-
-// catch uncaught exception
-process.on('uncaughtException', err => {
-  reactor.kill('SIGINT')
-  process.exit (1)
-})
+//
+//
+// process.on('exit', code => {
+//   reactor.kill('SIGINT')
+//   process.exit(code)
+// })
+//
+// // catch ctrl+c
+// process.on('SIGINT', () => {
+//   reactor.kill('SIGINT')
+//   process.exit(0)
+// })
+//
+// // catch uncaught exception
+// process.on('uncaughtException', err => {
+//   reactor.kill('SIGINT')
+//   process.exit(1)
+// })

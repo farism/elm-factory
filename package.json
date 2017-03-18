@@ -6,6 +6,9 @@
   "repository": {},
   "author": "Faris Mustafa <farismmk@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
   "dependencies": {
     "chokidar": "^1.6.1",
     "connect-history-api-fallback": "^1.3.0",
@@ -19,5 +22,8 @@
     "request": "^2.81.0",
     "request-promise": "^4.1.1",
     "yargs": "^7.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
   }
 }
