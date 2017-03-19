@@ -22,7 +22,7 @@ css =
             ]
         , id Page
             [ backgroundColor (rgb 200 128 64)
-            , color (hex "CCFFFF")
+            , color (hex "FF0000")
             , width (pct 100)
             , height (pct 100)
             , boxSizing borderBox
