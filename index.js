@@ -1,119 +1,149 @@
-const fs = require('fs')
-const child_process = require('child_process')
-const path = require('path')
-const chokidar = require('chokidar')
-const express = require('express')
-const request = require('request-promise')
-const proxy = require('http-proxy-middleware')
-const findElmDeps = require('find-elm-dependencies')
+const fs = require('fs');
+const child_process = require('child_process');
+const path = require('path');
+const tmp = require('tmp');
+const chokidar = require('chokidar');
+const express = require('express');
+const request = require('request-promise');
+const proxy = require('http-proxy-middleware');
+const compile = require('node-elm-compiler').compile;
+const handlebars = require('handlebars');
+const livereload = require('livereload');
+const findElmDependencies = require('find-elm-dependencies').findAllDependencies;
 
-const ENTRY = './src/Stylesheets.elm'
+const ENTRY = './src/Stylesheets.elm';
+let reactor = null;
+let app = null;
+let watcher = null;
+let lr = null;
+
+const createTmpDir = () => {
+  return new Promise(function(resolve, reject) {
+    tmp.dir(function(err, tmpDirPath) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(tmpDirPath);
+      }
+    });
+  });
+};
 
 const extractCss = () => {
-  const output = path.join(process.cwd(), 'dist')
-  const module = 'Stylesheets'
-  const port = 'files'
-  const root_ = ''
+  const output = path.join(process.cwd(), 'dist');
+  const module = 'Stylesheets';
+  const port = 'files';
+  const root_ = '';
 
   // const start = new Date().getTime()
 
-  child_process.exec(
-    `elm-css ${ENTRY} -o ${output} -m ${module} -p ${port} -r ${root_}`
-  )
+  // child_process.exec(
+  //   `elm-css ${ENTRY} -o ${output} -m ${module} -p ${port} -r ${root_}`
+  // )
 
   // console.log(new Date().getTime() - start)
-}
+};
 
-const getElmDependencies = async (entry) => {
-  try {
-    return await findElmDeps.findAllDependencies(entry)
-  } catch (e) {
-    console.error(e)
-  }
+const onChange = entry => path => {
+  console.log('changed: ', path);
 
-  return []
-}
+  // extract css
+  // extractCss();
 
-const addOnChange = async (entry, watcher) => {
-  watcher.on('change', async (path) => {
-    console.log('changed: ', path)
+  // close watcher to clear all watcher and file listeners
+  watcher.close();
 
-    // close watcher and clear all listeners
-    watcher.close()
+  // readd on file change listener
+  watcher.on('change', onChange(entry));
 
+  // get new files list and add them them the watcher
+  findElmDependencies(entry).then(files => {
+    watcher.add([entry, ...newFiles]);
+  });
+};
 
-    // readd on change listener
-    addOnChange(entry, watcher)
+const initWatcher = (tmpDirPath, entry) => {
+  findElmDependencies(entry)
+    .then(files => {
+      watcher = chokidar.watch([entry, ...files], {
+        awaitWriteFinish: {
+          stabilityThreshold: 500,
+          pollInterval: 100
+        }
+      });
 
-    // get new dep tree and add it to watch
-    const newFiles = await getElmDependencies(entry)
-    watcher.add([entry, ...newFiles])
+      // add change listeners
+      watcher.on('change', onChange(entry));
+    })
+    .catch(err => console.error(err));
+};
 
-    // extract css to a file
-    extractCss()
-  })
-}
-
-const initWatcher = async (entry) => {
-  const files = await getElmDependencies(entry)
-
-  const watcher = chokidar.watch([entry, ...files], {
-    awaitWriteFinish: {
-      stabilityThreshold: 500,
-      pollInterval: 100
-    },
-  })
-
-  addOnChange(entry, watcher)
-}
+const initReactor = () => {
+  child_process.spawn('elm-reactor', ['--address=127.0.0.1', '--port=8001']);
+};
 
 // init express server
-const app = new express()
+const initExpress = () => {
+  app = new express();
 
-app.use(proxy('/_compile', {
-  target: 'http://localhost:8001',
-}))
+  app.use(
+    proxy('/_compile', {
+      target: 'http://localhost:8001'
+    })
+  );
 
-app.get('*.elm', (req, res) => {
-  res.send(fs.readFileSync('index.html').toString())
-})
+  app.use(
+    proxy({
+      target: 'http://localhost:8001'
+    })
+  );
 
-app.use(proxy({
-  target: 'http://localhost:8001',
-}))
+  app.use(
+    proxy('/api', {
+      target: 'http://localhost:8001'
+    })
+  );
 
-// app.use(proxy('/api', {
-//   target: 'http://localhost:8001',
-// }))
+  app.get('*.elm', (req, res) => {
+    res.send(fs.readFileSync('index.html').toString());
+  });
 
-// start watching css
-// initWatcher(ENTRY)
+  app.listen(8000, () => {
+    console.log('elm-reactor-proxy listening on port 8000!');
+  });
+};
 
-// start elm-reactor
-const reactor = child_process.spawn('elm-reactor', [
-  '--address=127.0.0.1',
-  '--port=8001',
-])
+const initLiveReload = () => {
+  lr = livereload.createServer()
+}
 
-// start express
-app.listen(8000, () => {
-  console.log('elm-reactor-proxy listening on port 8000!')
-})
+function init(entry) {
+  createTmpDir().then(tmpDirPath => {
+    // initExpress(tmpDirPath);
+    // initReactor();
+    // initLiveReload();
+    // initWatcher(entry);
+  });
+}
 
-// catch exiting
+init(ENTRY);
+
+/* HANDLE EXITING */
+
+// regular exist
 process.on('exit', code => {
-  reactor.kill('SIGINT')
-  process.exit(code)
-})
+  reactor && reactor.kill('SIGINT');
+  process.exit(code);
+});
 
-// catch ctrl+c
+// ctrl+c
 process.on('SIGINT', () => {
-  reactor.kill('SIGINT')
-  process.exit(0)
-})
+  reactor && reactor.kill('SIGINT');
+  process.exit(0);
+});
 
-// catch uncaught exception
+// uncaught exception
 process.on('uncaughtException', err => {
-  reactor.kill('SIGINT')
-  process.exit(1)
-})
+  reactor && reactor.kill('SIGINT');
+  process.exit(1);
+});
