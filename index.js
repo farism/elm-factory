@@ -10,6 +10,8 @@ const compile = require('node-elm-compiler').compile;
 const handlebars = require('handlebars');
 const livereload = require('livereload');
 const findElmDependencies = require('find-elm-dependencies').findAllDependencies;
+const elmCss = require('elm-css');
+const chalk = require('chalk');
 
 const ENTRY = './src/Stylesheets.elm';
 let reactor = null;
@@ -29,36 +31,43 @@ const createTmpDir = () => {
   });
 };
 
-const extractCss = () => {
-  const output = path.join(process.cwd(), 'dist');
-  const module = 'Stylesheets';
-  const port = 'files';
-  const root_ = '';
-
-  // const start = new Date().getTime()
-
-  // child_process.exec(
-  //   `elm-css ${ENTRY} -o ${output} -m ${module} -p ${port} -r ${root_}`
-  // )
-
-  // console.log(new Date().getTime() - start)
+const compileCss = (
+  entry,
+  output,
+  module = 'Stylesheets',
+  port = 'files',
+  root_ = process.cwd(),
+  makePath
+) => {
+  const start = new Date().getTime();
+  const proc = child_process.spawn(
+    `elm-css`,
+    [
+      entry,
+      `--output=${output}`,
+      `--module=${module}`,
+      `--port=${port}`,
+      `--root=${root_}`
+    ],
+    { stdio: 'inherit' }
+  );
 };
 
-const onChange = entry => path => {
+const onChange = (tmpDirPath, entry) => path => {
   console.log('changed: ', path);
 
-  // extract css
-  // extractCss();
+  // compile css
+  compileCss(ENTRY, tmpDirPath);
 
   // close watcher to clear all watcher and file listeners
   watcher.close();
 
   // readd on file change listener
-  watcher.on('change', onChange(entry));
+  watcher.on('change', onChange(tmpDirPath, entry));
 
-  // get new files list and add them them the watcher
+  // get new files list and add them them to the watcher
   findElmDependencies(entry).then(files => {
-    watcher.add([entry, ...newFiles]);
+    watcher.add([entry, ...files]);
   });
 };
 
@@ -73,18 +82,28 @@ const initWatcher = (tmpDirPath, entry) => {
       });
 
       // add change listeners
-      watcher.on('change', onChange(entry));
+      watcher.on('change', onChange(tmpDirPath, entry));
     })
-    .catch(err => console.error(err));
+    .catch(err => console.log(chalk.red(err)));
 };
 
 const initReactor = () => {
-  child_process.spawn('elm-reactor', ['--address=127.0.0.1', '--port=8001']);
+  child_process.spawn('elm-reactor', ['--address=127.0.0.1', '--port=8001'], {
+    stdio: 'inherit'
+  });
 };
 
 // init express server
-const initExpress = () => {
+const initExpress = tmpDirPath => {
   app = new express();
+
+  app.use('/public', express.static(tmpDirPath));
+
+  app.use(
+    proxy('/api', {
+      target: 'http://localhost:8001'
+    })
+  );
 
   app.use(
     proxy('/_compile', {
@@ -98,31 +117,26 @@ const initExpress = () => {
     })
   );
 
-  app.use(
-    proxy('/api', {
-      target: 'http://localhost:8001'
-    })
-  );
-
   app.get('*.elm', (req, res) => {
     res.send(fs.readFileSync('index.html').toString());
   });
 
   app.listen(8000, () => {
-    console.log('elm-reactor-proxy listening on port 8000!');
+    console.log('elm-factory listening on port 8000!');
   });
 };
 
 const initLiveReload = () => {
-  lr = livereload.createServer()
-}
+  lr = livereload.createServer();
+};
 
 function init(entry) {
   createTmpDir().then(tmpDirPath => {
-    // initExpress(tmpDirPath);
-    // initReactor();
+    initReactor();
+    initExpress(tmpDirPath);
+    initWatcher(tmpDirPath, entry);
     // initLiveReload();
-    // initWatcher(entry);
+    compileCss(entry, tmpDirPath)
   });
 }
 
