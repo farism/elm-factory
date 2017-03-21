@@ -51,7 +51,6 @@ two commands
   - `elm-factory build` extracts css and
 
 elm-factory.json {
-  entry src/Main.elm
   cssEntry src/Stylesheets.elm
   dev {
     host http://localhost
@@ -61,6 +60,7 @@ elm-factory.json {
     proxyPath /api
   }
   build {
+    entry src/Main.elm
     assetPath http://s3.amazon.com
   }
   elm-reactor {
@@ -71,7 +71,6 @@ elm-factory.json {
     debug true
     warn true
     report json
-    yes true
   }
   elm-css {
     root .
