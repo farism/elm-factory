@@ -42,5 +42,33 @@ no elm-factory.json in default location
   - specify elm-factory.json thru cli, merges with api.js defaults?
 
 elm-factory.json in default location
-  - always read from elm-factory.json, merge with commander/index.js defaults?
+  - always read from elm-factory.json, merge with index.js defaults?
   - if cli args specified, merge over elm-factory.json?
+
+two commands
+  - `elm-factory` starts dev server by default
+  - `elm-factory dev` starts dev server
+  - `elm-factory build` extracts css and
+
+elm-factory.json {
+  host http://localhost
+  port 8000
+  entry src/Main.elm
+  elm-reactor {
+    address http://localhost
+    port 8000
+  }
+  elm-make {
+    debug true
+    warn true
+    report json
+    yes true
+  }
+  elm-css {
+    root .
+    entry src/Stylesheets.elm
+    module Stylesheets
+    port files
+    pathToMake
+  }
+}

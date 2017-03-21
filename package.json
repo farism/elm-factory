@@ -1,6 +1,6 @@
 {
   "name": "elm-factory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "dev server and build system wrapping elm-reactor",
   "main": "index.js",
   "repository": {},
