@@ -4,7 +4,7 @@ import Html exposing (..)
 import Html.CssHelpers exposing (..)
 import Html.Attributes exposing (..)
 import Css exposing (..)
-import MyCss
+import HelloWorldCss
 
 
 { id, class, classList } =
@@ -13,4 +13,5 @@ import MyCss
 
 main : Html a
 main =
-    div [ id MyCss.Page ] [ Html.text "Hello, World!" ]
+    div [ id HelloWorldCss.Page ]
+        [ Html.text "Hello, World!!!!!!" ]

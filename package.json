@@ -6,8 +6,14 @@
   "repository": {},
   "author": "Faris Mustafa <farismmk@gmail.com>",
   "license": "MIT",
+  "bin": {
+    "elm-factory": "./bin/cli.js",
+    "elm-factory-dev": "./bin/dev.js",
+    "elm-factory-build": "./bin/build.js"
+  },
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "node index.js",
+    "build": "node index.js"
   },
   "dependencies": {
     "chalk": "^1.1.3",

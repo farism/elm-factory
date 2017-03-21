@@ -11,8 +11,8 @@ const proxy = require('http-proxy-middleware');
 const request = require('request-promise');
 const tmp = require('tmp');
 
-const MAIN_ENTRY = './src/HelloWorld.elm';
-const STYLESHEET_ENTRY = './src/Stylesheets.elm';
+const MAIN_ENTRY = './src/elm/HelloWorld.elm';
+const STYLESHEET_ENTRY = './src/elm/Stylesheets.elm';
 const WATCHER_OPTS = {
   awaitWriteFinish: {
     stabilityThreshold: 500,
@@ -64,7 +64,7 @@ const compileCss = (
 const initLiveReload = (tmpDirPath, host, port) => {
   const lr = livereload.createServer({
     originalPath: `${host}:${port}`,
-    debug: true
+    // debug: true,
   });
 
   lr.watch(tmpDirPath);
@@ -147,7 +147,7 @@ const initWatchers = (lr, tmpDirPath, mainEntry, stylesheetEntry, opts) => {
   };
 
   const onChangeMainTree = (stylesheetWatcher, mainWatcher, entry) => file => {
-    console.log('changed main tree: ', file);
+    // console.log('changed main tree: ', file);
 
     const stylesheets = Object.values(stylesheetWatcher.getWatched()).reduce(
       (acc, cur) => [...acc, ...cur],
@@ -169,7 +169,7 @@ const initWatchers = (lr, tmpDirPath, mainEntry, stylesheetEntry, opts) => {
   };
 
   const onChangeStylesheetTree = (tmpDirPath, watcher, entry) => file => {
-    console.log('changed stylesheet tree: ', file);
+    // console.log('changed stylesheet tree: ', file);
 
     // compile css and trigger livereload
     compileCss(entry, tmpDirPath).then(() => {
@@ -237,7 +237,7 @@ const handleExit = (lr, reactor) => {
   // regular exist
   process.on('exit', code => {
     console.log('Exited with code', code);
-    reactor && process.kill(reactor.pid + 1);
+    reactor && process.kill(reactor.pid);
     process.exit(code);
   });
 

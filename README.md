@@ -33,3 +33,14 @@ options:
 ### livereload
 - debug (false)
 - wait (100)
+
+
+### cli stuff
+no elm-factory.json in default location
+  - defaults in commander? later
+  - defaults in api.js?
+  - specify elm-factory.json thru cli, merges with api.js defaults?
+
+elm-factory.json in default location
+  - always read from elm-factory.json, merge with commander/index.js defaults?
+  - if cli args specified, merge over elm-factory.json?
