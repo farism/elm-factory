@@ -28,15 +28,18 @@
     "express-request-proxy": "^2.0.0",
     "express-slash": "^2.0.1",
     "find-elm-dependencies": "^0.18.1",
+    "find-root": "^1.1.0",
     "handlebars": "^4.0.6",
     "http-proxy-middleware": "^0.17.4",
     "livereload": "^0.6.2",
     "mkdirp": "^0.5.1",
     "node-elm-compiler": "^4.3.0",
+    "pretty-ms": "^3.0.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1",
     "signal-exit": "^3.0.2",
     "tmp": "^0.0.31",
+    "tmp-promise": "^1.0.3",
     "yargs": "^7.0.2"
   },
   "devDependencies": {
