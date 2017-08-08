@@ -75,10 +75,16 @@ async function compileCss(
   root_ = process.cwd(),
 ) {
   try {
+    const t = new Date()
+    console.info(chalk.cyan(`[Stylesheet:compile:start] ${entry}`))
     await elmCss(root_, entry, output, module, port)
+    console.info(
+      chalk.cyan(`[Stylesheet:compile:done] ${entry} ${elapsed(t)}`),
+    )
   } catch (e) {
-    console.error(chalk.red(e))
-    // throw new Error(e)
+    console.error(
+      chalk.bold.red(`[Stylesheet:compile:fail] ${entry}`),
+    )
   }
 }
 
@@ -108,21 +114,17 @@ async function startElmReactor(port, host) {
         'elm-reactor',
         [`--port=${port}`, `--address=${host}`],
         {
-          detached: true,
+          detached: true, // running as detached or else child.pid returns the wrong pid
         },
       )
 
       onExit(function(code, signal) {
-        process.kill(-reactor.pid)
+        process.kill(-reactor.pid) // - kills process group range
       })
-
-      // reactor.stdout.on('data', (data) => {
-      //   console.log(data.toString())
-      // })
 
       console.info(
         chalk.bold.magentaBright(
-          `elm-reactor started on ${host}:${port} ${elapsed(t)}`,
+          `elm-reactor started at ${host}:${port} ${elapsed(t)}`,
         ),
       )
       spacer()
@@ -131,7 +133,7 @@ async function startElmReactor(port, host) {
     }
   } catch (e) {
     console.error(
-      chalk.red(
+      chalk.bold.red(
         `elm-reactor --port=${port} --address=${host}: resource busy (Address already in use)`,
       ),
     )
@@ -216,7 +218,7 @@ function startExpressApp(dir, lrPort, erPort, erHost, port, host) {
     app.listen(port, host, () => {
       console.log(
         chalk.bold.magentaBright(
-          `elm-factory server started on ${host}:${port} ${elapsed(t)}`,
+          `elm-factory server started at ${host}:${port} ${elapsed(t)}`,
         ),
       )
       spacer()
@@ -226,11 +228,8 @@ function startExpressApp(dir, lrPort, erPort, erHost, port, host) {
   })
 }
 
-async function resetTrackerDeps(entry, onChange, tracker) {
+async function addTrackerDeps(entry, onChange, tracker) {
   try {
-    // immediately close tracker to clear all listeners before we rebuild dep tree
-    tracker.close()
-
     const files = await findElmDependencies(entry)
 
     tracker.add([entry, ...files])
@@ -239,7 +238,7 @@ async function resetTrackerDeps(entry, onChange, tracker) {
 
     return tracker
   } catch (e) {
-    console.error(chalk.red(e))
+    console.error(chalk.bold.red(e))
   }
 }
 
@@ -250,24 +249,22 @@ async function startStylesheetTracker(dir, lr, entry) {
     try {
       const t = new Date()
 
-      console.info(chalk.cyan('[Stylesheet:changed]', `./${file}`))
-      console.info(chalk.cyan(`[Stylesheet:compile:start] ${entry}`))
+      console.info(chalk.cyan('[Stylesheet:changed]', `${file}`))
+
+      // immediately close tracker to clear all listeners before we compile and rebuild dep tree
+      tracker.close()
 
       await compileCss(dir, entry)
 
-      resetTrackerDeps(entry, onChange, tracker)
-
-      console.info(
-        chalk.cyan(`[Stylesheet:compile:done] ${entry} ${elapsed(t)}`),
-      )
+      await addTrackerDeps(entry, onChange, tracker)
 
       lr.filterRefresh(file)
     } catch (e) {
-      console.error(chalk.red(e))
+      console.error(chalk.bold.red(e))
     }
   }
 
-  return await resetTrackerDeps(entry, onChange, tracker)
+  return await addTrackerDeps(entry, onChange, tracker)
 }
 
 async function startMainTracker(dir, lr, stylesheetTracker, entry) {
@@ -284,17 +281,35 @@ async function startMainTracker(dir, lr, stylesheetTracker, entry) {
     try {
       const t = new Date()
 
-      console.info(chalk.cyan('[Main:changed]', `./${file}`))
+      console.info(chalk.cyan('[Main:changed]', `${file}`))
 
-      resetTrackerDeps(entry, onChange, tracker)
+      // immediately close tracker to clear all listeners before we rebuild dep tree
+      tracker.close()
+
+      await addTrackerDeps(entry, onChange, tracker)
 
       lr.refresh(file)
     } catch (e) {
-      console.error(chalk.red(e))
+      console.error(chalk.bold.red(e))
     }
   }
 
-  return await resetTrackerDeps(entry, onChange, tracker)
+  return await addTrackerDeps(entry, onChange, tracker)
+}
+
+async function checkEntry(type, entry) {
+  return new Promise((resolve, reject) => {
+    const entryPath = path.join(process.cwd(), entry)
+
+    fs.access(entryPath, 'r', err => {
+      if (err) {
+        reject(err)
+        console.error(chalk.bold.red(`[${type}:entry:missing] ${entryPath}`))
+      } else {
+        resolve()
+      }
+    })
+  })
 }
 
 async function dev(mainEntry, stylesheetEntry) {
@@ -304,40 +319,49 @@ async function dev(mainEntry, stylesheetEntry) {
   const erPort = 8001
   const erHost = '127.0.0.1'
 
+  try {
+    await checkEntry('Main', mainEntry)
+    await checkEntry('Stylesheet', stylesheetEntry)
+  } catch (e) {
+    console.error(chalk.bold.red('Exiting'))
+    process.exit(1)
+  }
+
   // get a tmp dir for assets and live reload
-  const {path: tmpDir} = await tmp.dir()
+  const {path: dir} = await tmp.dir()
 
   // proceses
   const reactor = await startElmReactor(erPort, erHost)
-  const lr = await startLiveReload(tmpDir, port, host)
-  const app = await startExpressApp(tmpDir, lrPort, erPort, erHost, port, host)
+  const lr = await startLiveReload(dir, port, host)
+  const app = await startExpressApp(dir, lrPort, erPort, erHost, port, host)
 
   // trackers
   const stylesheetTracker = await startStylesheetTracker(
-    tmpDir,
+    dir,
     lr,
     stylesheetEntry,
   )
   const mainTracker = await startMainTracker(
-    tmpDir,
+    dir,
     lr,
     stylesheetTracker,
     mainEntry,
   )
 
+  console.info(chalk.bold.cyanBright(`[Main:entry:use] ${mainEntry}`))
+  console.info(
+    chalk.bold.cyanBright(`[Stylesheet:entry:use] ${stylesheetEntry}`),
+  )
+  spacer()
   console.info(
     chalk.yellow(`elm-factory dev server is ready!! -> http://${host}:${port}`),
   )
-  console.info(
-    chalk.yellow(`> now we will perform an initial compile of assets`),
-  )
-  spacer()
-  console.info(chalk.bold.cyanBright(`[Main:entry] ${mainEntry}`))
-  console.info(chalk.bold.cyanBright(`[Stylesheet:entry] ${stylesheetEntry}`))
+  console.info(chalk.yellow(`> performing an initial compile of assets`))
   spacer()
 
   // do initial asset compilation
-  compileCss(tmpDir, stylesheetEntry)
+
+  await compileCss(dir, stylesheetEntry)
 }
 
 function build(mainEntry, stylesheetEntry) {
