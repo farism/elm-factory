@@ -50,19 +50,26 @@ const TEMPLATE = `<!DOCTYPE HTML>
 </html>
 `
 
+const colors = {
+  startup: chalk.bold.magentaBright,
+  ready: chalk.bold.yellow,
+  files: chalk.bold.cyan,
+  error: chalk.bold.red,
+}
+
 function isPortOpen(port, address = 'localhost') {
   return new Promise((resolve, reject) => {
     try {
       const server = http.createServer()
-      server.on('error', () => {
-        resolve(false)
+      server.on('error', e => {
+        reject(new Error(e))
       })
       server.on('listening', () => {
         server.close(() => resolve(true))
       })
       server.listen(port, address)
-    } catch (error) {
-      reject(error)
+    } catch (e) {
+      reject(e)
     }
   })
 }
@@ -76,19 +83,17 @@ async function compileCss(
 ) {
   try {
     const t = new Date()
-    console.info(chalk.cyan(`[Stylesheet:compile:start] ${entry}`))
+    console.info(colors.files(`[Stylesheet:compile:start] ${entry}`))
     await elmCss(root_, entry, output, module, port)
     console.info(
-      chalk.cyan(`[Stylesheet:compile:done] ${entry} ${elapsed(t)}`),
+      colors.files(`[Stylesheet:compile:done] ${entry} ${elapsed(t)}`),
     )
   } catch (e) {
-    console.error(
-      chalk.bold.red(`[Stylesheet:compile:fail] ${entry}`),
-    )
+    console.error(colors.error(`[Stylesheet:compile:fail] ${entry}`))
   }
 }
 
-function spacer(char = '=', len = 60) {
+function spacer(char = '-', len = 60) {
   console.info(chalk.dim(char.repeat(len)))
 }
 
@@ -103,48 +108,43 @@ function elapsed(start) {
 // create an elm-reactor process
 
 async function startElmReactor(port, host) {
+  const t = new Date()
+  console.info(colors.startup(`elm-reactor starting...`))
+
   try {
     const isOpen = await isPortOpen(port)
-
-    if (isOpen) {
-      const t = new Date()
-      console.info(chalk.magentaBright(`elm-reactor starting...`))
-
-      const reactor = spawn(
-        'elm-reactor',
-        [`--port=${port}`, `--address=${host}`],
-        {
-          detached: true, // running as detached or else child.pid returns the wrong pid
-        },
-      )
-
-      onExit(function(code, signal) {
-        process.kill(-reactor.pid) // - kills process group range
-      })
-
-      console.info(
-        chalk.bold.magentaBright(
-          `elm-reactor started at ${host}:${port} ${elapsed(t)}`,
-        ),
-      )
-      spacer()
-
-      return reactor
-    }
   } catch (e) {
-    console.error(
-      chalk.bold.red(
-        `elm-reactor --port=${port} --address=${host}: resource busy (Address already in use)`,
-      ),
+    throw new Error(
+      `elm-reactor --port=${port} --address=${host}: resource busy (Address already in use)`,
     )
   }
+
+  const reactor = spawn(
+    'elm-reactor',
+    [`--port=${port}`, `--address=${host}`],
+    {
+      detached: true, // running as detached or else child.pid returns the wrong pid
+    },
+  )
+
+  onExit(function(code, signal) {
+    process.kill(-reactor.pid) // - kills process group range
+  })
+
+  console.info(
+    colors.startup(
+      `elm-reactor started at ${host}:${port} ${elapsed(t)}`,
+    ),
+  )
+
+  return reactor
 }
 
 // create a live reload server
 
 const startLiveReload = (dir, port, host) => {
   const t = new Date()
-  console.log(chalk.magentaBright('live-reload starting...'))
+  console.log(colors.startup('live-reload starting...'))
 
   return new Promise((resolve, reject) => {
     const lr = livereload.createServer(
@@ -156,12 +156,10 @@ const startLiveReload = (dir, port, host) => {
         lr.watch(dir)
 
         console.log(
-          chalk.bold.magentaBright(
+          colors.startup(
             `live-reload started proxying on ${host}:${port} ${elapsed(t)}`,
           ),
         )
-        spacer()
-
         resolve(lr)
       },
     )
@@ -172,106 +170,112 @@ const startLiveReload = (dir, port, host) => {
 
 function startExpressApp(dir, lrPort, erPort, erHost, port, host) {
   const t = new Date()
-  console.log(chalk.magentaBright('elm-factory server starting...'))
+  console.log(colors.startup('elm-factory server starting...'))
 
   return new Promise((resolve, reject) => {
     const app = new express()
-    const elmReactorTarget = `http://${erHost}:${erPort}`
+    const erTarget = `http://${erHost}:${erPort}`
     const template = handlebars.compile(TEMPLATE)
 
-    // handle the /_compile/*.elm files specifically to elm-reactor
-    app.use(
-      proxy('/_compile', {
-        target: elmReactorTarget,
-      }),
-    )
+    app
+      .listen(port, host, err => {
+        console.log(
+          colors.startup(
+            `elm-factory server started at ${host}:${port} ${elapsed(t)}`,
+          ),
+        )
 
-    app.get('*.elm', [
-      // do live reload on this page
-      require('connect-livereload')({
-        port: lrPort,
-        include: [/(.)*\.elm/],
-      }),
-      // handle with html template
-      (req, res) => {
-        res.send(template({path: req.url}))
-      },
-    ])
+        // handle the /_compile/*.elm files specifically to elm-reactor
+        app.use(
+          proxy('/_compile', {
+            target: erTarget,
+          }),
+        )
 
-    // custom api proxy to get around cors
-    // app.use(
-    //   proxy('/api', {
-    //     target: elmReactorTarget,
-    //   }),
-    // )
+        app.get('*.elm', [
+          // do live reload on this page
+          require('connect-livereload')({
+            port: lrPort,
+            include: [/(.)*\.elm/],
+          }),
+          // handle with html template
+          (req, res) => {
+            res.send(template({path: req.url}))
+          },
+        ])
 
-    // static file serving
-    app.use('/public', express.static(dir))
+        // custom api proxy to get around cors
+        // app.use(
+        //   proxy('/api', {
+        //     target: erTarget,
+        //   }),
+        // )
 
-    // proxy all other requests to elm-reactor
-    app.use(
-      proxy({
-        target: elmReactorTarget,
-      }),
-    )
+        // static file serving
+        app.use('/public', express.static(dir))
 
-    app.listen(port, host, () => {
-      console.log(
-        chalk.bold.magentaBright(
-          `elm-factory server started at ${host}:${port} ${elapsed(t)}`,
-        ),
-      )
-      spacer()
+        // proxy all other requests to elm-reactor
+        app.use(
+          proxy({
+            target: erTarget,
+          }),
+        )
 
-      resolve(app)
-    })
+        resolve(app)
+      })
+      .on('error', err => {
+        reject(
+          err.code === 'EADDRINUSE'
+            ? `Could not start elm-reactor server: ${err.code}`
+            : 'elm-reactor could not start server',
+        )
+      })
   })
 }
 
-async function addTrackerDeps(entry, onChange, tracker) {
+async function addWatcherDeps(entry, onChange, watcher) {
   try {
     const files = await findElmDependencies(entry)
 
-    tracker.add([entry, ...files])
+    watcher.add([entry, ...files])
 
-    tracker.on('change', onChange)
+    watcher.on('change', onChange)
 
-    return tracker
+    return watcher
   } catch (e) {
-    console.error(chalk.bold.red(e))
+    console.error(colors.error(e))
   }
 }
 
-async function startStylesheetTracker(dir, lr, entry) {
-  const tracker = chokidar.watch([], {ignored: () => false})
+async function startStylesheetWatcher(dir, lr, entry) {
+  const watcher = chokidar.watch([], {ignored: () => false})
 
   async function onChange(file) {
     try {
       const t = new Date()
+      console.info(colors.files(`[Stylesheet:changed] ${file}`))
 
-      console.info(chalk.cyan('[Stylesheet:changed]', `${file}`))
-
-      // immediately close tracker to clear all listeners before we compile and rebuild dep tree
-      tracker.close()
+      // immediately close watcher to clear all listeners before we compile and rebuild dep tree
+      watcher.close()
 
       await compileCss(dir, entry)
 
-      await addTrackerDeps(entry, onChange, tracker)
+      await addWatcherDeps(entry, onChange, watcher)
 
       lr.filterRefresh(file)
     } catch (e) {
-      console.error(chalk.bold.red(e))
+      console.error(colors.error(e))
     }
   }
 
-  return await addTrackerDeps(entry, onChange, tracker)
+  return await addWatcherDeps(entry, onChange, watcher)
 }
 
-async function startMainTracker(dir, lr, stylesheetTracker, entry) {
-  const tracker = chokidar.watch([], {
+async function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
+  const watcher = chokidar.watch([], {
     ignored: file => {
-      // ignore file if it is being watched by the stylesheet tracker
-      return Object.values(stylesheetTracker.getWatched()).some(arr =>
+      // ignore file if it is being watched by the stylesheet watcher
+      return Object.values(stylesheetWatcher.getWatched()).some(arr =>
         arr.includes(path.basename(file)),
       )
     },
@@ -280,21 +284,20 @@ async function startMainTracker(dir, lr, stylesheetTracker, entry) {
   async function onChange(file) {
     try {
       const t = new Date()
+      console.info(colors.files(`[Main:changed], ${file}`))
 
-      console.info(chalk.cyan('[Main:changed]', `${file}`))
+      // immediately close watcher to clear all listeners before we rebuild dep tree
+      watcher.close()
 
-      // immediately close tracker to clear all listeners before we rebuild dep tree
-      tracker.close()
-
-      await addTrackerDeps(entry, onChange, tracker)
+      await addWatcherDeps(entry, onChange, watcher)
 
       lr.refresh(file)
     } catch (e) {
-      console.error(chalk.bold.red(e))
+      console.error(colors.error(e))
     }
   }
 
-  return await addTrackerDeps(entry, onChange, tracker)
+  return await addWatcherDeps(entry, onChange, watcher)
 }
 
 async function checkEntry(type, entry) {
@@ -303,8 +306,7 @@ async function checkEntry(type, entry) {
 
     fs.access(entryPath, 'r', err => {
       if (err) {
-        reject(err)
-        console.error(chalk.bold.red(`[${type}:entry:missing] ${entryPath}`))
+        reject(colors.error(`[${type}:entry:missing] ${entryPath}`))
       } else {
         resolve()
       }
@@ -319,49 +321,53 @@ async function dev(mainEntry, stylesheetEntry) {
   const erPort = 8001
   const erHost = '127.0.0.1'
 
-  try {
-    await checkEntry('Main', mainEntry)
-    await checkEntry('Stylesheet', stylesheetEntry)
-  } catch (e) {
-    console.error(chalk.bold.red('Exiting'))
-    process.exit(1)
-  }
-
   // get a tmp dir for assets and live reload
   const {path: dir} = await tmp.dir()
 
   // proceses
-  const reactor = await startElmReactor(erPort, erHost)
-  const lr = await startLiveReload(dir, port, host)
-  const app = await startExpressApp(dir, lrPort, erPort, erHost, port, host)
+  try {
+    await checkEntry('Main', mainEntry)
+    await checkEntry('Stylesheet', stylesheetEntry)
+    const reactor = await startElmReactor(erPort, erHost)
+    spacer()
+    const lr = await startLiveReload(dir, port, host)
+    spacer()
+    const app = await startExpressApp(dir, lrPort, erPort, erHost, port, host)
+    spacer()
 
-  // trackers
-  const stylesheetTracker = await startStylesheetTracker(
-    dir,
-    lr,
-    stylesheetEntry,
-  )
-  const mainTracker = await startMainTracker(
-    dir,
-    lr,
-    stylesheetTracker,
-    mainEntry,
-  )
+    // file watchers
+    const stylesheetWatcher = await startStylesheetWatcher(
+      dir,
+      lr,
+      stylesheetEntry,
+    )
+    const mainWatcher = await startMainWatcher(
+      dir,
+      lr,
+      stylesheetWatcher,
+      mainEntry,
+    )
+  } catch (e) {
+    console.error(colors.error(e))
+    console.error(colors.error('Exiting'))
+    process.exit(1)
+  }
 
-  console.info(chalk.bold.cyanBright(`[Main:entry:use] ${mainEntry}`))
+  console.info(colors.files(`[Main:entry:use] ${mainEntry}`))
   console.info(
-    chalk.bold.cyanBright(`[Stylesheet:entry:use] ${stylesheetEntry}`),
+    colors.files(`[Stylesheet:entry:use] ${stylesheetEntry}`),
   )
   spacer()
   console.info(
-    chalk.yellow(`elm-factory dev server is ready!! -> http://${host}:${port}`),
+    chalk.bold.yellow(
+      `elm-factory dev server is ready!! -> http://${host}:${port}`,
+    ),
   )
-  console.info(chalk.yellow(`> performing an initial compile of assets`))
+  console.info(chalk.bold.yellow(`> performing an initial compile of assets`))
   spacer()
 
   // do initial asset compilation
-
-  await compileCss(dir, stylesheetEntry)
+  compileCss(dir, stylesheetEntry)
 }
 
 function build(mainEntry, stylesheetEntry) {
