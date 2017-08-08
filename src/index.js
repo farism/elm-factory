@@ -1,24 +1,27 @@
-const chalk = require('chalk');
-const child_process = require('child_process');
-const chokidar = require('chokidar');
-const elmCss = require('elm-css');
-const express = require('express');
-const findElmDependencies = require('find-elm-dependencies').findAllDependencies;
-const handlebars = require('handlebars');
-const livereload = require('livereload');
-const path = require('path');
-const proxy = require('http-proxy-middleware');
-const request = require('request-promise');
-const tmp = require('tmp');
+const chalk = require('chalk')
+const chokidar = require('chokidar')
+const elmCss = require('elm-css')
+const express = require('express')
+const findElmDependencies = require('find-elm-dependencies').findAllDependencies
+const handlebars = require('handlebars')
+const http = require('http')
+const livereload = require('livereload')
+const mkdirp = require('mkdirp')
+const onExit = require('signal-exit')
+const path = require('path')
+const proxy = require('http-proxy-middleware')
+const request = require('request-promise')
+const spawn = require('child_process').spawn
+const tmp = require('tmp')
 
-const MAIN_ENTRY = './src/elm/HelloWorld.elm';
-const STYLESHEET_ENTRY = './src/elm/Stylesheets.elm';
+const MAIN_ENTRY = './src/elm/HelloWorld.elm'
+const STYLESHEET_ENTRY = './src/elm/Stylesheets.elm'
 const WATCHER_OPTS = {
   awaitWriteFinish: {
     stabilityThreshold: 500,
-    pollInterval: 100
-  }
-};
+    pollInterval: 100,
+  },
+}
 const TEMPLATE = `<!DOCTYPE HTML>
 <html>
   <head>
@@ -48,206 +51,274 @@ const TEMPLATE = `<!DOCTYPE HTML>
     runElmProgram()
   </script>
 </html>
-`;
+`
 
-const compileCss = (
+const proc = chalk.magentaBright
+const file = chalk.cyanBright
+const elm = chalk.greenBright
+const err = chalk.red
+const quiet = chalk.dim
+
+function isPortOpen(port, address = 'localhost') {
+  return new Promise((resolve, reject) => {
+    try {
+      const server = http.createServer()
+      server.on('error', () => {
+        resolve(false)
+      })
+      server.on('listening', () => {
+        server.close(() => resolve(true))
+      })
+      server.listen(port, address)
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+function compileCss(
   entry,
   output,
   module = 'Stylesheets',
   port = 'files',
   root_ = process.cwd(),
-  makePath
-) => {
-  return elmCss(root_, entry, output, module, port, makePath);
-};
+) {
+  const t = new Date();
+  console.info(elm('elm-css started compiling...'))
 
-const initLiveReload = (tmpDirPath, host, port) => {
-  const lr = livereload.createServer({
-    originalPath: `${host}:${port}`,
-    // debug: true,
-  });
-
-  lr.watch(tmpDirPath);
-
-  return lr;
-};
-
-const initReactor = () => {
-  reactor = child_process.spawn(
-    'elm-reactor',
-    ['--address=127.0.0.1', '--port=8001'],
-    {
-      stdio: 'inherit'
-    }
-  );
-};
-
-// init express server
-const initExpress = tmpDirPath => {
-  app = new express();
-
-  // static file serving
-  app.use('/public', express.static(tmpDirPath));
-
-  // custom api proxy to get around cors
-  app.use(
-    proxy('/api', {
-      target: 'http://localhost:8001'
-    })
-  );
-
-  // handle the /_compile/*.elm files specifically to elm-reactor
-  app.use(
-    proxy('/_compile', {
-      target: 'http://localhost:8001'
-    })
-  );
-
-  const template = handlebars.compile(TEMPLATE);
-
-  app.get('*.elm', [
-    // do live reload on
-    require('connect-livereload')({
-      port: 35729,
-      include: [/(.)*\.elm/]
-    }),
-    // handle with template
-    (req, res) => {
-      res.send(template({ path: req.url }));
-    }
-  ]);
-
-  // proxy all other requests to elm-reactor
-  app.use(
-    proxy({
-      target: 'http://localhost:8001'
-    })
-  );
-
-  app.listen(8000, () => {
-    console.log('elm-factory listening on port 8000!');
-  });
-
-  return app;
-};
-
-const initWatchers = (lr, tmpDirPath, mainEntry, stylesheetEntry, opts) => {
-  const resetWatcher = (entry, watcher, onChange) => {
-    // get new files list
-    findElmDependencies(entry).then(files => {
-      // close watcher to clear all listeners
-      watcher.close();
-
-      // re add file on change listener
-      watcher.on('change', onChange);
-
-      // and entry and files to the watcher
-      watcher.add([entry, ...files]);
-    });
-  };
-
-  const onChangeMainTree = (stylesheetWatcher, mainWatcher, entry) => file => {
-    // console.log('changed main tree: ', file);
-
-    const stylesheets = Object.values(stylesheetWatcher.getWatched()).reduce(
-      (acc, cur) => [...acc, ...cur],
-      []
-    );
-
-    // don't trigger hard refresh for stylesheet tracked files
-    if (!stylesheets.includes(path.basename(file))) {
-      // reset the main watcher
-      resetWatcher(
-        entry,
-        mainWatcher,
-        onChangeMainTree(stylesheetWatcher, mainWatcher, entry)
-      );
-
-      // trigger livereload
-      lr.refresh(file);
-    }
-  };
-
-  const onChangeStylesheetTree = (tmpDirPath, watcher, entry) => file => {
-    // console.log('changed stylesheet tree: ', file);
-
-    // compile css and trigger livereload
-    compileCss(entry, tmpDirPath).then(() => {
-      resetWatcher(
-        entry,
-        watcher,
-        onChangeStylesheetTree(tmpDirPath, watcher, entry)
-      );
-
-      lr.filterRefresh(file);
-    });
-  };
-
-  // build from dependency trees watchers
-  findElmDependencies(stylesheetEntry)
-    .then(files => {
-      const stylesheetWatcher = chokidar.watch(
-        [stylesheetEntry, ...files],
-        opts
-      );
-
-      stylesheetWatcher.on(
-        'change',
-        onChangeStylesheetTree(tmpDirPath, stylesheetWatcher, stylesheetEntry)
-      );
-
-      findElmDependencies(mainEntry)
-        .then(files => {
-          mainWatcher = chokidar.watch([mainEntry, ...files], opts);
-
-          mainWatcher.on(
-            'change',
-            onChangeMainTree(stylesheetWatcher, mainWatcher, mainEntry)
-          );
-        })
-        .catch(err => console.log(chalk.red(err)));
-    })
-    .catch(err => console.log(chalk.red(err)));
-};
-
-function init(mainEntry, stylesheetEntry, watcherOpts) {
-  // create a tmp dir to serve assets from
-  tmp.dir(function(err, tmpDirPath) {
-    if (err) {
-      console.error(chalk.red(err));
-    } else {
-      // initial compile of assets
-      compileCss(stylesheetEntry, tmpDirPath).then(() => {
-        // start processes
-        const lr = initLiveReload(tmpDirPath, 'http://localhost', 8000);
-        const reactor = initReactor();
-        const app = initExpress(tmpDirPath);
-        initWatchers(lr, tmpDirPath, mainEntry, stylesheetEntry, watcherOpts);
-        handleExit(lr, reactor);
-      });
-    }
-  });
+  return new Promise((resolve, reject) => {
+    elmCss(root_, entry, output, module, port)
+      .then(() => {
+        console.info(elm(`elm-css finished compiling ${elapsed(t)}`))
+        resolve()
+      })
+      .catch((err) => reject(err))
+  })
 }
 
-init(MAIN_ENTRY, STYLESHEET_ENTRY, WATCHER_OPTS);
+// create an elm-reactor process
 
-/* MAKE SURE WE KILL CHILD PROCESSES */
+function elapsed(start) {
+  const str = start ? `(${new Date().getTime() - start.getTime()}ms)` : ''
 
-const handleExit = (lr, reactor) => {
-  // regular exist
-  process.on('exit', code => {
-    console.log('Exited with code', code);
-    reactor && process.kill(reactor.pid);
-    process.exit(code);
-  });
+  return quiet(str)
+}
 
-  // ctrl+c
-  process.on('SIGINT', () => {
-    process.exit(0);
-  });
+function startElmReactor(port, host) {
+  const t = new Date()
+  console.info(proc('elm-reactor starting...'))
 
-  // uncaught exception
-  process.on('uncaughtException', err => {
-    process.exit(1);
-  });
-};
+  return new Promise((resolve, reject) => {
+    isPortOpen(port).then(isOpen => {
+      if (isOpen) {
+        const reactor = spawn(
+          'elm-reactor',
+          [`--port=${port}`, `--address=${host}`],
+          {detached: true},
+        )
+
+        onExit(function(code, signal) {
+          process.kill(-reactor.pid)
+        })
+
+        console.info(
+          proc(`elm-reactor started on ${host}:${port} ${elapsed(t)}`),
+        )
+        resolve(reactor)
+      } else {
+        reject(
+          `elm-reactor --port=${port} --address=${host}: resource busy (Address already in use)`,
+        )
+      }
+    })
+  })
+}
+
+// create a live reload server
+
+const startLiveReload = (dir, port, host) => {
+  const t = new Date()
+  console.log(chalk.magentaBright('live-reload starting...'))
+
+  return new Promise((resolve, reject) => {
+    const lr = livereload.createServer(
+      {
+        originalPath: `${host}:${port}`,
+        // debug: true,
+      },
+      () => {
+        lr.watch(dir)
+        console.log(
+          chalk.magentaBright(
+            `live-reload started proxying on ${host}:${port} ${elapsed(t)}`,
+          ),
+        )
+        resolve(lr)
+      },
+    )
+  })
+}
+
+// create an express server
+
+function startExpressApp(dir, lrPort, erPort, erHost, port, host) {
+  const t = new Date()
+  console.log(chalk.magentaBright('elm-factory server starting...'))
+
+  return new Promise((resolve, reject) => {
+    const app = new express()
+    const elmReactorTarget = `http://${erHost}:${erPort}`
+
+    // static file serving
+    app.use('/public', express.static(dir))
+
+    // custom api proxy to get around cors
+    // app.use(
+    //   proxy('/api', {
+    //     target: elmReactorTarget,
+    //   }),
+    // )
+
+    // handle the /_compile/*.elm files specifically to elm-reactor
+    app.use(
+      proxy('/_compile', {
+        target: elmReactorTarget,
+      }),
+    )
+
+    const template = handlebars.compile(TEMPLATE)
+
+    app.get('*.elm', [
+      // do live reload on this page
+      require('connect-livereload')({
+        port: lrPort,
+        include: [/(.)*\.elm/],
+      }),
+      // handle with template
+      (req, res) => {
+        res.send(template({path: req.url}))
+      },
+    ])
+
+    // proxy all other requests to elm-reactor
+    app.use(
+      proxy({
+        target: elmReactorTarget,
+      }),
+    )
+
+    app.listen(port, host, () => {
+      console.log(
+        chalk.magentaBright(
+          `elm-factory server started on ${host}:${port} ${elapsed(t)}`,
+        ),
+      )
+      resolve(app)
+    })
+  })
+}
+
+function onTrackerChanged(tracker, entry, onChange) {
+  return file => {
+    // immediately close tracker to clear all listeners before we rebuild dep tree
+    tracker.close()
+
+    findElmDependencies(entry).then(files => {
+      // re-add the onChange listener
+      tracker.on('change', onTrackerChanged(tracker, entry, onChange))
+
+      // and entry and new files to the tracker
+      tracker.add([entry, ...files])
+    })
+
+    onChange(file)
+  }
+}
+
+function addDepsToTracker(entry, onChange, tracker) {
+  return new Promise((resolve, reject) => {
+    findElmDependencies(entry)
+      .then(files => {
+        tracker.on('change', onTrackerChanged(tracker, entry, onChange))
+
+        tracker.add([entry, ...files])
+
+        resolve(tracker)
+      })
+      .catch(error => {
+        reject(error)
+      })
+  })
+}
+
+function dev(mainEntry, stylesheetEntry, trackerOpts) {
+  // create a tmp dir to serve assets from
+  tmp.dir(function(err, tmpDir) {
+    if (err) {
+      console.error(chalk.red(err))
+    } else {
+      const lrPort = 35729
+      const erPort = 8002
+      const erHost = '127.0.0.1'
+      const port = 8000
+      const host = '127.0.0.1'
+
+      startElmReactor(erPort, erHost)
+        .then(() => compileCss(stylesheetEntry, tmpDir))
+        .then(() => startLiveReload(tmpDir, port, host))
+        .then(() => startExpressApp(tmpDir, lrPort, erPort, erHost, port, host))
+        .then(lr => {
+          const stylesheetTracker = chokidar.watch([], {ignored: () => false})
+
+          const stylesheetTrackerWithDeps = addDepsToTracker(
+            stylesheetEntry,
+            file => {
+              console.info(chalk.yellow('[Stylesheet changed]', file))
+              console.log(lr.filterRefresh)
+              // lr.filterRefresh(file)
+            },
+            stylesheetTracker,
+          )
+
+          const mainTracker = chokidar.watch([], {
+            ignored: file => {
+              // if the edited file is currently being
+              // watched by the stylesheet tracker, ignore it
+              return Object.values(stylesheetTracker.getWatched()).some(arr =>
+                arr.includes(path.basename(file)),
+              )
+            },
+          })
+
+          const mainTrackerWithDeps = addDepsToTracker(
+            mainEntry,
+            file => {
+              console.info(chalk.yellow('[Main changed]', file))
+              lr.refresh(file)
+              console.log(lr.refresh, lr.filterRefresh)
+            },
+            mainTracker,
+          )
+
+          return Promise.all([stylesheetTrackerWithDeps, mainTrackerWithDeps])
+        })
+        .catch(err => console.error(chalk.red(err)))
+    }
+  })
+}
+
+function build(mainEntry, stylesheetEntry) {
+  outputDir = path.join(process.cwd(), './dist')
+  mkdirp(outputDir, () => {
+    compileCss(stylesheetEntry, outputDir).then(() => {
+      console.info('css done')
+    })
+  })
+}
+
+dev(MAIN_ENTRY, STYLESHEET_ENTRY, WATCHER_OPTS)
+
+module.exports = {
+  dev,
+  build,
+}

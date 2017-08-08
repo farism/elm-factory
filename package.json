@@ -1,6 +1,6 @@
 {
   "name": "elm-factory",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "dev server and build system wrapping elm-reactor",
   "main": "index.js",
   "repository": {},
@@ -16,12 +16,13 @@
     "build": "node index.js"
   },
   "dependencies": {
-    "chalk": "^1.1.3",
+    "chalk": "^2.1.0",
+    "child-process-promise": "^2.2.1",
     "chokidar": "^1.6.1",
     "connect-history-api-fallback": "^1.3.0",
     "connect-livereload": "^0.6.0",
     "elm": "^0.18.0",
-    "elm-css": "^0.6.0",
+    "elm-css": "^0.6.1",
     "express": "^4.15.2",
     "express-http-proxy": "^0.11.0",
     "express-request-proxy": "^2.0.0",
@@ -30,9 +31,11 @@
     "handlebars": "^4.0.6",
     "http-proxy-middleware": "^0.17.4",
     "livereload": "^0.6.2",
+    "mkdirp": "^0.5.1",
     "node-elm-compiler": "^4.3.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1",
+    "signal-exit": "^3.0.2",
     "tmp": "^0.0.31",
     "yargs": "^7.0.2"
   },

@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 
+const init = require('../src/index');
+
 var program = require('commander');
 
 program
   .version('0.0.1')
-  .option('-f, --foo', 'enable some foo')
-  .option('-b, --bar', 'enable some bar')
-  .option('-B, --baz', 'enable some baz');
 
-// must be before .parse() since
-// node's emit() is immediate
+program
+  .command('build')
+  .description('build an elm app')
+  .option("-e, --entry [path]", "Which setup mode to use")
+  .action(function (options) {
+    console.log(options.entry)
+  });
 
 program.on('--help', function() {
   console.log('  Examples:');
@@ -20,3 +24,5 @@ program.on('--help', function() {
 });
 
 program.parse(process.argv);
+
+// console.log(program)

@@ -51,7 +51,6 @@ two commands
   - `elm-factory build` extracts css and
 
 elm-factory.json {
-  cssEntry src/Stylesheets.elm
   dev {
     host http://localhost
     port 8000
@@ -74,6 +73,7 @@ elm-factory.json {
   }
   elm-css {
     root .
+    entry src/Stylesheets.elm
     port files
     pathToMake
   }

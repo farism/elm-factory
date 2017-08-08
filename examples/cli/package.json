@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "build": "elm-factory build --main-entry=./src/HelloWorld.elm --css-entry=./src/Stylesheets.elm"
+  },
   "dependencies": {
     "elm-factory": "file:../.."
   }

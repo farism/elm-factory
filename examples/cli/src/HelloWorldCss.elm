@@ -15,7 +15,7 @@ type CssIds
 css =
     (stylesheet << namespace "helloworld")
         [ id Page
-            [ backgroundColor (hex "FFFFFF")
+            [ backgroundColor (hex "000000")
             , color (hex "FF0000")
             ]
         , class Container
