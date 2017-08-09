@@ -7,6 +7,12 @@ const prettyMs = require('pretty-ms')
 
 const ELM_PACKAGE_NAME = 'elm-package.json'
 
+const defaults = {
+  main: './src/Main.elm',
+  stylesheets: './src/Stylesheets.elm',
+  template: './node_modules/elm-factory/lib/index.hbs',
+}
+
 const colors = {
   startup: chalk.bold.magentaBright,
   ready: chalk.bold.yellow,
@@ -23,13 +29,13 @@ async function compileCss(
 ) {
   try {
     const t = new Date()
-    console.info(colors.files(`[Stylesheet:compile:start] ${entry}`))
+    console.info(colors.files(`[Stylesheets:compile:start] ${entry}`))
     await elmCss(root_, entry, output, module, port)
     console.info(
-      colors.files(`[Stylesheet:compile:done] ${entry} ${elapsed(t)}`),
+      colors.files(`[Stylesheets:compile:done] ${entry} ${elapsed(t)}`),
     )
   } catch (e) {
-    console.error(colors.error(`[Stylesheet:compile:fail] ${entry}`))
+    console.error(colors.error(`[Stylesheets:compile:fail] ${entry}`))
   }
 }
 
@@ -70,6 +76,7 @@ async function validateFile(log, entry) {
 module.exports = {
   colors,
   compileCss,
+  defaults,
   elapsed,
   loadTemplate,
   spacer,

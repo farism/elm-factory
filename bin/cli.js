@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
-var program = require('commander')
+const program = require('commander')
+
+program.on('--help', function() {
+  console.log('')
+})
 
 program
   .version('0.0.1')
   .command('dev', 'starts an elm-factory dev server')
   .command('build', 'builds the elm application for production')
-
-program.on('--help', function(){
-  console.log('')
-});
-
-program.parse(process.argv)
+  .parse(process.argv)

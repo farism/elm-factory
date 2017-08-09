@@ -1,24 +1,33 @@
-async function dev(main, stylesheet, ) {
+const mkdirp = require('mkdirp')
+const path = require('path')
+
+const {compileCss, colors, defaults, spacer, validateFile} = require('./core')
+
+async function build({
+  main = defaults.main,
+  stylesheets = defaults.stylesheets,
+  output = './dist',
+}) {
   // get a tmp dir for assets and live reload
-  const {path: dir} = await tmp.dir()
+  const outputPath = path.join(process.cwd(), output)
+
+  await mkdirp(outputPath)
 
   // proceses
   try {
-    await validateEntry('Main', main)
-    await validateEntry('Stylesheet', stylesheet)
-  }
+    await validateFile('[Main:notfound]', main)
+    await validateFile('[Stylesheets:notfound]', stylesheets)
+  } catch (e) {}
 
-  console.info(colors.files(`[Main:entry:use] ${main}`))
-  console.info(colors.files(`[Stylesheet:entry:use] ${stylesheet}`))
+  console.info(colors.files(`[Main:use] ${main}`))
+  console.info(colors.files(`[Stylesheets:use] ${stylesheets}`))
 
-  console.info(
-    chalk.bold.yellow(
-      `elm-factory is starting your build!`,
-    ),
-  )
-  console.info(chalk.bold.yellow(`> performing compilation of assets`))
+  console.info(colors.ready(`elm-factory is starting your build!`))
+  console.info(colors.ready(`> performing compilation of assets`))
   spacer()
 
   // do initial asset compilation
-  compileCss(outputDir = path.join(process.cwd(), './dist'), stylesheet)
+  compileCss(outputPath, stylesheets)
 }
+
+module.exports = build

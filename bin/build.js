@@ -1,17 +1,12 @@
 #!/usr/bin/env node
 
-var program = require('commander')
+const program = require('commander')
 
-program
-  .version('0.0.1')
-  .option('-m --main', 'application main entry', null, './src/Main.elm')
-  .option('-c --css', 'application css entry', null, './src/Stylesheet.elm')
-  .option('-t --template', 'the html template to use', null, './node_modules/elm-reactor/tmpl/index.hbs')
-  .option('-o --output', 'the directory in which to write built files', null, './build')
+const build = require('../src/build')
 
-program.on('--help', function(){
+program.on('--help', function() {
   console.log(`
-  Example
+  Example:
 
     > elm-factory build -m ./src/MyApp.elm -s ./src/MyCss.elm -o ./dist
 
@@ -19,9 +14,13 @@ program.on('--help', function(){
 
     - build the application using elm-css and elm-make
     - output files to ./dist
-  `)
-});
+    `)
+})
 
-program.parse(process.argv)
+program
+  .option('-m --main [n]', 'application main entry')
+  .option('-c --stylesheets [n]', 'application stylesheets entry')
+  .option('-o --output [n]', 'the directory in which to write built files')
+  .parse(process.argv)
 
-console.log(program.args)
+build(program.opts())

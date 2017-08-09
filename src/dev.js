@@ -14,6 +14,7 @@ const tmp = require('tmp-promise')
 const {
   compileCss,
   colors,
+  defaults,
   elapsed,
   loadTemplate,
   spacer,
@@ -230,11 +231,11 @@ async function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
 }
 
 async function dev({
-  main = './src/Main.elm',
-  stylesheets = './src/Stylesheets.elm',
+  main = defaults.main,
+  stylesheets = defaults.stylesheets,
   host = '127.0.0.1',
   port = 8000,
-  template = './node_modules/lib/index.hbs',
+  template = defaults.template,
   reactorHost,
   reactorPort = 8001,
   livereloadPort = 35729,
