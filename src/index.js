@@ -132,9 +132,7 @@ async function startElmReactor(port, host) {
   })
 
   console.info(
-    colors.startup(
-      `elm-reactor started at ${host}:${port} ${elapsed(t)}`,
-    ),
+    colors.startup(`elm-reactor started at ${host}:${port} ${elapsed(t)}`),
   )
 
   return reactor
@@ -306,7 +304,7 @@ async function checkEntry(type, entry) {
 
     fs.access(entryPath, 'r', err => {
       if (err) {
-        reject(colors.error(`[${type}:entry:missing] ${entryPath}`))
+        reject(colors.error(`[${type}:entry:notfound] ${entryPath}`))
       } else {
         resolve()
       }
@@ -354,9 +352,7 @@ async function dev(mainEntry, stylesheetEntry) {
   }
 
   console.info(colors.files(`[Main:entry:use] ${mainEntry}`))
-  console.info(
-    colors.files(`[Stylesheet:entry:use] ${stylesheetEntry}`),
-  )
+  console.info(colors.files(`[Stylesheet:entry:use] ${stylesheetEntry}`))
   spacer()
   console.info(
     chalk.bold.yellow(

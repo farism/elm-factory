@@ -8,8 +8,8 @@
   "license": "MIT",
   "bin": {
     "elm-factory": "./bin/cli.js",
-    "elm-factory-dev": "./bin/dev.js",
-    "elm-factory-build": "./bin/build.js"
+    "elm-factory-build": "./bin/build.js",
+    "elm-factory-dev": "./bin/dev.js"
   },
   "scripts": {
     "dev": "node index.js",
@@ -40,6 +40,7 @@
     "signal-exit": "^3.0.2",
     "tmp": "^0.0.31",
     "tmp-promise": "^1.0.3",
+    "vorpal": "^1.12.0",
     "yargs": "^7.0.2"
   },
   "devDependencies": {

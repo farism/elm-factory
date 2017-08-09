@@ -1,0 +1,24 @@
+sudo: false
+
+cache:
+  directories:
+    - tests/elm-stuff/build-artifacts
+
+language: node_js
+node_js:
+  - "node"
+
+env:
+  matrix:
+    - ELM_VERSION=0.18.0
+
+install:
+  - npm install -g elm@$ELM_VERSION
+  - npm install
+  - ./node_modules/.bin/elm-package install -y
+
+script:
+  - npm test
+
+notifications:
+  email: false
