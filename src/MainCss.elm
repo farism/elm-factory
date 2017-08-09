@@ -1,4 +1,4 @@
-module HelloWorldCss exposing (..)
+module MainCss exposing (..)
 
 import Css exposing (..)
 import Css.Namespace exposing (namespace)
@@ -17,6 +17,7 @@ css =
         [ id Page
             [ backgroundColor (hex "000000")
             , color (hex "FF0000")
+            , fontSize (px 50)
             ]
         , class Container
             [ margin zero

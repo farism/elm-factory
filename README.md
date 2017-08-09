@@ -3,11 +3,11 @@
 A proxy configuration tool for elm-reactor
 
 - [ ] CLI
-- [ ] proxy elm reactor
-- [ ] proxy custom server
-- [ ] css file serving
+- [x] proxy elm reactor
+- [x] proxy custom server
+- [x] css file serving
 - [ ] build pipeline for css and assets
-- [ ] livereload
+- [x] livereload
 - [ ] elm-factory.json
 
 options:

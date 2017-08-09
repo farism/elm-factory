@@ -1,23 +1,15 @@
 #!/usr/bin/env node
 
-var program = require('commander')
+const fs = require('fs')
+const program = require('commander')
 
-program
-  .version('0.0.1')
-  .option('-m, --main-entry', 'app `Main.elm` entry point  [default: ./src/Main.elm]')
-  .option('-s, --stylesheet-entry', 'app `Stylesheet.elm` entry  [default: ./src/Stylesheet.elm]')
-  .option('-h, --host', 'dev server address [default: 127.0.0.1]')
-  .option('-p, --port', 'dev server port  [default: 8000]')
-  .option('-t, --template', 'dev server html template file')
-  .option('-r, --reactor-host', 'elm-reactor address  [default: 127.0.0.1]')
-  .option('-u, --reactor-port', 'elm-reactor port  [default: 8001]')
-  .option('-l, --livereload-port', 'livereload connector port  [default: 35729]')
+const dev = require('../src/dev')
 
 program.on('--help', function(){
   console.log(`
   Example:
 
-    > elm-factory dev -m ./src/MyApp.elm -s ./src/MyCSS.elm -p 3000 -t ./src/index.html
+    > elm-factory dev -m ./src/MyApp.elm -s ./src/MyCss.elm -p 3000 -t ./src/index.html
 
     Will:
 
@@ -26,14 +18,17 @@ program.on('--help', function(){
     - use ./src/MyCss.elm as the stylesheet entry point
     - use ./src/index.html as the handlebars template file
   `)
-});
+})
 
+program
+  .option('-m --main [n]', 'application main entry', './src/Main.elm')
+  .option('-c --stylesheets [n]', 'application stylesheets entry', './src/Stylesheets.elm')
+  .option('-h --host [n]', 'dev server address', '127.0.0.1')
+  .option('-p --port [n]', 'dev server port', '8000')
+  .option('-t --template [n]', 'dev server html template file', './node_modules/elm-factory/lib/index.hbs')
+  .option('-r --reactor-host [n]', 'elm-reactor address', '127.0.0.1')
+  .option('-u --reactor-port [n]', 'elm-reactor port', '8001')
+  .option('-l --livereload-port [n]', 'livereload connector port', '35729')
+  .parse(process.argv)
 
-program.parse(process.argv)
-
-if (program.args.length === 0) {
-  program.outputHelp()
-  return
-}
-
-// console.log(program)
+dev(program.opts())

@@ -7,4 +7,8 @@ program
   .command('dev', 'starts an elm-factory dev server')
   .command('build', 'builds the elm application for production')
 
+program.on('--help', function(){
+  console.log('')
+});
+
 program.parse(process.argv)

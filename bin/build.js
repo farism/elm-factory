@@ -4,30 +4,24 @@ var program = require('commander')
 
 program
   .version('0.0.1')
-  .option('-m, --main-entry', 'app `Main.elm` entry point [default ./src/Main.elm]')
-  .option('-s, --stylesheet-entry', 'app `Stylesheet.elm` entry [default ./src/Stylesheet.elm]')
-  .option('-o, --output', 'the directory in which to write built files [default .build/]')
+  .option('-m --main', 'application main entry', null, './src/Main.elm')
+  .option('-c --css', 'application css entry', null, './src/Stylesheet.elm')
+  .option('-t --template', 'the html template to use', null, './node_modules/elm-reactor/tmpl/index.hbs')
+  .option('-o --output', 'the directory in which to write built files', null, './build')
 
 program.on('--help', function(){
   console.log(`
   Example
 
-    > elm-factory build -m ./src/MyApp.elm -s ./src/MyCSS.elm -p 3000
+    > elm-factory build -m ./src/MyApp.elm -s ./src/MyCss.elm -o ./dist
 
     Will:
 
-    - start the elm-factory dev server on http://127.0.0.1:3000
-    - use ./src/MyApp.elm as the main entry point
-    - use ./src/MyCss.elm as the stylesheet entry point
+    - build the application using elm-css and elm-make
+    - output files to ./dist
   `)
 });
 
-
 program.parse(process.argv)
 
-if (program.args.length === 0) {
-  program.outputHelp()
-  return
-}
-
-// console.log(program)
+console.log(program.args)

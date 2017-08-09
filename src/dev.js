@@ -1,61 +1,24 @@
 const chalk = require('chalk')
 const chokidar = require('chokidar')
-const elmCss = require('elm-css')
 const express = require('express')
 const findElmDependencies = require('find-elm-dependencies').findAllDependencies
-const fs = require('fs')
-const handlebars = require('handlebars')
 const http = require('http')
 const livereload = require('livereload')
-const mkdirp = require('mkdirp')
+const livereloadConnect = require('connect-livereload')
 const onExit = require('signal-exit')
 const path = require('path')
-const prettyMs = require('pretty-ms')
 const proxy = require('http-proxy-middleware')
-const request = require('request-promise')
 const spawn = require('child_process').spawn
 const tmp = require('tmp-promise')
 
-const ELM_PACKAGE_NAME = 'elm-package.json'
-const MAIN_ENTRY = './src/elm/HelloWorld.elm'
-const STYLESHEET_ENTRY = './src/elm/Stylesheets.elm'
-const TEMPLATE = `<!DOCTYPE HTML>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>~{{path}}</title>
-    <style type="text/css">
-      @import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro);
-      html, head, body {
-        margin: 0;
-        height: 100%;
-      }
-    </style>
-    <link rel="stylesheet" href="http://localhost:8000/public/index.css">
-  </head>
-  <body>
-    <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #9A9A9A; font-family: &#39;Source Sans Pro&#39;;">
-      <div style="font-size: 3em;">Building your project!</div>
-      <img src="/_reactor/waiting.gif">
-      <div style="font-size: 1em">With new projects, I need a bunch of extra time to download packages.</div>
-    </div>
-  </body>
-  <script src="/_compile{{path}}" charset="utf-8"></script>
-  <script>
-    while (document.body.firstChild) {
-      document.body.removeChild(document.body.firstChild)
-    }
-    runElmProgram()
-  </script>
-</html>
-`
-
-const colors = {
-  startup: chalk.bold.magentaBright,
-  ready: chalk.bold.yellow,
-  files: chalk.bold.cyan,
-  error: chalk.bold.red,
-}
+const {
+  compileCss,
+  colors,
+  elapsed,
+  loadTemplate,
+  spacer,
+  validateFile,
+} = require('./core')
 
 function isPortOpen(port, address = 'localhost') {
   return new Promise((resolve, reject) => {
@@ -74,40 +37,9 @@ function isPortOpen(port, address = 'localhost') {
   })
 }
 
-async function compileCss(
-  output,
-  entry,
-  module = 'Stylesheets',
-  port = 'files',
-  root_ = process.cwd(),
-) {
-  try {
-    const t = new Date()
-    console.info(colors.files(`[Stylesheet:compile:start] ${entry}`))
-    await elmCss(root_, entry, output, module, port)
-    console.info(
-      colors.files(`[Stylesheet:compile:done] ${entry} ${elapsed(t)}`),
-    )
-  } catch (e) {
-    console.error(colors.error(`[Stylesheet:compile:fail] ${entry}`))
-  }
-}
-
-function spacer(char = '-', len = 60) {
-  console.info(chalk.dim(char.repeat(len)))
-}
-
-function elapsed(start) {
-  const str = start
-    ? `(${prettyMs(new Date().getTime() - start.getTime())})`
-    : ''
-
-  return chalk.dim(str)
-}
-
 // create an elm-reactor process
 
-async function startElmReactor(port, host) {
+async function startElmReactor(host, port) {
   const t = new Date()
   console.info(colors.startup(`elm-reactor starting...`))
 
@@ -140,7 +72,7 @@ async function startElmReactor(port, host) {
 
 // create a live reload server
 
-const startLiveReload = (dir, port, host) => {
+const startLiveReload = (dir, host, port) => {
   const t = new Date()
   console.log(colors.startup('live-reload starting...'))
 
@@ -166,14 +98,13 @@ const startLiveReload = (dir, port, host) => {
 
 // create an express server
 
-function startExpressApp(dir, lrPort, erPort, erHost, port, host) {
+function startExpressApp(dir, erHost, erPort, lrPort, template, host, port) {
   const t = new Date()
   console.log(colors.startup('elm-factory server starting...'))
 
   return new Promise((resolve, reject) => {
     const app = new express()
     const erTarget = `http://${erHost}:${erPort}`
-    const template = handlebars.compile(TEMPLATE)
 
     app
       .listen(port, host, err => {
@@ -192,7 +123,7 @@ function startExpressApp(dir, lrPort, erPort, erHost, port, host) {
 
         app.get('*.elm', [
           // do live reload on this page
-          require('connect-livereload')({
+          livereloadConnect({
             port: lrPort,
             include: [/(.)*\.elm/],
           }),
@@ -251,7 +182,7 @@ async function startStylesheetWatcher(dir, lr, entry) {
   async function onChange(file) {
     try {
       const t = new Date()
-      console.info(colors.files(`[Stylesheet:changed] ${file}`))
+      console.info(colors.files(`[Stylesheets:changed] ${file}`))
 
       // immediately close watcher to clear all listeners before we compile and rebuild dep tree
       watcher.close()
@@ -298,61 +229,51 @@ async function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
   return await addWatcherDeps(entry, onChange, watcher)
 }
 
-async function checkEntry(type, entry) {
-  return new Promise((resolve, reject) => {
-    const entryPath = path.join(process.cwd(), entry)
-
-    fs.access(entryPath, 'r', err => {
-      if (err) {
-        reject(colors.error(`[${type}:entry:notfound] ${entryPath}`))
-      } else {
-        resolve()
-      }
-    })
-  })
-}
-
-async function dev(mainEntry, stylesheetEntry) {
-  const port = 8000
-  const host = '127.0.0.1'
-  const lrPort = 35729
-  const erPort = 8001
-  const erHost = '127.0.0.1'
-
+async function dev({
+  main = './src/Main.elm',
+  stylesheets = './src/Stylesheets.elm',
+  host = '127.0.0.1',
+  port = 8000,
+  template = './node_modules/lib/index.hbs',
+  reactorHost,
+  reactorPort = 8001,
+  livereloadPort = 35729,
+}) {
   // get a tmp dir for assets and live reload
   const {path: dir} = await tmp.dir()
 
   // proceses
   try {
-    await checkEntry('Main', mainEntry)
-    await checkEntry('Stylesheet', stylesheetEntry)
-    const reactor = await startElmReactor(erPort, erHost)
+    await validateFile('[Main:notfound]', main)
+    await validateFile('[Stylesheets:notfound]', stylesheets)
+    await validateFile('[Template:notfound]', stylesheets)
+    const reactor = await startElmReactor(reactorHost, reactorPort)
     spacer()
-    const lr = await startLiveReload(dir, port, host)
+    const lr = await startLiveReload(dir, host, port)
     spacer()
-    const app = await startExpressApp(dir, lrPort, erPort, erHost, port, host)
+    const appTemplate = await loadTemplate(template)
+    const app = await startExpressApp(
+      dir,
+      reactorHost,
+      reactorPort,
+      livereloadPort,
+      appTemplate,
+      host,
+      port,
+    )
     spacer()
 
     // file watchers
-    const stylesheetWatcher = await startStylesheetWatcher(
-      dir,
-      lr,
-      stylesheetEntry,
-    )
-    const mainWatcher = await startMainWatcher(
-      dir,
-      lr,
-      stylesheetWatcher,
-      mainEntry,
-    )
+    const stylesheetWatcher = await startStylesheetWatcher(dir, lr, stylesheets)
+    const mainWatcher = await startMainWatcher(dir, lr, stylesheetWatcher, main)
   } catch (e) {
     console.error(colors.error(e))
     console.error(colors.error('Exiting'))
     process.exit(1)
   }
 
-  console.info(colors.files(`[Main:entry:use] ${mainEntry}`))
-  console.info(colors.files(`[Stylesheet:entry:use] ${stylesheetEntry}`))
+  console.info(colors.files(`[Main:use] ${main}`))
+  console.info(colors.files(`[Stylesheets:use] ${stylesheets}`))
   spacer()
   console.info(
     chalk.bold.yellow(
@@ -363,21 +284,7 @@ async function dev(mainEntry, stylesheetEntry) {
   spacer()
 
   // do initial asset compilation
-  compileCss(dir, stylesheetEntry)
+  compileCss(dir, stylesheets)
 }
 
-function build(mainEntry, stylesheetEntry) {
-  outputDir = path.join(process.cwd(), './dist')
-  mkdirp(outputDir, () => {
-    compileCss(stylesheetEntry, outputDir).then(() => {
-      console.info('css done')
-    })
-  })
-}
-
-dev(MAIN_ENTRY, STYLESHEET_ENTRY)
-
-module.exports = {
-  dev,
-  build,
-}
+module.exports = dev

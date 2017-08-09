@@ -4,7 +4,7 @@
     "repository": "https://github.com/user/project.git",
     "license": "BSD3",
     "source-directories": [
-        "./src/elm",
+        "./src",
         "vendor_dir/assets/elm/NoRedInk/elm-asset-path-2.0.0/src"
     ],
     "exposed-modules": [],
