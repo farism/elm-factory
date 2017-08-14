@@ -8,7 +8,7 @@ const livereloadConnect = require('connect-livereload')
 const onExit = require('signal-exit')
 const path = require('path')
 const proxy = require('http-proxy-middleware')
-const spawn = require('child_process').spawn
+const spawn = require('cross-spawn')
 const tmp = require('tmp-promise')
 
 const {
@@ -236,7 +236,7 @@ async function dev({
   host = '127.0.0.1',
   port = 8000,
   template = defaults.template,
-  reactorHost,
+  reactorHost = host,
   reactorPort = 8001,
   livereloadPort = 35729,
 }) {

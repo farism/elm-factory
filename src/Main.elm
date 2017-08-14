@@ -1,10 +1,15 @@
 module Main exposing (..)
 
-import Html exposing (..)
-import Html.CssHelpers exposing (..)
-import Html.Attributes exposing (..)
-import Css exposing (..)
-import HelloWorldCss
+import Html exposing (Html, div)
+import Html.CssHelpers exposing (withNamespace)
+import Html.Attributes exposing (id, src)
+
+
+-- import Css exposing (..)
+
+import MainCss
+import Asset exposing (url)
+import Assets exposing (hero)
 
 
 { id, class, classList } =
@@ -13,5 +18,8 @@ import HelloWorldCss
 
 main : Html a
 main =
-    div [ id HelloWorldCss.Page ]
-        [ Html.text "Hello, World!!" ]
+    div [ id MainCss.Page ]
+        [ Html.text "Hello, World!!"
+        , Html.img [ src (url hero) ] []
+        , div [ id MainCss.Page2 ] []
+        ]
