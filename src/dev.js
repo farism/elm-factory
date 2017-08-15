@@ -11,11 +11,13 @@ const proxy = require('http-proxy-middleware')
 const spawn = require('cross-spawn')
 const tmp = require('tmp-promise')
 
+const EADDRINUSE = 'EADDRINUSE'
+
 const {
   compileCss,
   colors,
   defaults,
-  elapsed,
+  getElapsed,
   loadTemplate,
   spacer,
   validateFile,
@@ -40,42 +42,38 @@ function isPortOpen(port, address = 'localhost') {
 
 // create an elm-reactor process
 
-async function startElmReactor(host, port) {
-  const t = new Date()
+function startElmReactor(host, port) {
   console.info(colors.startup(`elm-reactor starting...`))
+  const t = new Date()
 
-  try {
-    const isOpen = await isPortOpen(port)
-  } catch (e) {
-    throw new Error(
-      `elm-reactor --port=${port} --address=${host}: resource busy (Address already in use)`,
-    )
-  }
+  return new Promise((resolve, reject) => {
+    isPortOpen(port)
+      .then(isOpen => {
+        spawn('elm-reactor', [`--port=${port}`, `--address=${host}`])
 
-  const reactor = spawn(
-    'elm-reactor',
-    [`--port=${port}`, `--address=${host}`],
-    {
-      detached: true, // running as detached or else child.pid returns the wrong pid
-    },
-  )
+        const reactor = console.info(
+          colors.startup(
+            `elm-reactor started at ${host}:${port} ${getElapsed(t)}`,
+          ),
+        )
 
-  onExit(function(code, signal) {
-    process.kill(-reactor.pid) // - kills process group range
+        resolve(reactor)
+      })
+      .catch(e => {
+        console.error(
+          colors.error(
+            `could not start elm-reactor on ${host}:${port}: ${EADDRINUSE}`,
+          ),
+        )
+      })
   })
-
-  console.info(
-    colors.startup(`elm-reactor started at ${host}:${port} ${elapsed(t)}`),
-  )
-
-  return reactor
 }
 
 // create a live reload server
 
 const startLiveReload = (dir, host, port) => {
   const t = new Date()
-  console.log(colors.startup('live-reload starting...'))
+  console.info(colors.startup('live-reload starting...'))
 
   return new Promise((resolve, reject) => {
     const lr = livereload.createServer(
@@ -86,9 +84,9 @@ const startLiveReload = (dir, host, port) => {
       () => {
         lr.watch(dir)
 
-        console.log(
+        console.info(
           colors.startup(
-            `live-reload started proxying on ${host}:${port} ${elapsed(t)}`,
+            `live-reload started proxying on ${host}:${port} ${getElapsed(t)}`,
           ),
         )
         resolve(lr)
@@ -101,7 +99,7 @@ const startLiveReload = (dir, host, port) => {
 
 function startExpressApp(dir, erHost, erPort, lrPort, template, host, port) {
   const t = new Date()
-  console.log(colors.startup('elm-factory server starting...'))
+  console.info(colors.startup('elm-factory express server starting...'))
 
   return new Promise((resolve, reject) => {
     const app = new express()
@@ -109,13 +107,13 @@ function startExpressApp(dir, erHost, erPort, lrPort, template, host, port) {
 
     app
       .listen(port, host, err => {
-        console.log(
+        console.info(
           colors.startup(
-            `elm-factory server started at ${host}:${port} ${elapsed(t)}`,
+            `elm-factory server started at ${host}:${port} ${getElapsed(t)}`,
           ),
         )
 
-        // handle the /_compile/*.elm files specifically to elm-reactor
+        // proxy the /_compile/*.elm files to elm-reactor
         app.use(
           proxy('/_compile', {
             target: erTarget,
@@ -155,53 +153,46 @@ function startExpressApp(dir, erHost, erPort, lrPort, template, host, port) {
       })
       .on('error', err => {
         reject(
-          err.code === 'EADDRINUSE'
-            ? `Could not start elm-reactor server: ${err.code}`
-            : 'elm-reactor could not start server',
+          err.code === EADDRINUSE
+            ? `could not start elm-factory express server on ${host}:${port}: ${err.code}`
+            : 'could not start elm-factory express server',
         )
       })
   })
 }
 
-async function addWatcherDeps(entry, onChange, watcher) {
-  try {
-    const files = await findElmDependencies(entry)
+function addWatcherDeps(entry, onChange, watcher) {
+  return findElmDependencies(entry)
+    .then(files => {
+      watcher.add([entry, ...files])
+      watcher.on('change', onChange)
 
-    watcher.add([entry, ...files])
+      console.info(entry, files)
 
-    watcher.on('change', onChange)
-
-    return watcher
-  } catch (e) {
-    console.error(colors.error(e))
-  }
+      return watcher
+    })
+    .catch(e => console.error(colors.error(e)))
 }
 
-async function startStylesheetWatcher(dir, lr, entry) {
+function startStylesheetWatcher(dir, lr, entry) {
   const watcher = chokidar.watch([], {ignored: () => false})
 
-  async function onChange(file) {
-    try {
-      const t = new Date()
-      console.info(colors.files(`[Stylesheets:changed] ${file}`))
+  function onChange(file) {
+    const t = new Date()
+    console.info(colors.files(`[Stylesheets:changed] ${file}`))
 
-      // immediately close watcher to clear all listeners before we compile and rebuild dep tree
-      watcher.close()
+    // immediately close watcher to clear all listeners before we compile and rebuild dep tree
+    watcher.close()
+    addWatcherDeps(entry, onChange, watcher)
+    lr.filterRefresh(file)
 
-      await compileCss(dir, entry)
-
-      await addWatcherDeps(entry, onChange, watcher)
-
-      lr.filterRefresh(file)
-    } catch (e) {
-      console.error(colors.error(e))
-    }
+    compileCss(dir, entry).catch(e => console.error(colors.error(e)))
   }
 
-  return await addWatcherDeps(entry, onChange, watcher)
+  return addWatcherDeps(entry, onChange, watcher)
 }
 
-async function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
+function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
   const watcher = chokidar.watch([], {
     ignored: file => {
       // ignore file if it is being watched by the stylesheet watcher
@@ -211,23 +202,17 @@ async function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
     },
   })
 
-  async function onChange(file) {
-    try {
-      const t = new Date()
-      console.info(colors.files(`[Main:changed], ${file}`))
+  function onChange(file) {
+    const t = new Date()
+    console.info(colors.files(`[Main:changed], ${file}`))
 
-      // immediately close watcher to clear all listeners before we rebuild dep tree
-      watcher.close()
-
-      await addWatcherDeps(entry, onChange, watcher)
-
-      lr.refresh(file)
-    } catch (e) {
-      console.error(colors.error(e))
-    }
+    // immediately close watcher to clear all listeners before we rebuild dep tree
+    watcher.close()
+    addWatcherDeps(entry, onChange, watcher)
+    lr.refresh(file)
   }
 
-  return await addWatcherDeps(entry, onChange, watcher)
+  return addWatcherDeps(entry, onChange, watcher)
 }
 
 async function dev({
@@ -241,7 +226,7 @@ async function dev({
   livereloadPort = 35729,
 }) {
   // get a tmp dir for assets and live reload
-  const {path: dir} = await tmp.dir()
+  const {path: dir} = await tmp.dir({unsafeCleanup: true})
 
   // proceses
   try {
@@ -285,7 +270,7 @@ async function dev({
   spacer()
 
   // do initial asset compilation
-  compileCss(dir, stylesheets)
+  compileCss(dir, stylesheets).catch(e => console.error(colors.error(e)))
 }
 
 module.exports = dev

@@ -2,7 +2,6 @@ module MainCss exposing (..)
 
 import Css exposing (..)
 import Css.Namespace exposing (namespace)
-import Asset
 import Assets exposing (hero)
 
 
@@ -18,12 +17,12 @@ type CssIds
 css =
     (stylesheet << namespace "helloworld")
         [ id Page
-            [ backgroundColor (hex "000000")
+            [ backgroundColor (hex "FF0000")
             , color (hex "FF0000")
             , fontSize (px 50)
             ]
         , id Page2
-            [ backgroundImage (url (Asset.url hero))
+            [ backgroundImage (url (Assets.url hero))
             , width (px 1200)
             , height (px 312)
             ]

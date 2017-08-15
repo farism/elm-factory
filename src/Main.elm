@@ -8,8 +8,7 @@ import Html.Attributes exposing (id, src)
 -- import Css exposing (..)
 
 import MainCss
-import Asset exposing (url)
-import Assets exposing (hero)
+import Assets exposing (url, hero)
 
 
 { id, class, classList } =
@@ -18,7 +17,7 @@ import Assets exposing (hero)
 
 main : Html a
 main =
-    div [ id MainCss.Page ]
+    div [ id MainCss.Page2 ]
         [ Html.text "Hello, World!!"
         , Html.img [ src (url hero) ] []
         , div [ id MainCss.Page2 ] []
