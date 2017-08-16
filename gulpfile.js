@@ -1,19 +1,22 @@
+const assetManifest = require('gulp-asset-manifest')
 const connect = require('connect')
 const cssnano = require('cssnano')
 const elm = require('gulp-elm')
 const express = require('express')
+const {findAllDependencies} = require('find-elm-dependencies')
 const gulp = require('gulp')
 const handlebars = require('handlebars')
 const livereload = require('gulp-livereload')
 const livereloadConnect = require('connect-livereload')
 const lr = require('tiny-lr')()
-const os = require('os')
+const merge = require('gulp-merge')
 const path = require('path')
-const plumber = require('gulp-plumber')
+const portscanner = require('portscanner')
 const postcss = require('gulp-postcss')
 const proxy = require('http-proxy-middleware')
-const shell = require('gulp-shell')
 const spawn = require('cross-spawn')
+const rev = require('gulp-rev')
+const runSequence = require('run-sequence')
 const tmp = require('tmp')
 const url = require('postcss-url')
 
@@ -53,88 +56,118 @@ const templateStr = `
 
 const {name: tmpDir} = tmp.dirSync()
 
-const template = handlebars.compile(templateStr)
-
-gulp.task('build-main', () =>
-  gulp.src('src/Main.elm').pipe(elm()).pipe(gulp.dest('dist/')),
-)
-
-gulp.task('build-css', () =>
-  gulp
-    .src('src/Stylesheets.elm')
-    .pipe(elmCss())
-    .pipe(
-      postcss([
-        url({
-          url: 'copy',
-          basePath: path.resolve('./'),
-          assetsPath: path.resolve('dist'),
-          useHash: true,
-        }),
-        url({url: asset => path.join('/public/', path.basename(asset.url))}),
-        cssnano(),
-      ]),
+const build = ({
+  main = './src/Main.elm',
+  stylesheets = './src/Stylesheets.elm',
+  output = './dist',
+}) => {
+  gulp.task('build', () =>
+    merge(
+      gulp.src(main).pipe(elm()),
+      gulp.src(stylesheets).pipe(elmCss()).pipe(
+        postcss([
+          url({
+            url: 'copy',
+            basePath: path.resolve('./'),
+            assetsPath: path.resolve(output),
+            useHash: true,
+          }),
+          url({
+            url: asset => path.join('/public/', path.basename(asset.url)),
+          }),
+          cssnano(),
+        ]),
+      ),
     )
-    .pipe(gulp.dest('dist')),
-)
+      .pipe(rev())
+      .pipe(gulp.dest('dist')),
+  )
+}
 
-gulp.task('css', () =>
-  gulp
-    .src('src/Stylesheets.elm')
-    .pipe(elmCss({out: tmpDir}))
-    .pipe(livereload()),
-)
-
-gulp.task('reactor', () => {
-  spawn('elm-reactor', [`--port=8001`, `--address=127.0.0.1`], {
-    stdio: 'inherit',
+const dev = ({
+  main = './src/Main.elm',
+  stylesheets = './src/Stylesheets.elm',
+  host = '127.0.0.1',
+  port,
+  reactorHost = '127.0.0.1',
+  reactorPort,
+}) => {
+  gulp.task('reactor', callback => {
+    spawn(
+      'elm-reactor',
+      [`--port=${reactorPort}`, `--address=${reactorHost}`],
+      {
+        stdio: 'inherit',
+      },
+    )
   })
-})
 
-gulp.task('server', () => {
-  const app = new express()
-  const target = 'http://127.0.0.1:8001'
+  gulp.task('server', () => {
+    const app = new express()
+    const target = `http://${reactorHost}:${reactorPort}`
+    const template = handlebars.compile(templateStr)
 
-  // proxy the /_compile/*.elm files to elm-reactor
-  app.use(
-    proxy('/_compile', {
-      target,
-    }),
+    // proxy the /_compile/*.elm files to elm-reactor
+    app.use(
+      proxy('/_compile', {
+        target,
+      }),
+    )
+
+    app.get('*.elm', [
+      // do live reload on this page
+      livereloadConnect({
+        port: 35729,
+        include: [/(.)*\.elm/],
+      }),
+      // handle with html template
+      (req, res) => {
+        res.send(template({path: req.url}))
+      },
+    ])
+
+    // static assets
+    app.use('/public', express.static(tmpDir))
+
+    // proxy all other requests to elm-reactor
+    app.use(
+      proxy({
+        target,
+      }),
+    )
+
+    app.listen(port, host)
+  })
+
+  gulp.task('css', () =>
+    gulp.src(stylesheets).pipe(elmCss({out: tmpDir})).pipe(livereload()),
   )
 
-  app.get('*.elm', [
-    // do live reload on this page
-    livereloadConnect({
-      port: 35729,
-      include: [/(.)*\.elm/],
-    }),
-    // handle with html template
-    (req, res) => {
-      console.log(req.url)
-      res.send(template({path: req.url}))
-    },
-  ])
+  let mainWatcher = null
 
-  // static assets
-  app.use('/public', express.static(tmpDir))
+  gulp.task('watch-main', () => {
+    mainWatcher && mainWatcher.end()
+    findAllDependencies(main).then(
+      files => (mainWatcher = gulp.watch(files, ['watch-main'])),
+    )
+  })
 
-  // proxy all other requests to elm-reactor
-  app.use(
-    proxy({
-      target,
-    }),
-  )
+  let cssWatcher = null
 
-  app.listen(8000, '127.0.0.1')
-})
+  gulp.task('watch-css', () => {
+    cssWatcher && cssWatcher.end()
+    findAllDependencies(main).then(
+      files => (cssWatcher = gulp.watch(files, ['watch-css'])),
+    )
+  })
 
-gulp.task('watch', () => {
-  livereload.listen()
-  gulp.watch('src/*Css.elm', ['elm-css-dev'])
-})
+  gulp.task('dev', () => {
+    livereload.listen()
+    runSequence(['reactor', 'server', 'css', 'watch-main', 'watch-css'])
+  })
+}
 
-gulp.task('build', ['build-main', 'build-css'])
-
-gulp.task('dev', ['css', 'reactor', 'server', 'watch'])
-
-gulp.task('default', ['dev'])
+module.exports = {
+  build,
+  dev,
+}

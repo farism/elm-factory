@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 const program = require('commander')
+const gulp = require('gulp')
 
-const build = require('../src/build')
+const {build} = require('../gulpfile')
 
 program.on('--help', function() {
   console.log(`
@@ -23,4 +24,8 @@ program
   .option('-o --output [n]', 'the directory in which to write built files')
   .parse(process.argv)
 
+// load the dev tasks
 build(program.opts())
+
+// start the main build task
+gulp.start('build')

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+const gulp = require('gulp')
+const portscanner = require('portscanner')
 const program = require('commander')
 
-const dev = require('../src/dev')
+const {dev} = require('../gulpfile')
 
 program.on('--help', function() {
   console.log(`
@@ -27,7 +29,17 @@ program
   .option('-t --template [n]', 'dev server html template file')
   .option('-r --reactor-host [n]', 'elm-reactor address')
   .option('-u --reactor-port [n]', 'elm-reactor port')
-  .option('-l --livereload-port [n]', 'livereload connector port')
   .parse(process.argv)
 
-dev(program.opts())
+// load the dev tasks
+
+const opts = program.opts()
+
+opts.host || opts.port
+  ? dev(opts) && gulp.start('dev')
+  : portscanner.findAPortNotInUse(8000, 9000).then(port => {
+      portscanner.findAPortNotInUse(8010, 9000).then(reactorPort => {
+        dev(Object.assign({}, opts, {port, reactorPort}))
+        gulp.start('dev')
+      })
+    })
