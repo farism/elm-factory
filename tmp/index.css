@@ -1,0 +1,16 @@
+#Page {
+    background-color: #0000FF;
+    color: #FF0000;
+    font-size: 50px;
+}
+
+#Page2 {
+    background-image: url(/src/assets/elm.png);
+    width: 1200px;
+    height: 312px;
+}
+
+.helloworldContainer {
+    margin: 0;
+    padding: 0;
+}

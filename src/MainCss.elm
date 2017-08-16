@@ -17,7 +17,7 @@ type CssIds
 css =
     (stylesheet << namespace "helloworld")
         [ id Page
-            [ backgroundColor (hex "FF0000")
+            [ backgroundColor (hex "0000FF")
             , color (hex "FF0000")
             , fontSize (px 50)
             ]

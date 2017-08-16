@@ -167,8 +167,6 @@ function addWatcherDeps(entry, onChange, watcher) {
       watcher.add([entry, ...files])
       watcher.on('change', onChange)
 
-      console.info(entry, files)
-
       return watcher
     })
     .catch(e => console.error(colors.error(e)))
@@ -204,7 +202,7 @@ function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
 
   function onChange(file) {
     const t = new Date()
-    console.info(colors.files(`[Main:changed], ${file}`))
+    console.info(colors.files(`[Main:changed] ${file}`))
 
     // immediately close watcher to clear all listeners before we rebuild dep tree
     watcher.close()

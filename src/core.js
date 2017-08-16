@@ -1,16 +1,11 @@
 const chalk = require('chalk')
 const elmCss = require('elm-css')
 const fs = require('fs-extra')
-const glob = require('glob-promise')
 const handlebars = require('handlebars')
 const path = require('path')
 const prettyMs = require('pretty-ms')
-const xxh = require('xxhashjs')
 
 const ELM_PACKAGE_NAME = 'elm-package.json'
-const HASH_LEN = 8
-const HEX_BASE = 16
-const SEED = 0
 
 const defaults = {
   main: './src/Main.elm',
@@ -57,44 +52,16 @@ function getElapsed(start) {
   return chalk.dim(str)
 }
 
-function getHash(content) {
-  return xxh
-    .h32(SEED)
-    .update(content)
-    .digest()
-    .toString(HEX_BASE)
-    .substr(0, HASH_LEN)
-}
-
-function getHashedFilename(file, contents) {
-  const ext = path.extname(file)
-  const basename = path.basename(file, ext)
-
-  return `${basename}.${getHash(contents)}${ext}`
-}
-
-function spacer(char = '-', len = 60) {
-  console.info(chalk.dim(char.repeat(len)))
-}
-
-function loadFilesAsStrings(pattern) {
-  return glob(pattern).then(files =>
-    Promise.all(files.map(file => fs.readFile(file))).then(contents =>
-      files.reduce(
-        (acc, file, i) =>
-          Object.assign({}, acc, {[file]: contents[i].toString()}),
-        {},
-      ),
-    ),
-  )
-}
-
 function loadTemplate(template) {
   return new Promise((resolve, reject) => {
     fs.readFile(template, 'utf8', (err, data) => {
       resolve(handlebars.compile(data))
     })
   })
+}
+
+function spacer(char = '-', len = 60) {
+  console.info(chalk.dim(char.repeat(len)))
 }
 
 function validateFile(log, entry) {
@@ -110,8 +77,6 @@ module.exports = {
   compileCss,
   defaults,
   getElapsed,
-  getHashedFilename,
-  loadFilesAsStrings,
   loadTemplate,
   spacer,
   validateFile,
