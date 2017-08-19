@@ -17,11 +17,6 @@ const defaults = {
 
 module.exports = function(options) {
   const transform = function(file, encode, callback) {
-    if (file.isNull()) {
-      this.push(file)
-      return callback()
-    }
-
     if (file.isStream()) {
       this.emit(
         'error',
@@ -37,8 +32,8 @@ module.exports = function(options) {
     elmCss(cwd, file.path, dir, module, port)
       .then(() => glob(`${dir}/*.css`))
       .then(files =>
-        Promise.all(files.map(file => fs.readFile(file))).then(allContents => {
-          allContents.map((contents, i) => {
+        Promise.all(files.map(file => fs.readFile(file))).then(allContent => {
+          allContent.map((contents, i) => {
             this.push(
               new gutil.File({
                 cwd: process.cwd(),
@@ -55,7 +50,7 @@ module.exports = function(options) {
       })
       .catch(e => {
         // console.error(e)
-        dir.removeCallback && dir.removeCallback();
+        dir.removeCallback && dir.removeCallback()
         callback()
       })
   }

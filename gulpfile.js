@@ -1,25 +1,27 @@
-const assetManifest = require('gulp-asset-manifest')
-const connect = require('connect')
 const cssnano = require('cssnano')
+const del = require('del')
 const elm = require('gulp-elm')
 const express = require('express')
-const {findAllDependencies} = require('find-elm-dependencies')
+const flatten = require('gulp-flatten')
 const gulp = require('gulp')
 const handlebars = require('handlebars')
 const livereload = require('gulp-livereload')
 const livereloadConnect = require('connect-livereload')
-const lr = require('tiny-lr')()
-const merge = require('gulp-merge')
 const path = require('path')
-const portscanner = require('portscanner')
 const postcss = require('gulp-postcss')
 const proxy = require('http-proxy-middleware')
+const pump = require('pump')
 const spawn = require('cross-spawn')
-const rev = require('gulp-rev')
+const rev = require('gulp-rev-all')
 const runSequence = require('run-sequence')
+const through = require('through2')
 const tmp = require('tmp')
 const url = require('postcss-url')
+const watch = require('gulp-watch')
+const xxh = require('xxhashjs')
 
+const elmFindDependencies = require('./src/gulp-elm-find-dependencies')
+const elmExtractAssets = require('./src/gulp-elm-extract-assets')
 const elmCss = require('./src/gulp-elm-css')
 
 const templateStr = `
@@ -54,34 +56,75 @@ const templateStr = `
 </html>
 `
 
-const {name: tmpDir} = tmp.dirSync()
-
 const build = ({
   main = './src/Main.elm',
   stylesheets = './src/Stylesheets.elm',
-  output = './dist',
+  outputPath = 'dist',
+  publicPath = '/public/',
 }) => {
-  gulp.task('build', () =>
-    merge(
-      gulp.src(main).pipe(elm()),
-      gulp.src(stylesheets).pipe(elmCss()).pipe(
-        postcss([
-          url({
-            url: 'copy',
-            basePath: path.resolve('./'),
-            assetsPath: path.resolve(output),
-            useHash: true,
-          }),
-          url({
-            url: asset => path.join('/public/', path.basename(asset.url)),
-          }),
-          cssnano(),
-        ]),
-      ),
-    )
-      .pipe(rev())
-      .pipe(gulp.dest('dist')),
+  const getHash = contents =>
+    xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
+
+  const transformFilename = (file, hash) =>
+    `${getHash(file.contents)}${path.extname(file.path)}`
+
+  gulp.task('build-clean', () => {
+    // del(outputPath)
+  })
+
+  gulp.task('build-main', () => {
+    pump([
+      gulp.src(main),
+      elm(),
+      elmExtractAssets({tag: 'AssetUrl'}),
+      rev.revision({
+        fileNameManifest: 'js-manifest.json',
+        dontUpdateReference: ['Main.js'],
+        replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
+          const filename = newReference.split('/').pop()
+          const newPath = path.join(publicPath, filename)
+
+          fragment.contents = fragment.contents.replace(
+            replaceRegExp,
+            `$1${newPath}$3$4`,
+          )
+        },
+        transformFilename,
+      }),
+      flatten(),
+      gulp.dest(outputPath),
+      rev.manifestFile(),
+      gulp.dest(outputPath),
+    ])
+  })
+
+  gulp.task('build-css', () =>
+    pump([
+      gulp.src(stylesheets),
+      elmCss(),
+      postcss([
+        url({
+          url: 'copy',
+          basePath: path.resolve('./'),
+          assetsPath: path.resolve(outputPath),
+          useHash: true,
+          hashOptions: {
+            method: getHash,
+          },
+        }),
+        url({
+          url: asset => path.join(publicPath, path.basename(asset.url)),
+        }),
+        cssnano(),
+      ]),
+      rev.revision({fileNameManifest: 'css-manifest.json', transformFilename}),
+      gulp.dest(outputPath),
+      rev.manifestFile(),
+      gulp.dest(outputPath),
+    ]),
   )
+
+  gulp.task('build', ['build-clean', 'build-main', 'build-css'])
 }
 
 const dev = ({
@@ -92,17 +135,17 @@ const dev = ({
   reactorHost = '127.0.0.1',
   reactorPort,
 }) => {
-  gulp.task('reactor', callback => {
+  const {name: tmpDir} = tmp.dirSync()
+
+  gulp.task('dev-reactor', () => {
     spawn(
       'elm-reactor',
       [`--port=${reactorPort}`, `--address=${reactorHost}`],
-      {
-        stdio: 'inherit',
-      },
+      {stdio: 'inherit'},
     )
   })
 
-  gulp.task('server', () => {
+  gulp.task('dev-server', () => {
     const app = new express()
     const target = `http://${reactorHost}:${reactorPort}`
     const template = handlebars.compile(templateStr)
@@ -136,34 +179,54 @@ const dev = ({
       }),
     )
 
-    app.listen(port, host)
+    app.listen(port, host, () => {
+      livereload.listen()
+    })
   })
 
-  gulp.task('css', () =>
-    gulp.src(stylesheets).pipe(elmCss({out: tmpDir})).pipe(livereload()),
-  )
+  let mainWatcher
 
-  let mainWatcher = null
-
-  gulp.task('watch-main', () => {
+  gulp.task('dev-main', () => {
+    livereload.reload()
     mainWatcher && mainWatcher.end()
-    findAllDependencies(main).then(
-      files => (mainWatcher = gulp.watch(files, ['watch-main'])),
-    )
+    mainWatcher = gulp.watch(main, ['dev-main'])
+
+    return pump([
+      gulp.src(main),
+      elmFindDependencies(),
+      through.obj((file, encode, callback) => {
+        const cssWatched = cssWatcher._watcher._watched
+        const cssWatchedFiles = Object.keys(cssWatched).reduce((acc, key) => {
+          return [...acc, ...cssWatched[key]]
+        }, [])
+        if (!cssWatchedFiles.includes(file.path)) {
+          mainWatcher._watcher.add(file.path)
+        }
+        callback()
+      }),
+    ])
   })
 
-  let cssWatcher = null
+  let cssWatcher
 
-  gulp.task('watch-css', () => {
+  gulp.task('dev-css', callback => {
     cssWatcher && cssWatcher.end()
-    findAllDependencies(main).then(
-      files => (cssWatcher = gulp.watch(files, ['watch-css'])),
-    )
+    cssWatcher = gulp.watch(stylesheets, ['dev-css'])
+
+    pump([gulp.src(stylesheets), elmCss({out: tmpDir}), livereload()])
+
+    return pump([
+      gulp.src(stylesheets),
+      elmFindDependencies(),
+      through.obj((file, encode, cb) => {
+        cssWatcher._watcher.add(file.path)
+        cb()
+      }),
+    ])
   })
 
   gulp.task('dev', () => {
-    livereload.listen()
-    runSequence(['reactor', 'server', 'css', 'watch-main', 'watch-css'])
+    runSequence(['dev-reactor', 'dev-server'], 'dev-css', 'dev-main')
   })
 }
 
