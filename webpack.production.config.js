@@ -8,7 +8,7 @@ const WebpackCleanupPlugin = require('webpack-cleanup-plugin')
 // local css modules
 loaders.push({
   test: /[/\\]src[/\\].*\.css/,
-  exclude: /(node_modules|bower_components|public\/)/,
+  exclude: /(node_modules|bower_components|build\/)/,
   loader: ExtractTextPlugin.extract(
     'style',
     'css?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]'
@@ -18,7 +18,7 @@ loaders.push({
 // local scss modules
 loaders.push({
   test: /[/\\]src[/\\].*\.scss/,
-  exclude: /(node_modules|bower_components|public\/)/,
+  exclude: /(node_modules|bower_components|build\/)/,
   loader: ExtractTextPlugin.extract(
     'style',
     'css?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss!sass'
@@ -34,7 +34,7 @@ module.exports = {
   entry: ['./src/index.jsx'],
   output: {
     publicPath: '/',
-    path: path.join(__dirname, 'public'),
+    path: path.join(__dirname, 'build'),
     filename: '[chunkhash].js',
   },
   resolve: {

@@ -17,7 +17,7 @@ loaders.push({
 // local scss modules
 loaders.push({
   test: /\.scss$/,
-  exclude: /[/\\](node_modules|public\/)[/\\]/,
+  exclude: /[/\\](node_modules|build\/)[/\\]/,
   loaders: [
     'style?sourceMap',
     'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]&sourceMap',
@@ -29,7 +29,7 @@ loaders.push({
 // local css modules
 loaders.push({
   test: /\.css$/,
-  exclude: /[/\\](node_modules|public\/)[/\\]/,
+  exclude: /[/\\](node_modules|build\/)[/\\]/,
   loaders: [
     'style?sourceMap',
     'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]&sourceMap',
@@ -41,7 +41,7 @@ module.exports = {
   devtool: WEBPACK_DEVTOOL,
   output: {
     publicPath: '/',
-    path: path.join(__dirname, 'public'),
+    path: path.join(__dirname, 'build'),
     filename: 'bundle.js',
   },
   resolve: {
@@ -51,7 +51,7 @@ module.exports = {
     loaders,
   },
   devServer: {
-    contentBase: './public',
+    contentBase: './build',
     // do not print bundle build stats
     noInfo: true,
     // enable HMR
