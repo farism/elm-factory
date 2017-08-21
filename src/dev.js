@@ -1,274 +1,152 @@
-const chalk = require('chalk')
-const chokidar = require('chokidar')
 const express = require('express')
-const findElmDependencies = require('find-elm-dependencies').findAllDependencies
-const http = require('http')
-const livereload = require('livereload')
+const gulp = require('gulp')
+const handlebars = require('handlebars')
+const livereload = require('gulp-livereload')
 const livereloadConnect = require('connect-livereload')
-const onExit = require('signal-exit')
 const path = require('path')
 const proxy = require('http-proxy-middleware')
+const pump = require('pump')
 const spawn = require('cross-spawn')
-const tmp = require('tmp-promise')
+const runSequence = require('run-sequence')
+const through = require('through2')
+const tmp = require('tmp')
+const watch = require('gulp-watch')
+const elmFindDependencies = require('gulp-elm-find-dependencies')
+const elmCss = require('gulp-elm-css')
 
-const EADDRINUSE = 'EADDRINUSE'
-
-const {
-  compileCss,
-  colors,
-  defaults,
-  getElapsed,
-  loadTemplate,
-  spacer,
-  validateFile,
-} = require('./core')
-
-function isPortOpen(port, address = 'localhost') {
-  return new Promise((resolve, reject) => {
-    try {
-      const server = http.createServer()
-      server.on('error', e => {
-        reject(new Error(e))
-      })
-      server.on('listening', () => {
-        server.close(() => resolve(true))
-      })
-      server.listen(port, address)
-    } catch (e) {
-      reject(e)
+const templateStr = `
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>~{{path}}</title>
+    <style type="text/css">
+      @import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro);
+      html, head, body {
+        margin: 0;
+        height: 100%;
+      }
+    </style>
+    <link rel="stylesheet" href="http://localhost:8000/public/index.css">
+  </head>
+  <body>
+    <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #9A9A9A; font-family: &#39;Source Sans Pro&#39;;">
+      <div style="font-size: 3em;">Building your project!</div>
+      <img src="/_reactor/waiting.gif">
+      <div style="font-size: 1em">With new projects, I need a bunch of extra time to download packages.</div>
+    </div>
+  </body>
+  <script src="/_compile{{path}}" charset="utf-8"></script>
+  <script>
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild)
     }
-  })
-}
+    runElmProgram()
+  </script>
+</html>
+`
 
-// create an elm-reactor process
-
-function startElmReactor(host, port) {
-  console.info(colors.startup(`elm-reactor starting...`))
-  const t = new Date()
-
-  return new Promise((resolve, reject) => {
-    isPortOpen(port)
-      .then(isOpen => {
-        spawn('elm-reactor', [`--port=${port}`, `--address=${host}`])
-
-        const reactor = console.info(
-          colors.startup(
-            `elm-reactor started at ${host}:${port} ${getElapsed(t)}`,
-          ),
-        )
-
-        resolve(reactor)
-      })
-      .catch(e => {
-        console.error(
-          colors.error(
-            `could not start elm-reactor on ${host}:${port}: ${EADDRINUSE}`,
-          ),
-        )
-      })
-  })
-}
-
-// create a live reload server
-
-const startLiveReload = (dir, host, port) => {
-  const t = new Date()
-  console.info(colors.startup('live-reload starting...'))
-
-  return new Promise((resolve, reject) => {
-    const lr = livereload.createServer(
-      {
-        originalPath: `${host}:${port}`,
-        // debug: true,
-      },
-      () => {
-        lr.watch(dir)
-
-        console.info(
-          colors.startup(
-            `live-reload started proxying on ${host}:${port} ${getElapsed(t)}`,
-          ),
-        )
-        resolve(lr)
-      },
-    )
-  })
-}
-
-// create an express server
-
-function startExpressApp(dir, erHost, erPort, lrPort, template, host, port) {
-  const t = new Date()
-  console.info(colors.startup('elm-factory express server starting...'))
-
-  return new Promise((resolve, reject) => {
-    const app = new express()
-    const erTarget = `http://${erHost}:${erPort}`
-
-    app
-      .listen(port, host, err => {
-        console.info(
-          colors.startup(
-            `elm-factory server started at ${host}:${port} ${getElapsed(t)}`,
-          ),
-        )
-
-        // proxy the /_compile/*.elm files to elm-reactor
-        app.use(
-          proxy('/_compile', {
-            target: erTarget,
-          }),
-        )
-
-        app.get('*.elm', [
-          // do live reload on this page
-          livereloadConnect({
-            port: lrPort,
-            include: [/(.)*\.elm/],
-          }),
-          // handle with html template
-          (req, res) => {
-            res.send(template({path: req.url}))
-          },
-        ])
-
-        // custom api proxy to get around cors
-        // app.use(
-        //   proxy('/api', {
-        //     target: erTarget,
-        //   }),
-        // )
-
-        // static file serving
-        app.use('/public', express.static(dir))
-
-        // proxy all other requests to elm-reactor
-        app.use(
-          proxy({
-            target: erTarget,
-          }),
-        )
-
-        resolve(app)
-      })
-      .on('error', err => {
-        reject(
-          err.code === EADDRINUSE
-            ? `could not start elm-factory express server on ${host}:${port}: ${err.code}`
-            : 'could not start elm-factory express server',
-        )
-      })
-  })
-}
-
-function addWatcherDeps(entry, onChange, watcher) {
-  return findElmDependencies(entry)
-    .then(files => {
-      watcher.add([entry, ...files])
-      watcher.on('change', onChange)
-
-      return watcher
-    })
-    .catch(e => console.error(colors.error(e)))
-}
-
-function startStylesheetWatcher(dir, lr, entry) {
-  const watcher = chokidar.watch([], {ignored: () => false})
-
-  function onChange(file) {
-    const t = new Date()
-    console.info(colors.files(`[Stylesheets:changed] ${file}`))
-
-    // immediately close watcher to clear all listeners before we compile and rebuild dep tree
-    watcher.close()
-    addWatcherDeps(entry, onChange, watcher)
-    lr.filterRefresh(file)
-
-    compileCss(dir, entry).catch(e => console.error(colors.error(e)))
-  }
-
-  return addWatcherDeps(entry, onChange, watcher)
-}
-
-function startMainWatcher(dir, lr, stylesheetWatcher, entry) {
-  const watcher = chokidar.watch([], {
-    ignored: file => {
-      // ignore file if it is being watched by the stylesheet watcher
-      return Object.values(stylesheetWatcher.getWatched()).some(arr =>
-        arr.includes(path.basename(file)),
-      )
-    },
-  })
-
-  function onChange(file) {
-    const t = new Date()
-    console.info(colors.files(`[Main:changed] ${file}`))
-
-    // immediately close watcher to clear all listeners before we rebuild dep tree
-    watcher.close()
-    addWatcherDeps(entry, onChange, watcher)
-    lr.refresh(file)
-  }
-
-  return addWatcherDeps(entry, onChange, watcher)
-}
-
-async function dev({
-  main = defaults.main,
-  stylesheets = defaults.stylesheets,
+const dev = ({
+  main = './src/Main.elm',
+  stylesheets = './src/Stylesheets.elm',
   host = '127.0.0.1',
-  port = 8000,
-  template = defaults.template,
-  reactorHost = host,
-  reactorPort = 8001,
-  livereloadPort = 35729,
-}) {
-  // get a tmp dir for assets and live reload
-  const {path: dir} = await tmp.dir({unsafeCleanup: true})
+  port,
+  reactorHost = '127.0.0.1',
+  reactorPort,
+}) => {
+  const { name: tmpDir } = tmp.dirSync()
 
-  // proceses
-  try {
-    await validateFile('[Main:notfound]', main)
-    await validateFile('[Stylesheets:notfound]', stylesheets)
-    await validateFile('[Template:notfound]', stylesheets)
-    const reactor = await startElmReactor(reactorHost, reactorPort)
-    spacer()
-    const lr = await startLiveReload(dir, host, port)
-    spacer()
-    const appTemplate = await loadTemplate(template)
-    const app = await startExpressApp(
-      dir,
-      reactorHost,
-      reactorPort,
-      livereloadPort,
-      appTemplate,
-      host,
-      port,
+  gulp.task('dev-reactor', () => {
+    spawn(
+      'elm-reactor',
+      [`--port=${reactorPort}`, `--address=${reactorHost}`],
+      { stdio: 'inherit' }
     )
-    spacer()
+  })
 
-    // file watchers
-    const stylesheetWatcher = await startStylesheetWatcher(dir, lr, stylesheets)
-    const mainWatcher = await startMainWatcher(dir, lr, stylesheetWatcher, main)
-  } catch (e) {
-    console.error(colors.error(e))
-    console.error(colors.error('Exiting'))
-    process.exit(1)
-  }
+  gulp.task('dev-server', () => {
+    const app = new express()
+    const target = `http://${reactorHost}:${reactorPort}`
+    const template = handlebars.compile(templateStr)
 
-  console.info(colors.files(`[Main:use] ${main}`))
-  console.info(colors.files(`[Stylesheets:use] ${stylesheets}`))
-  spacer()
-  console.info(
-    chalk.bold.yellow(
-      `elm-factory dev server is ready!! -> http://${host}:${port}`,
-    ),
-  )
-  console.info(chalk.bold.yellow(`> performing an initial compile of assets`))
-  spacer()
+    // proxy the /_compile/*.elm files to elm-reactor
+    app.use(
+      proxy('/_compile', {
+        target,
+      })
+    )
 
-  // do initial asset compilation
-  compileCss(dir, stylesheets).catch(e => console.error(colors.error(e)))
+    app.get('*.elm', [
+      // do live reload on this page
+      livereloadConnect({
+        port: 35729,
+        include: [/(.)*\.elm/],
+      }),
+      // handle with html template
+      (req, res) => {
+        res.send(template({ path: req.url }))
+      },
+    ])
+
+    // static assets
+    app.use('/public', express.static(tmpDir))
+
+    // proxy all other requests to elm-reactor
+    app.use(
+      proxy({
+        target,
+      })
+    )
+
+    app.listen(port, host, () => {
+      livereload.listen()
+    })
+  })
+
+  let mainWatcher
+
+  gulp.task('dev-main', () => {
+    livereload.reload()
+    mainWatcher && mainWatcher.end()
+    mainWatcher = gulp.watch(main, ['dev-main'])
+
+    return pump([
+      gulp.src(main),
+      elmFindDependencies(),
+      through.obj((file, encode, callback) => {
+        const cssWatched = cssWatcher._watcher._watched
+        const cssWatchedFiles = Object.keys(cssWatched).reduce((acc, key) => {
+          return [...acc, ...cssWatched[key]]
+        }, [])
+        if (!cssWatchedFiles.includes(file.path)) {
+          mainWatcher._watcher.add(file.path)
+        }
+        callback()
+      }),
+    ])
+  })
+
+  let cssWatcher
+
+  gulp.task('dev-css', callback => {
+    cssWatcher && cssWatcher.end()
+    cssWatcher = gulp.watch(stylesheets, ['dev-css'])
+
+    pump([gulp.src(stylesheets), elmCss({ out: tmpDir }), livereload()])
+
+    return pump([
+      gulp.src(stylesheets),
+      elmFindDependencies(),
+      through.obj((file, encode, cb) => {
+        cssWatcher._watcher.add(file.path)
+        cb()
+      }),
+    ])
+  })
+
+  gulp.task('dev', () => {
+    runSequence(['dev-reactor', 'dev-server'], 'dev-css', 'dev-main')
+  })
 }
 
 module.exports = dev
