@@ -1,3 +1,6 @@
+html {
+  overflow-y: scroll;
+}
 html,
 body {
   margin: 0;
@@ -27,6 +30,11 @@ a {
   color: #2896b8;
   outline: 0;
   text-decoration: none;
+  // transition: 0.3s color;
+
+  svg {
+    transition: 0.3s fill;
+  }
 }
 
 a:hover {

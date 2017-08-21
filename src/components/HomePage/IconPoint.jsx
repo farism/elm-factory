@@ -1,12 +1,21 @@
 import React, { PropTypes } from 'react'
+import { Link } from 'react-router-dom'
 
 import styles from './IconPoint.scss'
 
-export default function IconPoint({ children, icon, title }) {
+function withLink(href, contents) {
+  return (
+    <Link to={href}>
+      {contents}
+    </Link>
+  )
+}
+
+export default function IconPoint({ children, href, icon, title }) {
   const Icon = icon
 
-  return (
-    <div className={styles.container}>
+  const content = (
+    <div>
       <div className={styles.icon}>
         <Icon />
       </div>
@@ -16,6 +25,12 @@ export default function IconPoint({ children, icon, title }) {
       <p>
         {children}
       </p>
+    </div>
+  )
+
+  return (
+    <div className={styles.container}>
+      {href ? withLink(href, content) : content}
     </div>
   )
 }

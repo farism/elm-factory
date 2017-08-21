@@ -1,1 +1,2 @@
-export { default as default } from './CLIWrapper'
+import CLIWrapper from './CLIWrapper'
+export default CLIWrapper

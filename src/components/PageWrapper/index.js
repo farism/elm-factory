@@ -1,1 +1,2 @@
-export { default as default } from './PageWrapper'
+import PageWrapper from './PageWrapper'
+export default PageWrapper

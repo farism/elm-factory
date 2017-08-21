@@ -1,15 +1,50 @@
+@keyframes hover {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
 .container {
   flex: 1;
   padding: 0 32px;
   text-align: center;
 
+  &:hover {
+    .icon {
+      svg {
+        animation-name: hover;
+
+        path {
+          fill: #2896b8;
+        }
+      }
+    }
+
+    h3,
+    p {
+      color: #2896b8;
+    }
+  }
+
   .icon {
     svg {
+      animation-duration: 2s;
+      animation-fill-mode: both;
+      animation-iteration-count: infinite;
+      animation-timing-function: linear;
       height: 164px;
+      transition: 0.5s;
       width: 164px;
 
       path {
         fill: #293c4b;
+        transition: 0.5s;
       }
 
       @media screen and (max-width: 800px) {
@@ -21,15 +56,25 @@
 
   h3 {
     font-size: 22px;
+    transition: 0.5s color;
   }
 
   p {
     font-size: 16px;
     padding-left: 4px;
     padding-right: 4px;
+    transition: 0.5s color;
 
     @media screen and (max-width: 800px) {
       font-size: 14px;
+    }
+  }
+
+  a {
+    color: #293c4b;
+
+    &:hover {
+      text-decoration: none;
     }
   }
 

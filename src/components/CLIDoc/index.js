@@ -1,1 +1,2 @@
-export { default as default } from './CLIDoc'
+import CLIDoc from './CLIDoc'
+export default CLIDoc

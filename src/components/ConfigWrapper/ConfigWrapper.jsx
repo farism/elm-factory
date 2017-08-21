@@ -1,5 +1,5 @@
-import React, { PureComponent } from 'react'
-import { Link, routerShape } from 'react-router'
+import React from 'react'
+import { Link, routerShape } from 'react-router-dom'
 
 import makeProps from '../../make_props'
 import publishProps from '../../publish_props'

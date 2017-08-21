@@ -1,5 +1,5 @@
-import React, { PureComponent } from 'react'
-import { Link } from 'react-router'
+import React from 'react'
+import { Link } from 'react-router-dom'
 import FileCodeIcon from 'react-octicons-svg/dist/FileCodeIcon'
 import GlobeIcon from 'react-octicons-svg/dist/GlobeIcon'
 import PackageIcon from 'react-octicons-svg/dist/PackageIcon'
@@ -47,11 +47,11 @@ export default function HomePage() {
           and just code!
         </SectionHeader>
         <div className={styles.pointContainer}>
-          <IconPoint icon={FileCodeIcon} title="Develop">
+          <IconPoint href="/cli/dev" icon={FileCodeIcon} title="Develop">
             The elm-factory dev server is a thin layer on top of popular
             existing libraries such as elm-reactor and elm-css.
           </IconPoint>
-          <IconPoint icon={PackageIcon} title="Package">
+          <IconPoint href="/cli/build" icon={PackageIcon} title="Package">
             Run a single command to extract stylesheet and other assets from
             your Elm program, with automatic cache busting features.
           </IconPoint>

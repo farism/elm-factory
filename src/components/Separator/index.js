@@ -1,1 +1,2 @@
-export { default as default } from './Separator'
+import Separator from './Separator'
+export default Separator

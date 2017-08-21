@@ -1,1 +1,2 @@
-export { default as default } from './ConfigPropDoc'
+import ConfigPropDoc from './ConfigPropDoc'
+export default ConfigPropDoc

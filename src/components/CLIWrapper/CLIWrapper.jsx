@@ -1,5 +1,5 @@
-import React, { PureComponent } from 'react'
-import { Link, routerShape } from 'react-router'
+import React, { PropTypes } from 'react'
+import { Link, matchShape } from 'react-router-dom'
 
 import docs from '../../docs'
 import CLIDoc from '../CLIDoc'
@@ -7,8 +7,8 @@ import { PrimarySection, SubtronSection } from '../PageSections'
 
 import styles from './CLIWrapper.scss'
 
-export default function CLIWrapper({ router }) {
-  const targetDoc = docs.find(doc => doc.command === router.params.command)
+export default function CLIWrapper({ match }) {
+  const targetDoc = docs.find(doc => doc.command === match.params.command)
 
   return (
     <div>
@@ -42,5 +42,7 @@ export default function CLIWrapper({ router }) {
 }
 
 CLIWrapper.propTypes = {
-  router: routerShape,
+  match: PropTypes.shape({
+    params: PropTypes.shape().isRequired,
+  }).isRequired,
 }
