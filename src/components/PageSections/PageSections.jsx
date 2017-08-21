@@ -1,81 +1,68 @@
-/* eslint-disable react/no-multi-comp */
-
-import React, { PureComponent, PropTypes } from 'react'
+import React, { PropTypes } from 'react'
 
 import Separator from '../Separator'
 
 import styles from './PageSection.scss'
 
-class PrimarySection extends PureComponent {
-  static propTypes = {
-    children: PropTypes.node,
-  }
-
-  render() {
-    return (
-      <div className={`${styles.section} ${styles.primary}`}>
-        {this.props.children}
-      </div>
-    )
-  }
+function PrimarySection({ children }) {
+  return (
+    <div className={`${styles.section} ${styles.primary}`}>
+      {children}
+    </div>
+  )
 }
 
-class SecondarySection extends PureComponent {
-  static propTypes = {
-    children: PropTypes.node,
-  }
-
-  render() {
-    return (
-      <div className={`${styles.section} ${styles.secondary}`}>
-        {this.props.children}
-      </div>
-    )
-  }
+PrimarySection.propTypes = {
+  children: PropTypes.node,
 }
 
-class SubtronSection extends PureComponent {
-  static propTypes = {
-    title: PropTypes.string,
-    children: PropTypes.node,
-  }
-
-  render() {
-    const { children, title } = this.props
-    return (
-      <div className={`${styles.section} ${styles.subtron}`}>
-        <h1>
-          {title}
-        </h1>
-        <p>
-          {children}
-        </p>
-      </div>
-    )
-  }
+function SecondarySection({ children }) {
+  return (
+    <div className={`${styles.section} ${styles.secondary}`}>
+      {children}
+    </div>
+  )
 }
 
-class SectionHeader extends PureComponent {
-  static propTypes = {
-    title: PropTypes.string,
-    children: PropTypes.node,
-  }
+SecondarySection.propTypes = {
+  children: PropTypes.node,
+}
 
-  render() {
-    const { children, title } = this.props
+function SubtronSection({ children, title }) {
+  return (
+    <div className={`${styles.section} ${styles.subtron}`}>
+      <h1>
+        {title}
+      </h1>
+      <p>
+        {children}
+      </p>
+    </div>
+  )
+}
 
-    return (
-      <div>
-        <h1 className={styles.sectionHeaderTitle}>
-          {title}
-        </h1>
-        <p className={styles.sectionHeaderContent}>
-          {children}
-        </p>
-        <Separator big />
-      </div>
-    )
-  }
+SubtronSection.propTypes = {
+  title: PropTypes.string,
+  children: PropTypes.node,
+}
+
+function SectionHeader({ children, title }) {
+  return (
+    <div>
+      <h1 className={styles.sectionHeaderTitle}>
+        {title}
+      </h1>
+      <p className={styles.sectionHeaderContent}>
+        {children}
+      </p>
+      <Separator big />
+    </div>
+  )
+}
+
+SectionHeader.propTypes = {
+  title: PropTypes.string,
+  children: PropTypes.node,
 }
 
 export { PrimarySection, SecondarySection, SectionHeader, SubtronSection }

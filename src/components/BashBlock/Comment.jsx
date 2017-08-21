@@ -1,18 +1,16 @@
-import React, { PureComponent, PropTypes } from 'react'
+import React, { PropTypes } from 'react'
 
 import styles from './BashBlock.scss'
 
-export default class Comment extends PureComponent {
-  static propTypes = {
-    value: PropTypes.string.isRequired,
-  }
+export default function Comment({ value }) {
+  return (
+    <div className={styles.comment}>
+      <span className={styles.prefix}>#&nbsp;</span>
+      {value}
+    </div>
+  )
+}
 
-  render() {
-    return (
-      <div className={styles.comment}>
-        <span className={styles.prefix}>#&nbsp;</span>
-        {this.props.value}
-      </div>
-    )
-  }
+Comment.propTypes = {
+  value: PropTypes.string.isRequired,
 }

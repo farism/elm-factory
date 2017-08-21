@@ -1,18 +1,16 @@
-import React, { PureComponent, PropTypes } from 'react'
+import React, { PropTypes } from 'react'
 
 import styles from './BashBlock.scss'
 
-export default class Line extends PureComponent {
-  static propTypes = {
-    value: PropTypes.string.isRequired,
-  }
+export default function Line({ value }) {
+  return (
+    <div className={styles.line}>
+      <span className={styles.prefix}>$&nbsp;</span>
+      {value}
+    </div>
+  )
+}
 
-  render() {
-    return (
-      <div className={styles.line}>
-        <span className={styles.prefix}>$&nbsp;</span>
-        {this.props.value}
-      </div>
-    )
-  }
+Line.propTypes = {
+  value: PropTypes.string.isRequired,
 }
