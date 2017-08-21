@@ -63,8 +63,8 @@ module.exports = {
       allChunks: true,
     }),
     new HtmlWebpackPlugin({
+      filename: '../index.html',
       template: './src/template.html',
-      title: 'Webpack App',
     }),
     new webpack.optimize.DedupePlugin(),
   ],

@@ -6,6 +6,8 @@
   "main": "src/index.jsx",
   "scripts": {
     "build": "webpack --config webpack.production.config.js --progress --profile --colors",
+    "precommit": "lint-staged",
+    "pretty": "prettier --write --no-semi --single-quote --trailing-comma es5",
     "start": "webpack-dev-server --progress --profile --colors"
   },
   "repository": {
@@ -34,8 +36,11 @@
     "extract-text-webpack-plugin": "^1.0.1",
     "file-loader": "0.9.0",
     "html-webpack-plugin": "^2.24.1",
+    "husky": "^0.14.3",
+    "lint-staged": "^4.0.3",
     "node-sass": "^4.1.1",
     "postcss-loader": "^1.2.1",
+    "prettier": "^1.5.3",
     "react-hot-loader": "^3.0.0-beta.6",
     "sass-loader": "^4.0.2",
     "style-loader": "0.13.1",
