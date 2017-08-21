@@ -1,30 +1,36 @@
 #!/usr/bin/env node
 
-const program = require('commander')
+const chalk = require('chalk')
 const gulp = require('gulp')
+const program = require('commander')
 
-const {build} = require('../src')
+const { create } = require('../src')
 
-program.on('--help', function() {
+const help = () =>
   console.log(`
   Example:
 
-    > elm-factory build -m ./src/MyApp.elm -s ./src/MyCss.elm -o ./dist
+    ${chalk.bold.cyan('> elm-factory create', chalk.cyan.underline('my-elm-app'))}
 
     Will:
 
-    - build the application using elm-css and elm-make
-    - output files to ./dist
-    `)
+    - create a boilerplate project
+    - cd into the created folder
+  `)
+
+program.on('--help', function() {
+  help()
 })
 
-program
-  .option('-m --main [n]', 'application main entry')
-  .option('-c --stylesheets [n]', 'application stylesheets entry')
-  .option('-o --output [n]', 'the directory in which to write built files')
-  .parse(process.argv)
+const name = program.parse(process.argv).args[0]
+
+if (!name) {
+  console.log(chalk.red('Please enter a project directory name'))
+  help()
+  process.exit(1)
+}
 
 // load the dev tasks
-build(program.opts())
+create({ name })
 
-gulp.start('build')
+gulp.start('create')
