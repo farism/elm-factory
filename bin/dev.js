@@ -4,7 +4,7 @@ const gulp = require('gulp')
 const portscanner = require('portscanner')
 const program = require('commander')
 
-const {dev} = require('../gulpfile')
+const {dev} = require('../src')
 
 program.on('--help', function() {
   console.log(`

@@ -18,7 +18,7 @@ css =
     (stylesheet << namespace "helloworld")
         [ id Page
             [ backgroundColor (hex "FFFFFF")
-            , color (hex "FF0000")
+            , color (hex "000000")
             , fontSize (px 50)
             ]
         , id Page2

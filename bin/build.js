@@ -3,7 +3,7 @@
 const program = require('commander')
 const gulp = require('gulp')
 
-const {build} = require('../gulpfile')
+const {build} = require('../src')
 
 program.on('--help', function() {
   console.log(`
@@ -27,5 +27,4 @@ program
 // load the dev tasks
 build(program.opts())
 
-// start the main build task
 gulp.start('build')

@@ -12,9 +12,6 @@ url asset =
             url
 
 
-hero =
-    AssetUrl "/src/assets/elm.png"
 
-
-hero2 =
-    AssetUrl "/src/assets/css3.png"
+-- assetFunction =
+-- AssetUrl "/src/assets/elm.png"
