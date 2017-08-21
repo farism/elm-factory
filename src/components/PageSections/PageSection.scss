@@ -1,0 +1,66 @@
+.section {
+  padding: 48px;
+
+  @media screen and (max-width: 500px) {
+    padding: 24px;
+  }
+
+  &.primary {
+  }
+
+  &.secondary {
+    background: #f6f8f8;
+    border: 1px solid #e0e5e6;
+    min-height: 0;
+  }
+
+  &.subtron {
+    background-color: #f6f8f8;
+    border: 1px solid #e0e5e6;
+    position: relative;
+    text-align: center;
+
+    > * {
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    > h1 {
+      color: #293c4b;
+      font-size: 40px;
+      font-weight: 300;
+      margin-bottom: 0.3em;
+      max-width: 800px;
+    }
+
+    > p {
+      color: #293c4b;
+      font-size: 20px;
+      font-weight: 300;
+      margin-bottom: 12px;
+      margin-top: 0;
+      max-width: 800px;
+    }
+  }
+
+  .sectionHeaderTitle {
+    color: #20515b;
+    font-size: 40px;
+    font-weight: 300;
+    margin-bottom: 0.3em;
+    margin: 0 auto;
+    max-width: 800px;
+    text-align: center;
+  }
+
+  .sectionHeaderContent {
+    color: #293c4b;
+    font-size: 20px;
+    font-weight: 300;
+    margin-bottom: 12px;
+    margin-top: 0;
+    margin: 0 auto;
+    max-width: 800px;
+    text-align: center;
+  }
+}

@@ -1,0 +1,72 @@
+.block {
+  -webkit-font-smoothing: antialiased;
+  background-color: #2b2e3b;
+  border-radius: 4px;
+  border: 1px solid #111218;
+  color: #9feaf9;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.65;
+  margin: 24px auto;
+  max-width: 800px;
+  overflow: auto;
+  padding: 12px;
+  text-align: left;
+
+  &.fullWidth {
+    margin: 0;
+    max-width: none;
+    width: 100%;
+  }
+
+  .blockWidthConstrainer {
+    min-width: 400px;
+  }
+
+  .closeButton {
+    display: none;
+    margin-top: 64px;
+    text-align: center;
+
+    > button {
+      background: transparent;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      color: #9feaf9;
+      cursor: pointer;
+      font-size: 16px;
+      outline: 0;
+      padding: 4px 12px;
+      transition: border-color 0.2s ease-in-out;
+
+      &:hover {
+        border: 1px solid #9feaf9;
+      }
+    }
+  }
+}
+
+.prefix {
+  margin-left: 24px;
+  user-select: none;
+
+  @media screen and (max-width: 500px) {
+    margin-left: 0;
+  }
+}
+
+.comment {
+  color: #719fad;
+  display: flex;
+  font-style: italic;
+  user-select: none;
+}
+
+.line {
+  white-space: nowrap;
+}
+
+.gap {
+  height: 24px;
+}

@@ -1,0 +1,9 @@
+.pointContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+
+  @media screen and (max-width: 800px) {
+    flex-direction: column;
+  }
+}

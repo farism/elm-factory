@@ -1,0 +1,22 @@
+.link {
+  align-items: center;
+  color: #34495e;
+  display: inline-block;
+  display: flex;
+  margin-left: 20px;
+  text-decoration: none !important;
+
+  svg {
+    fill: #34495e;
+    height: 32px;
+    width: 32px;
+  }
+
+  &:hover {
+    color: #000000;
+
+    svg {
+      fill: #000000;
+    }
+  }
+}

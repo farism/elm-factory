@@ -1,0 +1,41 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    "Segoe UI", "Oxygen", "Ubuntu", "Cantarell", "Open Sans", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #293c4b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1 {
+  -webkit-font-smoothing: antialiased;
+}
+
+h3 {
+  -webkit-font-smoothing: antialiased;
+  font-weight: 400;
+  font-size: 22px;
+}
+
+a {
+  color: #2896b8;
+  outline: 0;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code > pre {
+  background: #2b2e3b;
+  color: #9feaf9;
+  padding: 16px;
+  -webkit-font-smoothing: antialiased;
+}

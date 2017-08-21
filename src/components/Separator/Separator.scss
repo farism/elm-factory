@@ -1,0 +1,14 @@
+.separator {
+  border-color: #d1d9db;
+  height: 0;
+  margin: 30px 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #ddd;
+
+  &.big {
+    margin: 64px auto;
+    max-width: 1200px;
+  }
+}
