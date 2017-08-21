@@ -1,0 +1,33 @@
+{
+  "name": "elm-factory-io",
+  "version": "0.1.0",
+  "private": true,
+  "description": "elm-factory website",
+  "scripts": {
+    "start": "webpack-dev-server --devtool eval-source-map --history-api-fallback --open",
+    "build": "webpack -p"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rafrex/spa-github-pages.git"
+  },
+  "author": "Faris Mustafa <farismmk@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "prop-types": "^15.5.8",
+    "react": "^15.5.4",
+    "react-dom": "^15.5.4",
+    "react-interactive": "^0.6.5",
+    "react-router-dom": "^4.1.1"
+  },
+  "devDependencies": {
+    "babel-core": "^6.24.1",
+    "babel-eslint": "^7.2.3",
+    "babel-loader": "^7.0.0",
+    "babel-preset-env": "^1.4.0",
+    "babel-preset-react": "^6.24.1",
+    "babel-preset-stage-1": "^6.24.1",
+    "webpack": "^2.4.1",
+    "webpack-dev-server": "^2.4.5"
+  }
+}
