@@ -10,9 +10,10 @@ const spawn = require('cross-spawn')
 const runSequence = require('run-sequence')
 const through = require('through2')
 const tmp = require('tmp')
-const watch = require('gulp-watch')
 const elmFindDependencies = require('gulp-elm-find-dependencies')
 const elmCss = require('gulp-elm-css')
+
+const defaults = require('../defaults').dev
 
 const templateStr = `
 <!DOCTYPE HTML>
@@ -47,12 +48,12 @@ const templateStr = `
 `
 
 const dev = ({
-  main = './src/Main.elm',
-  stylesheets = './src/Stylesheets.elm',
-  host = '127.0.0.1',
-  port,
-  reactorHost = '127.0.0.1',
-  reactorPort,
+  main = defaults.main,
+  stylesheets = defaults.stylesheets,
+  host = defaults.host,
+  port = defaults.port,
+  reactorHost = defaults.reactorHost,
+  reactorPort = defaults.reactorPort,
 }) => {
   const { name: tmpDir } = tmp.dirSync()
 

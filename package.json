@@ -7,10 +7,7 @@
   "author": "Faris Mustafa <farismmk@gmail.com>",
   "license": "MIT",
   "bin": {
-    "elm-factory": "./bin/cli.js",
-    "elm-factory-build": "./bin/build.js",
-    "elm-factory-create": "./bin/create.js",
-    "elm-factory-dev": "./bin/dev.js"
+    "elm-factory": "./bin/cli.js"
   },
   "scripts": {
     "dev": "node index.js",
@@ -18,10 +15,6 @@
     "gulp": "gulp"
   },
   "dependencies": {
-    "chalk": "^2.1.0",
-    "chokidar": "^1.6.1",
-    "connect": "^3.6.3",
-    "connect-history-api-fallback": "^1.3.0",
     "connect-livereload": "^0.6.0",
     "cross-spawn": "^5.1.0",
     "cssnano": "^3.10.0",
@@ -29,51 +22,31 @@
     "elm": "^0.18.0",
     "elm-css": "^0.6.1",
     "express": "^4.15.2",
-    "express-http-proxy": "^0.11.0",
-    "express-request-proxy": "^2.0.0",
     "fs-extra": "^4.0.1",
     "glob-promise": "^3.1.0",
     "gulp": "^3.9.1",
     "gulp-compile-handlebars": "^0.6.1",
     "gulp-connect": "^5.0.0",
-    "gulp-debug": "^3.1.0",
     "gulp-elm": "^0.7.2",
     "gulp-elm-css": "^0.1.0",
     "gulp-elm-extract-assets": "^0.1.0",
     "gulp-elm-find-dependencies": "^0.1.0",
-    "gulp-filter": "^5.0.1",
     "gulp-flatten": "^0.3.1",
-    "gulp-handlebars": "^4.0.0",
     "gulp-livereload": "^3.8.1",
     "gulp-postcss": "^7.0.0",
     "gulp-rename": "^1.2.2",
     "gulp-rev-all": "^0.9.7",
-    "gulp-shell": "^0.6.3",
-    "gulp-template": "^4.0.0",
     "gulp-through": "^0.4.0",
-    "gulp-uglify": "^3.0.0",
-    "gulp-watch": "^4.3.11",
     "handlebars": "^4.0.10",
     "http-proxy-middleware": "^0.17.4",
-    "lazypipe": "^1.0.1",
-    "livereload": "^0.6.2",
-    "merge-stream": "^1.0.1",
-    "mkdirp-promise": "^5.0.1",
-    "node-elm-compiler": "^4.3.0",
     "portscanner": "^2.1.1",
     "postcss": "^6.0.9",
     "postcss-url": "^7.1.2",
-    "ps-tree": "^1.1.0",
     "pump": "^1.0.2",
     "run-sequence": "^2.1.0",
-    "serve-static": "^1.12.4",
-    "tiny-lr": "^1.0.5",
-    "tmp-promise": "^1.0.3",
     "uglify-js": "^3.0.27",
     "vinyl": "^2.1.0",
-    "xxhashjs": "^0.2.1"
-  },
-  "devDependencies": {
-    "nodemon": "^1.11.0"
+    "xxhashjs": "^0.2.1",
+    "yargs": "^8.0.2"
   }
 }
