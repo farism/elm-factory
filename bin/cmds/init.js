@@ -6,7 +6,9 @@ module.exports = {
   command: init.command,
   desc: init.description,
   builder: function(yargs) {
-    yargs.demandOption('dir', 'You must enter a project name')
+    yargs
+      .options(init.options)
+      .demandOption('dir', 'You must enter a project name')
   },
   handler: function(argv) {
     require('../../src/tasks/init')(argv)

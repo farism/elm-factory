@@ -1,29 +1,29 @@
 const defaults = require('../../src/defaults').build
 
 module.exports = {
-  command: 'build',
-  usage: 'build [options]',
+  name: 'build',
+  command: 'build [options]',
   description: 'builds an elm-factory for production',
   options: {
     m: {
       alias: 'main',
-      describe: 'main entry',
+      description: 'main entry',
       default: defaults.main,
     },
     s: {
       alias: 'stylesheets',
-      describe: 'stylesheets entry',
+      description: 'stylesheets entry',
       default: defaults.stylesheets,
     },
     o: {
       alias: 'output',
-      describe: 'output directory',
+      description: 'output directory',
       default: defaults.output,
     },
     p: {
-      alias: 'public',
-      describe: 'public path to serve from',
-      default: defaults.public,
+      alias: 'path',
+      description: 'absolute path to static assets',
+      default: defaults.path,
     },
   },
 }

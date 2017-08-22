@@ -2,7 +2,7 @@
   "name": "elm-factory",
   "version": "0.3.0",
   "description": "dev server and build system wrapping elm-reactor",
-  "main": "index.js",
+  "main": "lib/index.js",
   "repository": {},
   "author": "Faris Mustafa <farismmk@gmail.com>",
   "license": "MIT",
@@ -10,9 +10,8 @@
     "elm-factory": "./bin/cli.js"
   },
   "scripts": {
-    "dev": "node index.js",
-    "build": "node index.js",
-    "gulp": "gulp"
+    "build": "babel src -d lib",
+    "prepublish": "npm run build"
   },
   "dependencies": {
     "connect-livereload": "^0.6.0",
@@ -48,5 +47,9 @@
     "vinyl": "^2.1.0",
     "xxhashjs": "^0.2.1",
     "yargs": "^8.0.2"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1"
   }
 }

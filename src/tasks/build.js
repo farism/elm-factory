@@ -19,7 +19,7 @@ const build = ({
   main = defaults.main,
   stylesheets = defaults.stylesheets,
   output = defaults.output,
-  public = 'public',
+  path: publicPath = 'public',
 }) => {
   const getHash = contents =>
     xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
@@ -41,7 +41,7 @@ const build = ({
         dontUpdateReference: ['Main.js'],
         replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
           const filename = newReference.split('/').pop()
-          const newPath = path.join(public, filename)
+          const newPath = path.join(path, filename)
 
           fragment.contents = fragment.contents.replace(
             replaceRegExp,
@@ -72,7 +72,7 @@ const build = ({
           },
         }),
         url({
-          url: asset => path.join(public, path.basename(asset.url)),
+          url: asset => path.join(path, path.basename(asset.url)),
         }),
         cssnano(),
       ]),
