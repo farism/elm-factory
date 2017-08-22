@@ -16,14 +16,14 @@ module.exports = {
       default: defaults.stylesheets,
     },
     o: {
-      alias: 'output',
-      description: 'output directory',
-      default: defaults.output,
+      alias: 'output-path',
+      description: 'output directory path',
+      default: defaults.outputPath,
     },
     p: {
-      alias: 'path',
+      alias: 'public-path',
       description: 'absolute path to static assets',
-      default: defaults.path,
+      default: defaults.publicPath,
     },
   },
 }

@@ -6,8 +6,8 @@ const port = 8000
 const build = {
   main,
   stylesheets,
-  output: 'build',
-  public: '/public/',
+  outputPath: 'build',
+  publicPath: '/public/',
 }
 
 const dev = {

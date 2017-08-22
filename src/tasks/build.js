@@ -18,17 +18,20 @@ const defaults = require('../defaults').build
 const build = ({
   main = defaults.main,
   stylesheets = defaults.stylesheets,
-  output = defaults.output,
-  path: publicPath = 'public',
+  outputPath = defaults.outputPath,
+  publicPath = defaults.publicPath,
 }) => {
   const getHash = contents =>
     xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
+
+  const getPublicPath = filename =>
+    path.join(publicPath, path.basename(filename))
 
   const transformFilename = (file, hash) =>
     `${getHash(file.contents)}${path.extname(file.path)}`
 
   gulp.task('build-clean', () => {
-    del(output)
+    del(outputPath)
   })
 
   gulp.task('build-main', () => {
@@ -41,7 +44,7 @@ const build = ({
         dontUpdateReference: ['Main.js'],
         replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
           const filename = newReference.split('/').pop()
-          const newPath = path.join(path, filename)
+          const newPath = getPublicPath(filename)
 
           fragment.contents = fragment.contents.replace(
             replaceRegExp,
@@ -51,9 +54,9 @@ const build = ({
         transformFilename,
       }),
       flatten(),
-      gulp.dest(output),
+      gulp.dest(outputPath),
       rev.manifestFile(),
-      gulp.dest(output),
+      gulp.dest(outputPath),
     ])
   })
 
@@ -65,14 +68,14 @@ const build = ({
         url({
           url: 'copy',
           basePath: path.resolve('./'),
-          assetsPath: path.resolve(output),
+          assetsPath: path.resolve(outputPath),
           useHash: true,
           hashOptions: {
             method: getHash,
           },
         }),
         url({
-          url: asset => path.join(path, path.basename(asset.url)),
+          url: asset => getPublicPath(asset.url),
         }),
         cssnano(),
       ]),
@@ -80,9 +83,9 @@ const build = ({
         fileNameManifest: 'css-manifest.json',
         transformFilename,
       }),
-      gulp.dest(output),
+      gulp.dest(outputPath),
       rev.manifestFile(),
-      gulp.dest(output),
+      gulp.dest(outputPath),
     ])
   )
 
