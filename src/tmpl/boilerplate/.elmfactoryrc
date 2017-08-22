@@ -1,0 +1,11 @@
+{
+  "build": {
+    "main": "./src/Main.elm",
+    "stylesheets": "./src/Stylesheets.elm",
+    "outputPath": "./build"
+  },
+  "dev": {
+    "main": "./src/Main.elm",
+    "stylesheets": "./src/Stylesheets.elm"
+  }
+}
