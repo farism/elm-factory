@@ -1,17 +1,22 @@
+const main = './src/Main.elm'
+const stylesheets = './src/Stylesheets.elm'
+const host = '127.0.0.1'
+const port = 8000
+
 const build = {
-  main: './src/Main.elm',
-  stylesheets: './src/Stylesheets.elm',
+  main,
+  stylesheets,
   output: 'build',
-  public: '/public/'
+  public: '/public/',
 }
 
 const dev = {
-  main: './src/Main.elm',
-  stylesheets: './src/Stylesheets.elm',
-  host: '127.0.0.1',
-  port: '8000',
-  reactorHost: '127.0.0.1',
-  reactorPort: '8001',
+  main,
+  stylesheets,
+  host,
+  port,
+  reactorHost: host,
+  reactorPort: port + 1,
 }
 
 const init = {}
