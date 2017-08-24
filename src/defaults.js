@@ -17,6 +17,7 @@ const dev = {
   port,
   reactorHost: host,
   reactorPort: port + 1,
+  template: './node_modules/elm-factory/src/tmpl/boilerplate/index.ejs',
 }
 
 const init = {}

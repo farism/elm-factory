@@ -1,3 +1,4 @@
+const anyTemplate = require('gulp-any-template')
 const express = require('express')
 const gulp = require('gulp')
 const handlebars = require('handlebars')
@@ -15,38 +16,6 @@ const elmCss = require('gulp-elm-css')
 
 const defaults = require('../defaults').dev
 
-const templateStr = `
-<!DOCTYPE HTML>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>~{{path}}</title>
-    <style type="text/css">
-      @import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro);
-      html, head, body {
-        margin: 0;
-        height: 100%;
-      }
-    </style>
-    <link rel="stylesheet" href="http://localhost:8000/public/index.css">
-  </head>
-  <body>
-    <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #9A9A9A; font-family: &#39;Source Sans Pro&#39;;">
-      <div style="font-size: 3em;">Building your project!</div>
-      <img src="/_reactor/waiting.gif">
-      <div style="font-size: 1em">With new projects, I need a bunch of extra time to download packages.</div>
-    </div>
-  </body>
-  <script src="/_compile{{path}}" charset="utf-8"></script>
-  <script>
-    while (document.body.firstChild) {
-      document.body.removeChild(document.body.firstChild)
-    }
-    runElmProgram()
-  </script>
-</html>
-`
-
 const dev = ({
   main = defaults.main,
   stylesheets = defaults.stylesheets,
@@ -54,6 +23,7 @@ const dev = ({
   port = defaults.port,
   reactorHost = defaults.reactorHost,
   reactorPort = defaults.reactorPort,
+  template = defaults.template,
 }) => {
   const { name: tmpDir } = tmp.dirSync()
 
@@ -68,40 +38,50 @@ const dev = ({
   gulp.task('dev-server', () => {
     const app = new express()
     const target = `http://${reactorHost}:${reactorPort}`
-    const template = handlebars.compile(templateStr)
 
-    // proxy the /_compile/*.elm files to elm-reactor
-    app.use(
-      proxy('/_compile', {
-        target,
+    return pump(
+      gulp.src(template),
+      through.obj((file, encode, callback) => {
+        const html = anyTemplate.compiler(file.path)(String(file.contents), { path: req.url })
+
+        // proxy the /_compile/*.elm files to elm-reactor
+        app.use(
+          proxy('/_compile', {
+            target,
+          })
+        )
+
+        app.get('*.elm', [
+          // do live reload on this page
+          livereloadConnect({
+            port: 35729,
+            include: [/(.)*\.elm/],
+          }),
+          // handle with html template
+          (req, res) => {
+            console.log(req)
+            // console.log(templateFn({ path: req.url }))
+            res.send(templateFn({ path: req.url }))
+          },
+        ])
+
+        // static assets
+        app.use('/public', express.static(tmpDir))
+
+        // proxy all other requests to elm-reactor
+        app.use(
+          proxy({
+            target,
+          })
+        )
+
+        app.listen(port, host, (err) => {
+          livereload.listen()
+        })
+
+        callback()
       })
     )
-
-    app.get('*.elm', [
-      // do live reload on this page
-      livereloadConnect({
-        port: 35729,
-        include: [/(.)*\.elm/],
-      }),
-      // handle with html template
-      (req, res) => {
-        res.send(template({ path: req.url }))
-      },
-    ])
-
-    // static assets
-    app.use('/public', express.static(tmpDir))
-
-    // proxy all other requests to elm-reactor
-    app.use(
-      proxy({
-        target,
-      })
-    )
-
-    app.listen(port, host, () => {
-      livereload.listen()
-    })
   })
 
   let mainWatcher
@@ -111,7 +91,7 @@ const dev = ({
     mainWatcher && mainWatcher.end()
     mainWatcher = gulp.watch(main, ['dev-main'])
 
-    return pump([
+    return pump(
       gulp.src(main),
       elmFindDependencies(),
       through.obj((file, encode, callback) => {
@@ -123,8 +103,8 @@ const dev = ({
           mainWatcher._watcher.add(file.path)
         }
         callback()
-      }),
-    ])
+      })
+    )
   })
 
   let cssWatcher
@@ -133,16 +113,16 @@ const dev = ({
     cssWatcher && cssWatcher.end()
     cssWatcher = gulp.watch(stylesheets, ['dev-css'])
 
-    pump([gulp.src(stylesheets), elmCss({ out: tmpDir }), livereload()])
+    pump(gulp.src(stylesheets), elmCss({ out: tmpDir }), livereload())
 
-    return pump([
+    return pump(
       gulp.src(stylesheets),
       elmFindDependencies(),
       through.obj((file, encode, cb) => {
         cssWatcher._watcher.add(file.path)
         cb()
-      }),
-    ])
+      })
+    )
   })
 
   gulp.task('dev', () => {

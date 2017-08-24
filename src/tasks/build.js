@@ -35,7 +35,7 @@ const build = ({
   })
 
   gulp.task('build-main', () => {
-    pump([
+    pump(
       gulp.src(main),
       elm(),
       elmExtractAssets({ tag: 'AssetUrl' }),
@@ -56,12 +56,12 @@ const build = ({
       flatten(),
       gulp.dest(outputPath),
       rev.manifestFile(),
-      gulp.dest(outputPath),
-    ])
+      gulp.dest(outputPath)
+    )
   })
 
   gulp.task('build-css', () =>
-    pump([
+    pump(
       gulp.src(stylesheets),
       elmCss(),
       postcss([
@@ -85,8 +85,8 @@ const build = ({
       }),
       gulp.dest(outputPath),
       rev.manifestFile(),
-      gulp.dest(outputPath),
-    ])
+      gulp.dest(outputPath)
+    )
   )
 
   gulp.task('build', ['build-clean', 'build-main', 'build-css'])
