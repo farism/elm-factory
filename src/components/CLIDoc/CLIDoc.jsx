@@ -1,6 +1,6 @@
 import React, { PropTypes } from 'react'
 
-import BashBlock, { Comment, Line } from '../BashBlock'
+import BashBlock, { Comment, Gap, Line } from '../BashBlock'
 
 export default function CLIDoc({ doc }) {
   return (
@@ -28,17 +28,15 @@ export default function CLIDoc({ doc }) {
       <h2>Options</h2>
       {doc.options.length === 0
         ? <i>No Options</i>
-        : doc.options.map(arg =>
-            <div key={arg.name}>
-              <h3>
-                --{arg.name}
-                {arg.value ? '=[value]' : ''}
-              </h3>
-              <p>
-                {arg.description}
-              </p>
-            </div>
-          )}
+        : <BashBlock fullWidth>
+            {doc.options.map(opt =>
+              <span key={opt.name}>
+                <Line value={`-${opt.name}`} />
+                <Comment value={`${opt.description} [default: ${opt.default}]`} />
+                <Gap />
+              </span>
+            )}
+          </BashBlock>}
     </div>
   )
 }

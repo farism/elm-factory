@@ -8,15 +8,18 @@ import NotFoundPage from './components/NotFoundPage'
 import PageWrapper from './components/PageWrapper'
 import ScrollToTop from './components/ScrollToTop'
 
+const basename = process.env.NODE_ENV === 'production' ? '/elm-factory' : '/'
+
 export default class App extends React.Component {
   render() {
     return (
-      <Router basename="/elm-factory">
+      <Router basename={basename}>
         <ScrollToTop>
           <PageWrapper>
             <Switch>
               <Route exact path="/" component={HomePage} />
               <Route path="/cli/:command?" component={CLIWrapper} />
+              <Route path="/config/:type?" component={ConfigWrapper} />
               <Route path="*" component={NotFoundPage} />
             </Switch>
           </PageWrapper>

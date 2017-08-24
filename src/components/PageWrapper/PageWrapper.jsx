@@ -20,7 +20,7 @@ export default function PageWrapper({ children }) {
           <nav className={styles.nav}>
             <NavLink href="/" text="Getting Started" />
             <NavLink href="/cli" text="CLI Usage" />
-            {/* <NavLink href="/config" text="Configuration" /> */}
+            <NavLink href="/config" text="Configuration" />
             <NavLink
               href="https://github.com/farism/elm-factory"
               text={<MarkGithubIcon />}

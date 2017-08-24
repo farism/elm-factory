@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 
-module.exports = [
+export default [
   {
     name: 'publish_targets',
     example: {

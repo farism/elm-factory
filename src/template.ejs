@@ -6,12 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://fonts.googleapis.com/css?family=Roboto:300,400" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/octicons/4.4.0/font/octicons.min.css" rel="stylesheet">
-<link href="/elm-factory/build/663b62d616ca701038dfe1c22942091a.css" rel="stylesheet"></head>
-<body class="production">
+</head>
+<body class="<%= htmlWebpackPlugin.options.environment %>">
   <div class="container">
     <div id="app"></div>
   </div>
-  
+  <% if(htmlWebpackPlugin.options.environment === 'production'){ %>
     <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
       (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -38,6 +38,6 @@
         }
       }(window.location))
     </script>
-  
-<script type="text/javascript" src="/elm-factory/build/67f09f98cfc2b47add6b.js"></script></body>
+  <% } %>
+</body>
 </html>

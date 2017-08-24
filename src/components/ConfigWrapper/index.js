@@ -1,6 +1,2 @@
-export {
-  PrimarySection,
-  SecondarySection,
-  SectionHeader,
-  SubtronSection,
-} from './ConfigWrapper'
+import ConfigWrapper from './ConfigWrapper'
+export default ConfigWrapper

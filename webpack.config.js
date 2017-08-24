@@ -2,37 +2,20 @@ const webpack = require('webpack')
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 
-const loaders = require('./webpack.loaders')
+const rules = require('./webpack.rules')
 
 const HOST = process.env.HOST || '127.0.0.1'
 const PORT = process.env.PORT || '8888'
 const WEBPACK_DEVTOOL = process.env.WEBPACK_DEVTOOL || 'eval-source-map'
 
-// global css
-loaders.push({
-  test: /\.css$/,
-  exclude: /[/\\]src[/\\]/,
-  loaders: ['style?sourceMap', 'css'],
-})
-// local scss modules
-loaders.push({
+rules.push({
   test: /\.scss$/,
-  exclude: /[/\\](node_modules|build\/)[/\\]/,
+  exclude: /(node_modules)/,
   loaders: [
-    'style?sourceMap',
-    'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]&sourceMap',
-    'postcss',
-    'sass',
-  ],
-})
-
-// local css modules
-loaders.push({
-  test: /\.css$/,
-  exclude: /[/\\](node_modules|build\/)[/\\]/,
-  loaders: [
-    'style?sourceMap',
-    'css?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]&sourceMap',
+    'style-loader?sourceMap',
+    'css-loader?modules&importLoaders=1&localIdentName=[path]___[name]__[local]___[hash:base64:5]&sourceMap',
+    'postcss-loader',
+    'sass-loader',
   ],
 })
 
@@ -44,30 +27,35 @@ module.exports = {
     path: path.join(__dirname, 'build'),
     filename: 'bundle.js',
   },
+  externals: {
+    fs: 'fs',
+  },
   resolve: {
-    extensions: ['', '.js', '.jsx'],
+    extensions: ['.js', '.jsx'],
   },
   module: {
-    loaders,
+    rules,
   },
   devServer: {
     contentBase: './',
-    // do not print bundle build stats
     noInfo: true,
-    // enable HMR
     hot: true,
-    // embed the webpack-dev-server runtime into the bundle
     inline: true,
-    // serve index.html in place of 404 responses to allow HTML5 history
     historyApiFallback: true,
     port: PORT,
     host: HOST,
   },
   plugins: [
-    new webpack.NoErrorsPlugin(),
+    new webpack.NoEmitOnErrorsPlugin(),
     new webpack.HotModuleReplacementPlugin(),
+    new webpack.DefinePlugin({
+      'process.env': {
+        NODE_ENV: '"development"',
+      },
+    }),
     new HtmlWebpackPlugin({
-      template: './src/template.html',
+      template: './src/template.ejs',
+      environment: 'development',
     }),
   ],
 }

@@ -1,47 +1,36 @@
 const webpack = require('webpack')
 const path = require('path')
-const loaders = require('./webpack.loaders')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const WebpackCleanupPlugin = require('webpack-cleanup-plugin')
 
-// local css modules
-loaders.push({
-  test: /[/\\]src[/\\].*\.css/,
-  exclude: /(node_modules|bower_components|build\/)/,
-  loader: ExtractTextPlugin.extract(
-    'style',
-    'css?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]'
-  ),
-})
+const rules = require('./webpack.rules')
 
-// local scss modules
-loaders.push({
-  test: /[/\\]src[/\\].*\.scss/,
-  exclude: /(node_modules|bower_components|build\/)/,
-  loader: ExtractTextPlugin.extract(
-    'style',
-    'css?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss!sass'
-  ),
-})
-// global css files
-loaders.push({
-  test: /[/\\](node_modules|global)[/\\].*\.css$/,
-  loader: ExtractTextPlugin.extract('style', 'css'),
+rules.push({
+  test: /\.scss$/,
+  exclude: /(node_modules)/,
+  use: ExtractTextPlugin.extract({
+    fallback: 'style-loader',
+    use: [
+      'css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]',
+      'postcss-loader',
+      'sass-loader',
+    ],
+  }),
 })
 
 module.exports = {
   entry: ['./src/index.jsx'],
   output: {
-    publicPath: '/',
+    publicPath: '/elm-factory/build/',
     path: path.join(__dirname, 'build'),
     filename: '[chunkhash].js',
   },
   resolve: {
-    extensions: ['', '.js', '.jsx'],
+    extensions: ['.js', '.jsx'],
   },
   module: {
-    loaders,
+    rules,
   },
   plugins: [
     new WebpackCleanupPlugin(),
@@ -58,14 +47,13 @@ module.exports = {
         drop_debugger: true,
       },
     }),
-    new webpack.optimize.OccurenceOrderPlugin(),
     new ExtractTextPlugin('[contenthash].css', {
       allChunks: true,
     }),
     new HtmlWebpackPlugin({
+      environment: 'production',
       filename: '../index.html',
-      template: './src/template.html',
+      template: './src/template.ejs',
     }),
-    new webpack.optimize.DedupePlugin(),
   ],
 }

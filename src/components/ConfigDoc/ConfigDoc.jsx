@@ -1,6 +1,6 @@
 import React, { PropTypes } from 'react'
 
-export default function ConfigPropDoc({ prop }) {
+export default function ConfigDoc({ prop }) {
   return (
     <div>
       <h1>
@@ -49,7 +49,7 @@ export default function ConfigPropDoc({ prop }) {
   )
 }
 
-ConfigPropDoc.propTypes = {
+ConfigDoc.propTypes = {
   prop: PropTypes.shape({
     name: PropTypes.string.isRequired,
     module: PropTypes.string,
