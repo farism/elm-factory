@@ -186,6 +186,29 @@ code > pre {
     .CLIWrapper__container___1E7q0 .CLIWrapper__commandDocs___KrXsu .CLIWrapper__noCommand___1Omk1 {
       margin-top: 100px;
       text-align: center; }
+.ConfigWrapper__container___Kz6mX {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex; }
+  .ConfigWrapper__container___Kz6mX .ConfigWrapper__commandList___36cMM {
+    width: 200px;
+    border-right: 1px solid #e0e5e6; }
+    .ConfigWrapper__container___Kz6mX .ConfigWrapper__commandList___36cMM > h3 {
+      margin-bottom: 4px; }
+    .ConfigWrapper__container___Kz6mX .ConfigWrapper__commandList___36cMM .ConfigWrapper__commandLink___2BSZp {
+      padding: 4px; }
+  .ConfigWrapper__container___Kz6mX .ConfigWrapper__commandDocs___3BRxA {
+    -webkit-box-flex: 1;
+    -webkit-flex: 1;
+        -ms-flex: 1;
+            flex: 1;
+    padding: 0 20px; }
+    .ConfigWrapper__container___Kz6mX .ConfigWrapper__commandDocs___3BRxA .ConfigWrapper__noCommand___1xWG- {
+      margin-top: 100px;
+      text-align: center; }
 @-webkit-keyframes IconPoint__hover___tbGZw {
   0% {
     -webkit-transform: translateY(0);

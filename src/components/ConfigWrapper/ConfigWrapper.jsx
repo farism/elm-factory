@@ -1,7 +1,6 @@
 import React, { PropTypes } from 'react'
 import { Link, routerShape } from 'react-router-dom'
 
-import config from '../../config'
 import ConfigDoc from '../ConfigDoc'
 import { PrimarySection, SubtronSection } from '../PageSections'
 import BashBlock, { Comment, Gap, Line } from '../BashBlock'
@@ -10,7 +9,22 @@ import styles from './ConfigWrapper.scss'
 
 const extras = [{ label: 'Overview', href: '/config' }]
 
-const example = {}
+const example = {
+  main: './src/Main.elm',
+  stylesheets: './src/Stylesheets.elm',
+  build: {
+    output: 'build',
+    publicPath: 'public',
+    template: './src/index.prod.ejs',
+  },
+  dev: {
+    template: './src/index.dev.ejs',
+    host: '127.0.0.1',
+    port: 8000,
+    reactorHost: '127.0.0.1',
+    reactorPort: 8001,
+  },
+}
 
 function getDefaultDoc(type) {
   switch (type) {
@@ -27,26 +41,7 @@ function getDefaultDoc(type) {
               // .elmfactoryrc
               <br />
               <br />
-              {JSON.stringify(
-                {
-                  main: './src/Main.elm',
-                  stylesheets: './src/Stylesheets.elm',
-                  build: {
-                    output: 'build',
-                    publicPath: 'public'
-                    template: './src/index.prod.ejs',
-                  },
-                  dev: {
-                    template: './src/index.dev.ejs',
-                    host: '127.0.0.1',
-                    port: 8000,
-                    reactorHost: '127.0.0.1',
-                    reactorPort: 8001,
-                  }
-                },
-                null,
-                2
-              )}
+              {JSON.stringify(example, null, 2)}
             </pre>
           </code>
           <p />
