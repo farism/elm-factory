@@ -7,13 +7,18 @@ module.exports = {
   options: {
     m: {
       alias: 'main',
-      description: 'main entry',
+      description: 'main entry file',
       default: defaults.main,
     },
     s: {
       alias: 'stylesheets',
-      description: 'stylesheets entry',
+      description: 'stylesheets entry file',
       default: defaults.stylesheets,
+    },
+    t: {
+      alias: 'template',
+      description: 'html template file',
+      default: defaults.template,
     },
     h: {
       alias: 'host',
@@ -24,11 +29,6 @@ module.exports = {
       alias: 'port',
       description: 'dev server port',
       default: defaults.port,
-    },
-    t: {
-      alias: 'template',
-      description: 'dev server html template file',
-      default: defaults.template,
     },
     r: {
       alias: 'reactor-host',

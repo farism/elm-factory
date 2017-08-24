@@ -15,20 +15,22 @@ const elmCss = require('gulp-elm-css')
 
 const defaults = require('../defaults').build
 
-const build = ({
-  main = defaults.main,
-  stylesheets = defaults.stylesheets,
-  outputPath = defaults.outputPath,
-  publicPath = defaults.publicPath,
-}) => {
-  const getHash = contents =>
-    xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
+const getHash = contents =>
+  xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
 
-  const getPublicPath = filename =>
-    path.join(publicPath, path.basename(filename))
+const getPublicPath = filename => path.join(publicPath, path.basename(filename))
 
-  const transformFilename = (file, hash) =>
-    `${getHash(file.contents)}${path.extname(file.path)}`
+const transformFilename = (file, hash) =>
+  `${getHash(file.contents)}${path.extname(file.path)}`
+
+const build = options => {
+  const {
+    main = defaults.main,
+    stylesheets = defaults.stylesheets,
+    outputPath = defaults.outputPath,
+    publicPath = defaults.publicPath,
+    template = defaults.template,
+  } = options
 
   gulp.task('build-clean', () => {
     del(outputPath)
@@ -89,7 +91,16 @@ const build = ({
     )
   )
 
-  gulp.task('build', ['build-clean', 'build-main', 'build-css'])
+  gulp.task('build-html', () => {})
+
+  gulp.task('build', ['build-clean', 'build-main', 'build-css'], callback => {
+    runSequence(
+      'build-clean',
+      ['build-main', 'build-css'],
+      'build-html',
+      callback
+    )
+  })
 }
 
 module.exports = build

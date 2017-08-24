@@ -1,11 +1,13 @@
 const main = './src/Main.elm'
 const stylesheets = './src/Stylesheets.elm'
+const template = './src/index.ejs'
 const host = '127.0.0.1'
 const port = 8000
 
 const build = {
   main,
   stylesheets,
+  template: undefined,
   outputPath: 'build',
   publicPath: '/public/',
 }
@@ -13,11 +15,11 @@ const build = {
 const dev = {
   main,
   stylesheets,
+  template,
   host,
   port,
   reactorHost: host,
   reactorPort: port + 1,
-  template: './node_modules/elm-factory/src/tmpl/boilerplate/index.ejs',
 }
 
 const init = {}

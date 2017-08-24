@@ -16,19 +16,20 @@ const elmCss = require('gulp-elm-css')
 
 const defaults = require('../defaults').dev
 
-const dev = ({
-  main = defaults.main,
-  stylesheets = defaults.stylesheets,
-  host = defaults.host,
-  port = defaults.port,
-  reactorHost = defaults.reactorHost,
-  reactorPort = defaults.reactorPort,
-  template = defaults.template,
-}) => {
+const dev = options => {
   const { name: tmpDir } = tmp.dirSync()
+  const {
+    main = defaults.main,
+    stylesheets = defaults.stylesheets,
+    template = defaults.template,
+    host = defaults.host,
+    port = defaults.port,
+    reactorHost = defaults.reactorHost,
+    reactorPort = defaults.reactorPort,
+  } = options
 
   gulp.task('dev-reactor', () => {
-    spawn(
+    const reactor = spawn(
       'elm-reactor',
       [`--port=${reactorPort}`, `--address=${reactorHost}`],
       { stdio: 'inherit' }
@@ -42,8 +43,6 @@ const dev = ({
     return pump(
       gulp.src(template),
       through.obj((file, encode, callback) => {
-        const html = anyTemplate.compiler(file.path)(String(file.contents), { path: req.url })
-
         // proxy the /_compile/*.elm files to elm-reactor
         app.use(
           proxy('/_compile', {
@@ -58,10 +57,12 @@ const dev = ({
             include: [/(.)*\.elm/],
           }),
           // handle with html template
-          (req, res) => {
-            console.log(req)
-            // console.log(templateFn({ path: req.url }))
-            res.send(templateFn({ path: req.url }))
+          (request, response) => {
+            anyTemplate.compiler(file.path)(String(file.contents), {
+              environment: 'development',
+              options,
+              request,
+            }).then(res => response.send(res))
           },
         ])
 
@@ -75,7 +76,7 @@ const dev = ({
           })
         )
 
-        app.listen(port, host, (err) => {
+        app.listen(port, host, err => {
           livereload.listen()
         })
 

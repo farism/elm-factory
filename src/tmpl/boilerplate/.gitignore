@@ -1,5 +1,4 @@
-dist/
+*.log
+build/
 elm-stuff/
 node-modules/
-*.DS_Store
-*.log

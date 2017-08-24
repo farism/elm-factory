@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "babel src -d lib",
-    "prepublish": "npm run build"
+    "prepublish": "./node_modules/.bin/in-publish && npm run build"
   },
   "dependencies": {
     "connect-livereload": "^0.6.0",
@@ -25,6 +25,7 @@
     "fs-extra": "^4.0.1",
     "glob-promise": "^3.1.0",
     "gulp": "^3.9.1",
+    "gulp-any-template": "^0.2.0",
     "gulp-compile-handlebars": "^0.6.1",
     "gulp-connect": "^5.0.0",
     "gulp-elm": "^0.7.2",
@@ -51,6 +52,11 @@
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
-    "babel-preset-es2015": "^6.24.1"
+    "babel-preset-es2015": "^6.24.1",
+    "chai": "^4.1.1",
+    "husky": "^0.14.3",
+    "in-publish": "^2.0.0",
+    "lint-staged": "^4.0.4",
+    "mocha": "^3.5.0"
   }
 }

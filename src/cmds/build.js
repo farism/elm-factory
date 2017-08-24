@@ -7,23 +7,28 @@ module.exports = {
   options: {
     m: {
       alias: 'main',
-      description: 'main entry',
+      description: 'main entry file',
       default: defaults.main,
     },
     s: {
       alias: 'stylesheets',
-      description: 'stylesheets entry',
+      description: 'stylesheets entry file',
       default: defaults.stylesheets,
     },
     o: {
       alias: 'output-path',
-      description: 'output directory path',
+      description: 'output directory',
       default: defaults.outputPath,
     },
     p: {
       alias: 'public-path',
-      description: 'absolute path to static assets',
+      description: 'absolute path for static assets',
       default: defaults.publicPath,
     },
+    t: {
+      alias: 'template',
+      'description': 'optional html template file',
+      default: ''
+    }
   },
 }
