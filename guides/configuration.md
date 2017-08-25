@@ -38,6 +38,7 @@ Each CLI option is available is a configuration option. Shared options may be de
     "publicPath": "http://somecdn.com"
   },
   "dev": {
+    "main": "./src/Sandbox.elm",
     "template": "./src/index.dev.ejs",
     "port": "3000"
   }
