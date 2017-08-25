@@ -29,13 +29,27 @@ export default function CLIDoc({ doc }) {
       {doc.options.length === 0
         ? <i>No Options</i>
         : <BashBlock fullWidth>
-            {doc.options.map(opt =>
-              <span key={opt.name}>
-                <Line value={`-${opt.name}`} />
-                <Comment value={`${opt.description} [default: ${opt.default}]`} />
-                <Gap />
-              </span>
-            )}
+            {doc.options.map(opt => {
+              const stringOrNot =
+                typeof opt.default === 'string'
+                  ? `"${opt.default}"`
+                  : opt.default
+
+              const defaultOrRequired =
+                typeof opt.default !== 'undefined'
+                  ? `default: ${stringOrNot}`
+                  : 'required'
+
+              return (
+                <span key={opt.name}>
+                  <Line value={`-${opt.name}`} />
+                  <Comment
+                    value={`${opt.description} [${defaultOrRequired}]`}
+                  />
+                  <Gap />
+                </span>
+              )
+            })}
           </BashBlock>}
     </div>
   )

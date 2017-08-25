@@ -2808,17 +2808,18 @@ object-assign
       o = {
         main: r,
         stylesheets: './src/Stylesheets.elm',
+        template: void 0,
         outputPath: 'build',
         publicPath: '/public/',
       },
       a = {
         main: r,
         stylesheets: './src/Stylesheets.elm',
+        template: './index.ejs',
         host: '127.0.0.1',
         port: 8e3,
         reactorHost: '127.0.0.1',
         reactorPort: 8001,
-        template: './node_modules/elm-factory/src/tmpl/boilerplate/index.ejs',
       },
       i = {}
     e.exports = { build: o, dev: a, init: i }
@@ -12348,20 +12349,25 @@ object-assign
       command: 'build [options]',
       description: 'builds an elm-factory for production',
       options: {
-        m: { alias: 'main', description: 'main entry', default: r.main },
+        m: { alias: 'main', description: 'main entry file', default: r.main },
         s: {
           alias: 'stylesheets',
-          description: 'stylesheets entry',
+          description: 'stylesheets entry file',
           default: r.stylesheets,
+        },
+        t: {
+          alias: 'template',
+          description: 'optional html template file',
+          default: '',
         },
         o: {
           alias: 'output-path',
-          description: 'output directory path',
+          description: 'output directory',
           default: r.outputPath,
         },
         p: {
           alias: 'public-path',
-          description: 'absolute path to static assets',
+          description: 'absolute path for static assets',
           default: r.publicPath,
         },
       },
@@ -12375,11 +12381,16 @@ object-assign
       command: 'dev [options]',
       description: 'starts elm-factory in dev mode',
       options: {
-        m: { alias: 'main', description: 'main entry', default: r.main },
+        m: { alias: 'main', description: 'main entry file', default: r.main },
         s: {
           alias: 'stylesheets',
-          description: 'stylesheets entry',
+          description: 'stylesheets entry file',
           default: r.stylesheets,
+        },
+        t: {
+          alias: 'template',
+          description: 'html template file',
+          default: r.template,
         },
         h: {
           alias: 'host',
@@ -12387,11 +12398,6 @@ object-assign
           default: r.host,
         },
         p: { alias: 'port', description: 'dev server port', default: r.port },
-        t: {
-          alias: 'template',
-          description: 'dev server html template file',
-          default: r.template,
-        },
         r: {
           alias: 'reactor-host',
           description: 'elm-reactor address',
@@ -12460,12 +12466,17 @@ object-assign
               i.d,
               { fullWidth: !0 },
               t.options.map(function(e) {
+                var t =
+                    'string' == typeof e.default
+                      ? '"' + e.default + '"'
+                      : e.default,
+                  n = void 0 !== e.default ? 'default: ' + t : 'required'
                 return a.a.createElement(
                   'span',
                   { key: e.name },
                   a.a.createElement(i.c, { value: '-' + e.name }),
                   a.a.createElement(i.a, {
-                    value: e.description + ' [default: ' + e.default + ']',
+                    value: e.description + ' [' + n + ']',
                   }),
                   a.a.createElement(i.b, null)
                 )
@@ -12612,7 +12623,7 @@ object-assign
       'undefined' != typeof __REACT_HOT_LOADER__ &&
         __REACT_HOT_LOADER__.register(
           r,
-          'Line',
+          'Gap',
           '/Users/farismustafa/Documents/Projects/elm-factory-io/src/components/BashBlock/Gap.jsx'
         )
     })()
@@ -12790,7 +12801,18 @@ object-assign
         c.a.createElement(
           'p',
           null,
-          'Elm Factory is configured through the ".elmfactoryrc" in your project folder.'
+          'The Elm Factory CLI tool is built on',
+          ' ',
+          c.a.createElement(
+            'a',
+            { href: 'https://github.com/yargs/yargs', target: '_blank' },
+            'yargs'
+          ),
+          ' ',
+          ', so it supports configuration through an ".elmfactoryrc" in your project root folder by default. View the',
+          ' ',
+          c.a.createElement(l.b, { to: '/cli' }, 'CLI Usage'),
+          ' for more information about what each setting does.'
         ),
         c.a.createElement(
           'code',
@@ -12798,7 +12820,7 @@ object-assign
           c.a.createElement(
             'pre',
             null,
-            '// .elmfactoryrc',
+            '// .elmfactoryrc or .elmfactoryrc.json',
             c.a.createElement('br', null),
             c.a.createElement('br', null),
             s()(m, null, 2)
@@ -13085,7 +13107,7 @@ object-assign
           a.a.createElement(
             f.c,
             { title: 'Opinionated Elm development' },
-            "Elm Factory is an all in one, zero config CLI tool with integrated dev and build modes for maximum productivity. Don't worry about tooling and just code!"
+            "Elm Factory is an all-in-one, zero-config CLI tool with integrated dev and build modes for maximum productivity. Don't worry about tooling and just code!"
           ),
           a.a.createElement(
             'div',

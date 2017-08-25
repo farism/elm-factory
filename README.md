@@ -1,10 +1,10 @@
-# elm-factory.io
+# elmfactory.io
 
-This is the React App that powers https://elm-factory.io
+This is the React App that powers https://elmfactory.io
 
 ### To run
 
-* You'll need to have [git](https://git-scm.com/) and [node](https://nodejs.org/en/) installed in your system.
+* You'll need to have [git](https://git-scm.com/) and [node](https://nodejs.org/en/) installed on your system.
 
 ```
 git clone https://github.com/farism/elm-factory.io.git
@@ -30,4 +30,4 @@ Open the web browser to `http://localhost:8888/`
 yarn build
 ```
 
-Special thanks to the guys at `https://electronforge.io/` for providing a website skeleton
+Special thanks to the guys at `https://electronforge.io/` for providing a skeleton for this website

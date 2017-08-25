@@ -1,5 +1,5 @@
 import React, { PropTypes } from 'react'
-import { Link, routerShape } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 import ConfigDoc from '../ConfigDoc'
 import { PrimarySection, SubtronSection } from '../PageSections'
@@ -33,12 +33,18 @@ function getDefaultDoc(type) {
         <div>
           <h1>Overview</h1>
           <p>
-            Elm Factory is configured through the ".elmfactoryrc" in your
-            project folder.
+            The Elm Factory CLI tool is built on{' '}
+            <a href="https://github.com/yargs/yargs" target="_blank">
+              yargs
+            </a>{' '}
+            , so it supports configuration through an ".elmfactoryrc" in your
+            project root folder by default. View the{' '}
+            <Link to="/cli">CLI Usage</Link> for more information about what
+            each setting does.
           </p>
           <code>
             <pre>
-              // .elmfactoryrc
+              // .elmfactoryrc or .elmfactoryrc.json
               <br />
               <br />
               {JSON.stringify(example, null, 2)}

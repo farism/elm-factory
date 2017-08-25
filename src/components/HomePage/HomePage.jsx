@@ -42,7 +42,7 @@ export default function HomePage() {
       </PrimarySection>
       <SecondarySection>
         <SectionHeader title="Opinionated Elm development">
-          Elm Factory is an all in one, zero config CLI tool with integrated dev
+          Elm Factory is an all-in-one, zero-config CLI tool with integrated dev
           and build modes for maximum productivity. Don't worry about tooling
           and just code!
         </SectionHeader>

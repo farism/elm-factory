@@ -100,7 +100,8 @@ code > pre {
   -webkit-user-select: none;
      -moz-user-select: none;
       -ms-user-select: none;
-          user-select: none; }
+          user-select: none;
+  white-space: nowrap; }
 
 .BashBlock__line___3iEZU {
   white-space: nowrap; }
