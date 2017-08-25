@@ -1,5 +1,5 @@
+const anyTemplate = require('gulp-any-template')
 const gulp = require('gulp')
-const handlebars = require('gulp-compile-handlebars')
 const path = require('path')
 const pump = require('pump')
 const rename = require('gulp-rename')
@@ -12,6 +12,7 @@ const init = ({ dir: name }) => {
       gulp.src([
         path.join(__dirname, '../tmpl/boilerplate/.gitignore'),
         path.join(__dirname, '../tmpl/boilerplate/.elmfactoryrc'),
+        path.join(__dirname, '../tmpl/boilerplate/index.ejs'),
       ]),
       gulp.dest(path.join(dest)),
     ])
@@ -19,9 +20,7 @@ const init = ({ dir: name }) => {
 
   gulp.task('init-src', () => {
     return pump([
-      gulp.src([
-        path.join(__dirname, '../tmpl/boilerplate/src/**/**'),
-      ]),
+      gulp.src([path.join(__dirname, '../tmpl/boilerplate/src/**/**')]),
       gulp.dest(path.join(dest, 'src')),
     ])
   })
@@ -29,9 +28,9 @@ const init = ({ dir: name }) => {
   gulp.task('init-elm-package', () => {
     return pump([
       gulp.src(
-        path.join(__dirname, '../tmpl/boilerplate/elm-package.json.hbs')
+        path.join(__dirname, '../tmpl/boilerplate/elm-package.json.ejs')
       ),
-      handlebars({ name }),
+      anyTemplate({ name }),
       rename('elm-package.json'),
       gulp.dest(dest),
     ])
@@ -39,8 +38,8 @@ const init = ({ dir: name }) => {
 
   gulp.task('init-node-package', () => {
     return pump([
-      gulp.src(path.join(__dirname, '../tmpl/boilerplate/package.json.hbs')),
-      handlebars({ name }),
+      gulp.src(path.join(__dirname, '../tmpl/boilerplate/package.json.ejs')),
+      anyTemplate({ name }),
       rename('package.json'),
       gulp.dest(dest),
     ])

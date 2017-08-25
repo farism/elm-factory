@@ -1,6 +1,6 @@
 const main = './src/Main.elm'
 const stylesheets = './src/Stylesheets.elm'
-const template = './src/index.ejs'
+const template = './index.ejs'
 const host = '127.0.0.1'
 const port = 8000
 

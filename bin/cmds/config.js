@@ -1,8 +1,17 @@
 const findUp = require('find-up')
 const fs = require('fs')
 
-const config = findUp.sync(['.elmfactoryrc', '.elmfactoryrc.json'])
+const configPath = findUp.sync(['.elmfactoryrc', '.elmfactoryrc.json'])
 
-module.exports = config
-  ? JSON.parse(fs.readFileSync(config))
-  : { build: {}, dev: {} }
+const fileConfig = configPath ? JSON.parse(fs.readFileSync(configPath)) : {}
+
+const config = {
+  main: fileConfig.main,
+  stylesheets: fileConfig.stylesheets,
+  template: fileConfig.template,
+}
+
+module.exports = {
+  build: Object.assign({}, config, fileConfig.build),
+  dev: Object.assign({}, config, fileConfig.dev),
+}

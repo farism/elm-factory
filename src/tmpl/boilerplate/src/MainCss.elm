@@ -5,29 +5,21 @@ import Css.Namespace exposing (namespace)
 import Assets exposing (hero)
 
 
-type CssClasses
-    = Container
-
-
 type CssIds
     = Page
-    | Page2
+
+
+type CssClasses
+    = Hero
 
 
 css =
-    (stylesheet << namespace "helloworld")
+    (stylesheet << namespace "main")
         [ id Page
             [ backgroundColor (hex "FFFFFF")
             , color (hex "000000")
             , fontSize (px 50)
             ]
-        , id Page2
-            [ backgroundImage (url (Assets.url hero))
-            , width (px 1200)
-            , height (px 312)
-            ]
-        , class Container
-            [ margin zero
-            , padding zero
-            ]
+        , class Hero
+            [ backgroundImage (url (Assets.url hero)) ]
         ]

@@ -1,7 +1,6 @@
 const anyTemplate = require('gulp-any-template')
 const express = require('express')
 const gulp = require('gulp')
-const handlebars = require('handlebars')
 const livereload = require('gulp-livereload')
 const livereloadConnect = require('connect-livereload')
 const path = require('path')

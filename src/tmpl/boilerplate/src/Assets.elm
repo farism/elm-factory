@@ -12,6 +12,5 @@ url asset =
             url
 
 
-
--- assetFunction =
--- AssetUrl "/src/assets/elm.png"
+hero =
+    AssetUrl "/src/assets/css3.png"

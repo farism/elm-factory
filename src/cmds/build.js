@@ -15,6 +15,11 @@ module.exports = {
       description: 'stylesheets entry file',
       default: defaults.stylesheets,
     },
+    t: {
+      alias: 'template',
+      description: 'optional html template file',
+      default: '',
+    },
     o: {
       alias: 'output-path',
       description: 'output directory',
@@ -25,10 +30,5 @@ module.exports = {
       description: 'absolute path for static assets',
       default: defaults.publicPath,
     },
-    t: {
-      alias: 'template',
-      'description': 'optional html template file',
-      default: ''
-    }
   },
 }

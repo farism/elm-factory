@@ -6,7 +6,7 @@ module.exports = {
   description: 'initializes a boilerplate elm-factory application',
   options: {
     dir: {
-      description: 'the project directory'
-    }
+      description: 'the project directory',
+    },
   },
 }
