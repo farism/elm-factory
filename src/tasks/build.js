@@ -1,6 +1,7 @@
 const cssnano = require('cssnano')
 const del = require('del')
 const elm = require('gulp-elm')
+const filter = require('gulp-filter')
 const flatten = require('gulp-flatten')
 const gulp = require('gulp')
 const path = require('path')
@@ -8,6 +9,7 @@ const postcss = require('gulp-postcss')
 const pump = require('pump')
 const rev = require('gulp-rev-all')
 const runSequence = require('run-sequence')
+const uglify = require('gulp-uglify')
 const url = require('postcss-url')
 const xxh = require('xxhashjs')
 const elmExtractAssets = require('gulp-elm-extract-assets')
@@ -33,6 +35,8 @@ const build = options => {
   const transformFilename = (file, hash) =>
     `${getHash(file.contents)}${path.extname(file.path)}`
 
+  const jsFilter = filter(['**/*.js'], { restore: true })
+
   gulp.task('build-clean', () => {
     del(outputPath)
   })
@@ -57,6 +61,9 @@ const build = options => {
         transformFilename,
       }),
       flatten(),
+      jsFilter,
+      uglify(),
+      jsFilter.restore,
       gulp.dest(outputPath),
       rev.manifestFile(),
       gulp.dest(outputPath)
