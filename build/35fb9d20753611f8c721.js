@@ -13086,8 +13086,13 @@ object-assign
             a.a.createElement(d.c, { value: 'elm-factory init my-elm-app' }),
             a.a.createElement(d.b, null),
             a.a.createElement(d.a, { value: 'Launch your app' }),
-            a.a.createElement(d.c, { value: 'cd my-elm-all' }),
-            a.a.createElement(d.c, { value: 'elm-factory dev' })
+            a.a.createElement(d.c, { value: 'cd my-elm-app' }),
+            a.a.createElement(d.c, { value: 'elm-factory dev' }),
+            a.a.createElement(d.b, null),
+            a.a.createElement(d.a, { value: 'Build your app' }),
+            a.a.createElement(d.c, {
+              value: 'elm-factory build --publicPath=http://cdn123.com/assets',
+            })
           ),
           a.a.createElement(
             'h3',
@@ -13107,7 +13112,16 @@ object-assign
           a.a.createElement(
             f.c,
             { title: 'Opinionated Elm development' },
-            "Elm Factory is an all-in-one, zero-config CLI tool with integrated dev and build modes for maximum productivity. Don't worry about tooling and just code!"
+            a.a.createElement(
+              'p',
+              null,
+              'Elm Factory is an all-in-one, zero-config CLI tool with a livereload development mode and a cache-busting build mode for maximum productivity.'
+            ),
+            a.a.createElement(
+              'p',
+              null,
+              "Don't worry about tooling and just code!"
+            )
           ),
           a.a.createElement(
             'div',

@@ -32,8 +32,11 @@ export default function HomePage() {
           <Line value="elm-factory init my-elm-app" />
           <Gap />
           <Comment value="Launch your app" />
-          <Line value="cd my-elm-all" />
+          <Line value="cd my-elm-app" />
           <Line value="elm-factory dev" />
+          <Gap />
+          <Comment value="Build your app" />
+          <Line value="elm-factory build --publicPath=http://cdn123.com/assets" />
         </BashBlock>
         <h3 style={{ textAlign: 'center' }}>
           Ready for a closer look?{' '}
@@ -42,9 +45,12 @@ export default function HomePage() {
       </PrimarySection>
       <SecondarySection>
         <SectionHeader title="Opinionated Elm development">
-          Elm Factory is an all-in-one, zero-config CLI tool with integrated dev
-          and build modes for maximum productivity. Don't worry about tooling
-          and just code!
+          <p>
+            Elm Factory is an all-in-one, zero-config CLI tool with a livereload
+            development mode and a cache-busting build mode for maximum
+            productivity.
+          </p>
+          <p>Don't worry about tooling and just code!</p>
         </SectionHeader>
         <div className={styles.pointContainer}>
           <IconPoint href="/cli/dev" icon={FileCodeIcon} title="Develop">
