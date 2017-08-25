@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "babel src -d lib",
-    "prepublish": "./node_modules/.bin/in-publish && npm run build"
+    "prepublish": "npm run build"
   },
   "dependencies": {
     "connect-livereload": "^0.6.0",
