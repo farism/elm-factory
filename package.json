@@ -12,7 +12,7 @@
   "scripts": {
     "build": "babel src -d lib",
     "prepublish": "npm run build",
-    "test": "NODE_ENV='test' mocha ./test/*.spec.js --opts .mocha.opts"
+    "test": "NODE_ENV='test' mocha"
   },
   "dependencies": {
     "connect-livereload": "^0.6.0",
