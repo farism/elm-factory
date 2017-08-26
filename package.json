@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "babel src -d lib",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "test": "NODE_ENV='test' mocha ./test/*.spec.js --opts .mocha.opts"
   },
   "dependencies": {
     "connect-livereload": "^0.6.0",
@@ -51,8 +52,10 @@
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
+    "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "chai": "^4.1.1",
+    "dir-compare": "^1.4.0",
     "husky": "^0.14.3",
     "lint-staged": "^4.0.4",
     "mocha": "^3.5.0"
