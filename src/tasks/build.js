@@ -100,7 +100,7 @@ const build = options => {
   )
 
   gulp.task('build', () =>
-    runSequence('build-clean', ['build-main', 'build-css'])
+    runSequence('build-clean', 'build-main', 'build-css')
   )
 }
 
