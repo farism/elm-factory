@@ -7,7 +7,12 @@
     "type": "git",
     "url": "git+https://github.com/farism/gulp-elm-find-dependencies.git"
   },
-  "keywords": ["elm", "elm-css", "livereload", "cli"],
+  "keywords": [
+    "elm",
+    "elm-css",
+    "livereload",
+    "cli"
+  ],
   "author": "Faris Mustafa <farismmk@gmail.com>",
   "license": "MIT",
   "bin": {
@@ -27,7 +32,7 @@
     "find-up": "^2.1.0",
     "glob-promise": "^3.1.0",
     "gulp": "^3.9.1",
-    "gulp-any-template": "^0.3.0",
+    "gulp-any-template": "^0.3.1",
     "gulp-elm": "^0.7.2",
     "gulp-elm-css": "^0.1.0",
     "gulp-elm-extract-assets": "^0.1.0",
