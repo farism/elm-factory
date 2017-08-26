@@ -1,0 +1,30 @@
+machine:
+  environment:
+    PATH: "$PATH:~/.config/yarn/global/node_modules/.bin"
+  node:
+    version: 8.2.0
+
+dependencies:
+  cache_directories:
+    - /opt/circleci/nodejs/v8.2.0
+    - ~/.cache/yarn
+    - sysconfcpus
+  pre:
+    - if [ ! -d sysconfcpus/bin ];
+      then
+        git clone https://github.com/obmarg/libsysconfcpus.git;
+        cd libsysconfcpus;
+        ./configure --prefix=${HOME}/${CIRCLE_PROJECT_REPONAME}/sysconfcpus;
+        make && make install;
+        cd ..;
+      fi
+  override:
+    - npm install -g elm@0.18.0;
+      mv $(npm config get prefix)/bin/elm-make $(npm config get prefix)/bin/elm-make-old;
+      printf '%s\n\n' '#!/bin/bash' '${HOME}/${CIRCLE_PROJECT_REPONAME}/sysconfcpus/bin/sysconfcpus -n 2 elm-make-old "$@"' > $(npm config get prefix)/bin/elm-make;
+      chmod +x $(npm config get prefix)/bin/elm-make;
+      yarn;
+
+test:
+  override:
+    - yarn test

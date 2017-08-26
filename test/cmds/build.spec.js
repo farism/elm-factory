@@ -4,7 +4,7 @@ import { build as defaults } from '../../src/defaults'
 import { build } from '../../src/cmds'
 
 describe('$ elm-factory build', () => {
-  it('should expose the correct options', () => {
+  it('should expose the correct CLI options', () => {
     expect(build.options).to.eql({
       m: {
         alias: 'main',

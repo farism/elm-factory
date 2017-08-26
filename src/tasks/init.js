@@ -7,7 +7,7 @@ const rename = require('gulp-rename')
 
 const src = glob => path.resolve(__dirname, '../tmpl/boilerplate/', glob)
 
-const initStream = dir => {
+const init = dir => {
   const packageJson = filter(['**/*.json.ejs'], { restore: true })
 
   return pump(
@@ -22,11 +22,11 @@ const initStream = dir => {
   )
 }
 
-const init = ({ dir }) => {
-  gulp.task('init', () => initStream(dir))
+const task = ({ dir }) => {
+  gulp.task('init', () => init(dir))
 }
 
 module.exports = {
-  initStream,
   init,
+  task,
 }

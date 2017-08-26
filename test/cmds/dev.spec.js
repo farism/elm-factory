@@ -4,7 +4,7 @@ import { dev as defaults } from '../../src/defaults'
 import { dev } from '../../src/cmds'
 
 describe('$ elm-factory dev', () => {
-  it('should expose the correct options', () => {
+  it('should expose the correct CLI options', () => {
     expect(dev.options).to.eql({
       m: {
         alias: 'main',

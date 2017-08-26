@@ -4,17 +4,29 @@ import dirCompare from 'dir-compare'
 import path from 'path'
 import tmp from 'tmp'
 
-import { initStream } from '../../src/tasks/init'
+import { init } from '../../src/tasks/init'
 
 chai.use(chaifs)
 
 describe('init', () => {
   it('inits the root files', done => {
     const { name: dir } = tmp.dirSync({ unsafeCleanup: true })
-    initStream(dir)
-      .on('end', () => {
-        assert.directoryEqual(dir, path.resolve(__dirname, 'fixture/init'))
-        done()
-      })
+    init(dir).on('end', () => {
+      expect(dir).to.be.a
+        .directory()
+        .with.deep.files([
+          '.elmfactoryrc',
+          '.gitignore',
+          'elm-package.json',
+          'index.ejs',
+          'package.json',
+          'src/Assets.elm',
+          'src/Main.elm',
+          'src/MainCss.elm',
+          'src/Stylesheets.elm',
+          'src/assets/css3.png',
+        ])
+      done()
+    })
   })
 })
