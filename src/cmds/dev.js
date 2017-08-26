@@ -40,5 +40,10 @@ module.exports = {
       description: 'elm-reactor port',
       default: defaults.reactorPort,
     },
+    l: {
+      alias: 'lr-port',
+      description: 'livereload port',
+      default: defaults.lrPort,
+    },
   },
 }
