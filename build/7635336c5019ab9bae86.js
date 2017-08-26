@@ -271,10 +271,10 @@ object-assign
   function(e, t, n) {
     'use strict'
     function r() {
-      ;(P.ReactReconcileTransaction && E) || l('123')
+      ;(O.ReactReconcileTransaction && E) || l('123')
     }
     function o() {
-      this.reinitializeTransaction(), (this.dirtyComponentsLength = null), (this.callbackQueue = f.getPooled()), (this.reconcileTransaction = P.ReactReconcileTransaction.getPooled(
+      this.reinitializeTransaction(), (this.dirtyComponentsLength = null), (this.callbackQueue = f.getPooled()), (this.reconcileTransaction = O.ReactReconcileTransaction.getPooled(
         !0
       ))
     }
@@ -346,7 +346,7 @@ object-assign
       destructor: function() {
         ;(this.dirtyComponentsLength = null), f.release(
           this.callbackQueue
-        ), (this.callbackQueue = null), P.ReactReconcileTransaction.release(
+        ), (this.callbackQueue = null), O.ReactReconcileTransaction.release(
           this.reconcileTransaction
         ), (this.reconcileTransaction = null)
       },
@@ -374,9 +374,9 @@ object-assign
           }
         }
       },
-      O = {
+      P = {
         injectReconcileTransaction: function(e) {
-          e || l('126'), (P.ReactReconcileTransaction = e)
+          e || l('126'), (O.ReactReconcileTransaction = e)
         },
         injectBatchingStrategy: function(e) {
           e || l('127'), 'function' != typeof e.batchedUpdates &&
@@ -384,15 +384,15 @@ object-assign
             l('129'), (E = e)
         },
       },
-      P = {
+      O = {
         ReactReconcileTransaction: null,
         batchedUpdates: a,
         enqueueUpdate: u,
         flushBatchedUpdates: T,
-        injection: O,
+        injection: P,
         asap: c,
       }
-    e.exports = P
+    e.exports = O
   },
   function(e, t) {
     var n = (e.exports = { version: '2.5.0' })
@@ -2820,6 +2820,7 @@ object-assign
         port: 8e3,
         reactorHost: '127.0.0.1',
         reactorPort: 8001,
+        lrPort: 35729,
       },
       i = {}
     e.exports = { build: o, dev: a, init: i }
@@ -4004,8 +4005,8 @@ object-assign
       )
     }
     function s(e, t, n, r) {
-      var o = O.ReactReconcileTransaction.getPooled(!n && b.useCreateElement)
-      o.perform(i, null, e, t, o, n, r), O.ReactReconcileTransaction.release(o)
+      var o = P.ReactReconcileTransaction.getPooled(!n && b.useCreateElement)
+      o.perform(i, null, e, t, o, n, r), P.ReactReconcileTransaction.release(o)
     }
     function u(e, t, n) {
       for (
@@ -4047,8 +4048,8 @@ object-assign
       x = (n(10), n(229)),
       w = n(27),
       T = n(68),
-      O = n(11),
-      P = n(32),
+      P = n(11),
+      O = n(32),
       k = n(109),
       R = (n(0), n(44)),
       S = n(66),
@@ -4083,7 +4084,7 @@ object-assign
       _renderNewRootComponent: function(e, t, n, r) {
         l(t) || d('37'), y.ensureScrollValueMonitoring()
         var o = k(e, !1)
-        O.batchedUpdates(s, o, t, n, r)
+        P.batchedUpdates(s, o, t, n, r)
         var a = o._instance.rootID
         return (j[a] = o), o
       },
@@ -4108,7 +4109,7 @@ object-assign
         if (e) {
           var u = C.get(e)
           i = u._processChildContext(u._context)
-        } else i = P
+        } else i = O
         var l = f(n)
         if (l) {
           var p = l._currentElement,
@@ -4146,7 +4147,7 @@ object-assign
           c(e), 1 === e.nodeType && e.hasAttribute(N)
           return !1
         }
-        return delete j[t._instance.rootID], O.batchedUpdates(u, t, e, !1), !0
+        return delete j[t._instance.rootID], P.batchedUpdates(u, t, e, !1), !0
       },
       _mountImageIntoNode: function(e, t, n, a, i) {
         if ((l(t) || d('41'), a)) {
@@ -4460,7 +4461,7 @@ object-assign
         b,
         E,
         C = function(e) {
-          if (!d && e in O) return O[e]
+          if (!d && e in P) return P[e]
           switch (e) {
             case 'keys':
             case 'values':
@@ -4475,11 +4476,11 @@ object-assign
         x = t + ' Iterator',
         w = 'values' == v,
         T = !1,
-        O = e.prototype,
-        P = O[f] || O['@@iterator'] || (v && O[v]),
-        k = P || C(v),
+        P = e.prototype,
+        O = P[f] || P['@@iterator'] || (v && P[v]),
+        k = O || C(v),
         R = v ? (w ? C('entries') : k) : void 0,
-        S = 'Array' == t ? O.entries || P : P
+        S = 'Array' == t ? P.entries || O : O
       if (
         (
           S &&
@@ -4487,15 +4488,15 @@ object-assign
             E.next &&
             (l(E, x, !0), r || s(E, f) || i(E, f, h)),
           w &&
-            P &&
-            'values' !== P.name &&
+            O &&
+            'values' !== O.name &&
             (
               (T = !0),
               (k = function() {
-                return P.call(this)
+                return O.call(this)
               })
             ),
-          (r && !g) || (!d && !T && O[f]) || i(O, f, k),
+          (r && !g) || (!d && !T && P[f]) || i(P, f, k),
           (u[t] = k),
           (u[x] = h),
           v
@@ -4511,7 +4512,7 @@ object-assign
             g
           )
         )
-          for (b in _) b in O || a(O, b, _[b])
+          for (b in _) b in P || a(P, b, _[b])
         else o(o.P + o.F * (d || T), t, _)
       return _
     }
@@ -6048,7 +6049,7 @@ object-assign
         (
           _
             ? (u = o(e))
-            : P
+            : O
               ? i(e, n) && (u = T.compositionEnd)
               : a(e, n) && (u = T.compositionStart),
           !u
@@ -6056,9 +6057,9 @@ object-assign
       )
         return null
       C &&
-        (P || u !== T.compositionStart
-          ? u === T.compositionEnd && P && (c = P.getData())
-          : (P = h.getPooled(r)))
+        (O || u !== T.compositionStart
+          ? u === T.compositionEnd && O && (c = O.getData())
+          : (O = h.getPooled(r)))
       var l = m.getPooled(u, t, n, r)
       if (c) l.data = c
       else {
@@ -6072,19 +6073,19 @@ object-assign
         case 'topCompositionEnd':
           return s(t)
         case 'topKeyPress':
-          return t.which !== x ? null : ((O = !0), w)
+          return t.which !== x ? null : ((P = !0), w)
         case 'topTextInput':
           var n = t.data
-          return n === w && O ? null : n
+          return n === w && P ? null : n
         default:
           return null
       }
     }
     function l(e, t) {
-      if (P) {
+      if (O) {
         if ('topCompositionEnd' === e || (!_ && i(e, t))) {
-          var n = P.getData()
-          return h.release(P), (P = null), n
+          var n = O.getData()
+          return h.release(O), (O = null), n
         }
         return null
       }
@@ -6186,8 +6187,8 @@ object-assign
           ],
         },
       },
-      O = !1,
-      P = null,
+      P = !1,
+      O = null,
       k = {
         eventTypes: T,
         extractEvents: function(e, t, n, r) {
@@ -6252,7 +6253,7 @@ object-assign
       return 'select' === t || ('input' === t && 'file' === e.type)
     }
     function o(e) {
-      var t = x.getPooled(P.change, R, e, w(e))
+      var t = x.getPooled(O.change, R, e, w(e))
       _.accumulateTwoPhaseDispatches(t), C.batchedUpdates(a, t)
     }
     function a(e) {
@@ -6331,8 +6332,8 @@ object-assign
       x = n(14),
       w = n(57),
       T = n(58),
-      O = n(101),
-      P = {
+      P = n(101),
+      O = {
         change: {
           phasedRegistrationNames: {
             bubbled: 'onChange',
@@ -6369,7 +6370,7 @@ object-assign
         },
       },
       L = {
-        eventTypes: P,
+        eventTypes: O,
         extractEvents: function(e, t, n, o) {
           var a,
             i,
@@ -6378,13 +6379,13 @@ object-assign
             (
               r(s)
                 ? N ? (a = u) : (i = c)
-                : O(s) ? (M ? (a = d) : ((a = m), (i = h))) : v(s) && (a = y),
+                : P(s) ? (M ? (a = d) : ((a = m), (i = h))) : v(s) && (a = y),
               a
             )
           ) {
             var l = a(e, t)
             if (l) {
-              var p = x.getPooled(P.change, l, n, o)
+              var p = x.getPooled(O.change, l, n, o)
               return (p.type = 'change'), _.accumulateTwoPhaseDispatches(p), p
             }
           }
@@ -6987,8 +6988,8 @@ object-assign
       x = n(34),
       w = n(54),
       T = n(46),
-      O = n(95),
-      P = n(5),
+      P = n(95),
+      O = n(5),
       k = n(189),
       R = n(191),
       S = n(107),
@@ -6996,9 +6997,9 @@ object-assign
       N = (n(10), n(193)),
       M = n(200),
       D = (n(8), n(45)),
-      L = (n(0), n(58), n(65), n(69), n(2), O),
+      L = (n(0), n(58), n(65), n(69), n(2), P),
       j = x.deleteListener,
-      I = P.getNodeFromInstance,
+      I = O.getNodeFromInstance,
       U = T.listenTo,
       F = w.registrationNameModules,
       H = { string: !0, number: !0 },
@@ -7121,7 +7122,7 @@ object-assign
                 ? h.createElement(this._currentElement.type, a.is)
                 : h.createElement(this._currentElement.type)
           else d = h.createElementNS(i, this._currentElement.type)
-          P.precacheNode(this, d), (this._flags |= L.hasCachedChildNodes), this
+          O.precacheNode(this, d), (this._flags |= L.hasCachedChildNodes), this
             ._hostParent || C.setAttributeForRoot(d), this._updateDOMProperties(
             null,
             a,
@@ -7336,7 +7337,7 @@ object-assign
           case 'body':
             m('66', this._tag)
         }
-        this.unmountChildren(e), P.uncacheNode(this), x.deleteAllListeners(
+        this.unmountChildren(e), O.uncacheNode(this), x.deleteAllListeners(
           this
         ), (this._rootNodeID = 0), (this._domID = 0), (this._wrapperState = null)
       },
@@ -10134,10 +10135,10 @@ object-assign
       x = n(79),
       w = n(268),
       T = n(137),
-      O = n(18),
-      P = n(40),
+      P = n(18),
+      O = n(40),
       k = T.f,
-      R = O.f,
+      R = P.f,
       S = w.f,
       A = r.Symbol,
       N = r.JSON,
@@ -10251,7 +10252,7 @@ object-assign
           return this._k
         }),
         (T.f = Q),
-        (O.f = z),
+        (P.f = z),
         (n(136).f = w.f = J),
         (n(84).f = $),
         (n(135).f = Z),
@@ -10269,7 +10270,7 @@ object-assign
 
     )
       d(ee[te++])
-    for (var ne = P(d.store), re = 0; ne.length > re; ) m(ne[re++])
+    for (var ne = O(d.store), re = 0; ne.length > re; ) m(ne[re++])
     i(i.S + i.F * !B, 'Symbol', {
       for: function(e) {
         return o(I, (e += '')) ? I[e] : (I[e] = A(e))
@@ -10678,14 +10679,14 @@ object-assign
             )
           },
           w = function(e) {
-            ;(0, h.isExtraneousPopstateEvent)(e) || P(b(e.state))
+            ;(0, h.isExtraneousPopstateEvent)(e) || O(b(e.state))
           },
           T = function() {
-            P(b(m()))
+            O(b(m()))
           },
-          O = !1,
-          P = function(e) {
-            if (O) (O = !1), x()
+          P = !1,
+          O = function(e) {
+            if (P) (P = !1), x()
             else {
               C.confirmTransitionTo(e, 'POP', v, function(t) {
                 t ? x({ action: 'POP', location: e }) : k(e)
@@ -10699,7 +10700,7 @@ object-assign
             var r = S.indexOf(e.key)
             ;-1 === r && (r = 0)
             var o = n - r
-            o && ((O = !0), D(o))
+            o && ((P = !0), D(o))
           },
           R = b(m()),
           S = [R.key],
@@ -11096,11 +11097,11 @@ object-assign
           T = function() {
             return x(1)
           },
-          O = function(e) {
+          P = function(e) {
             var t = R.index + e
             return t >= 0 && t < R.entries.length
           },
-          P = function() {
+          O = function() {
             var e =
               arguments.length > 0 && void 0 !== arguments[0] && arguments[0]
             return m.setPrompt(e)
@@ -11120,8 +11121,8 @@ object-assign
             go: x,
             goBack: w,
             goForward: T,
-            canGo: O,
-            block: P,
+            canGo: P,
+            block: O,
             listen: k,
           }
         return R
@@ -11928,8 +11929,8 @@ object-assign
             )
           },
           T = !1,
-          O = null,
-          P = function() {
+          P = null,
+          O = function() {
             var e = m(),
               t = b(e)
             if (e !== t) y(t)
@@ -11937,8 +11938,8 @@ object-assign
               var n = C(),
                 r = K.location
               if (!T && (0, c.locationsAreEqual)(r, n)) return
-              if (O === (0, l.createPath)(n)) return
-              ;(O = null), k(n)
+              if (P === (0, l.createPath)(n)) return
+              ;(P = null), k(n)
             }
           },
           k = function(e) {
@@ -11977,7 +11978,7 @@ object-assign
                 var t = (0, l.createPath)(n),
                   r = b(g + t)
                 if (m() !== r) {
-                  ;(O = t), v(r)
+                  ;(P = t), v(r)
                   var o = M.lastIndexOf((0, l.createPath)(K.location)),
                     a = M.slice(0, -1 === o ? 0 : o + 1)
                   a.push(t), (M = a), w({ action: 'PUSH', location: n })
@@ -11999,7 +12000,7 @@ object-assign
               if (e) {
                 var t = (0, l.createPath)(n),
                   r = b(g + t)
-                m() !== r && ((O = t), y(r))
+                m() !== r && ((P = t), y(r))
                 var o = M.indexOf((0, l.createPath)(K.location))
                 ;-1 !== o && (M[o] = t), w({ action: 'REPLACE', location: n })
               }
@@ -12020,8 +12021,8 @@ object-assign
           H = 0,
           B = function(e) {
             ;(H += e), 1 === H
-              ? (0, d.addEventListener)(window, 'hashchange', P)
-              : 0 === H && (0, d.removeEventListener)(window, 'hashchange', P)
+              ? (0, d.addEventListener)(window, 'hashchange', O)
+              : 0 === H && (0, d.removeEventListener)(window, 'hashchange', O)
           },
           W = !1,
           V = function() {
@@ -12407,6 +12408,11 @@ object-assign
           alias: 'reactor-port',
           description: 'elm-reactor port',
           default: r.reactorPort,
+        },
+        l: {
+          alias: 'lr-port',
+          description: 'livereload port',
+          default: r.lrPort,
         },
       },
     }
