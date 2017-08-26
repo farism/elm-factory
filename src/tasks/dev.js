@@ -1,8 +1,9 @@
 const anyTemplate = require('gulp-any-template')
 const express = require('express')
 const gulp = require('gulp')
-const livereload = require('gulp-livereload')
-const livereloadConnect = require('connect-livereload')
+const lr = require('gulp-livereload')
+const lrConnect = require('connect-livereload')
+const nocache = require('nocache')
 const path = require('path')
 const proxy = require('http-proxy-middleware')
 const pump = require('pump')
@@ -17,6 +18,7 @@ const defaults = require('../defaults').dev
 
 const dev = options => {
   const { name: tmpDir } = tmp.dirSync()
+
   const {
     main = defaults.main,
     stylesheets = defaults.stylesheets,
@@ -25,7 +27,16 @@ const dev = options => {
     port = defaults.port,
     reactorHost = defaults.reactorHost,
     reactorPort = defaults.reactorPort,
+    lrPort = defaults.lrPort,
   } = options
+
+  // is there a better way to link the dev-server and dev-template tasks...?
+  let templateCompiler = () => Promise.resolve('template is compiling...')
+
+  // is there a better way to use gulp.watch and find-elm-dependencies...?
+  let templateWatcher
+  let mainWatcher
+  let cssWatcher
 
   gulp.task('dev-reactor', () => {
     const reactor = spawn(
@@ -35,98 +46,121 @@ const dev = options => {
     )
   })
 
-  gulp.task('dev-server', () => {
+  gulp.task('dev-server', callback => {
     const app = new express()
-    const target = `http://${reactorHost}:${reactorPort}`
+    const reactor = `http://${reactorHost}:${reactorPort}`
+
+    app
+      .use(nocache())
+      // serve up static assets
+      .use('/public', express.static(tmpDir))
+      // proxy _compile to elm-reactor and do livereload
+      .use('/_compile', [
+        lrConnect({
+          port: lrPort,
+        }),
+        proxy({
+          // pathRewrite: { '.elm': `.elm?t=${new Date().getTime()}` },
+          target: reactor,
+        }),
+      ])
+      // serve up elm file with custom template middleware and do livereload
+      .get('*.elm', [
+        lrConnect({
+          port: lrPort,
+          include: [/(.)*\.elm/],
+        }),
+        (request, response) => {
+          templateCompiler({
+            environment: 'development',
+            livereload: defaults.livereload,
+            options,
+            request,
+          })
+            .then(res => response.send(res))
+            .catch(err => console.error(err.message))
+        },
+      ])
+      // proxy all other requests to elm-reactor
+      .use(
+        proxy({
+          target: reactor,
+        })
+      )
+      // begin the dev server
+      .listen(port, host, err => {
+        // begin the livereload server
+        lr.listen({ port: lrPort })
+        callback()
+      })
+  })
+
+  gulp.task('dev-template', callback => {
+    templateWatcher && templateWatcher.end()
+    templateWatcher = gulp.watch(template, ['dev-template'])
 
     return pump(
       gulp.src(template),
-      through.obj((file, encode, callback) => {
-        // proxy the /_compile/*.elm files to elm-reactor
-        app.use(
-          proxy('/_compile', {
-            target,
-          })
-        )
-
-        app.get('*.elm', [
-          // do live reload on this page
-          livereloadConnect({
-            port: 35729,
-            include: [/(.)*\.elm/],
-          }),
-          // handle with html template
-          (request, response) => {
-            anyTemplate.compiler(file.path)(String(file.contents), {
-              environment: 'development',
-              options,
-              request,
-            }).then(res => response.send(res))
-          },
-        ])
-
-        // static assets
-        app.use('/public', express.static(tmpDir))
-
-        // proxy all other requests to elm-reactor
-        app.use(
-          proxy({
-            target,
-          })
-        )
-
-        app.listen(port, host, err => {
-          livereload.listen()
-        })
-
-        callback()
-      })
+      through.obj(function(file, encode, cb) {
+        this.push(file)
+        templateCompiler = anyTemplate.compiler(file)
+        cb()
+      }),
+      lr()
     )
   })
-
-  let mainWatcher
-
-  gulp.task('dev-main', () => {
-    livereload.reload()
-    mainWatcher && mainWatcher.end()
-    mainWatcher = gulp.watch(main, ['dev-main'])
-
-    return pump(
-      gulp.src(main),
-      elmFindDependencies(),
-      through.obj((file, encode, callback) => {
-        const cssWatched = cssWatcher._watcher._watched
-        const cssWatchedFiles = Object.keys(cssWatched).reduce((acc, key) => {
-          return [...acc, ...cssWatched[key]]
-        }, [])
-        if (!cssWatchedFiles.includes(file.path)) {
-          mainWatcher._watcher.add(file.path)
-        }
-        callback()
-      })
-    )
-  })
-
-  let cssWatcher
 
   gulp.task('dev-css', callback => {
     cssWatcher && cssWatcher.end()
     cssWatcher = gulp.watch(stylesheets, ['dev-css'])
 
-    pump(gulp.src(stylesheets), elmCss({ out: tmpDir }), livereload())
+    pump(gulp.src(stylesheets), elmCss({ out: tmpDir }), lr())
 
     return pump(
       gulp.src(stylesheets),
       elmFindDependencies(),
-      through.obj((file, encode, cb) => {
+      through.obj(function(file, encode, cb) {
         cssWatcher._watcher.add(file.path)
         cb()
       })
     )
   })
 
+  gulp.task('dev-main', () => {
+    lr.reload()
+    mainWatcher && mainWatcher.end()
+    mainWatcher = gulp.watch(main, ['dev-main'])
+
+    // get stylesheet watched files
+    const cssWatched = cssWatcher ? cssWatcher._watcher._watched : {}
+    const cssWatchedFiles = Object.keys(cssWatched).reduce((acc, key) => {
+      return [...acc, ...cssWatched[key]]
+    }, [])
+
+    return pump(
+      gulp.src(main),
+      elmFindDependencies(),
+      through.obj((file, encode, callback) => {
+        // exclude stylesheet watched files from main tree watcher because we
+        // css injection will be used on those files
+        if (!cssWatchedFiles.includes(file.path)) {
+          mainWatcher._watcher.add(file.path)
+        }
+
+        callback()
+      })
+    )
+  })
+
   gulp.task('dev', () => {
-    runSequence(['dev-reactor', 'dev-server'], 'dev-css', 'dev-main')
+    // order matters here, we need to find which css files are watched
+    // before we create the main watcher
+    runSequence(
+      ['dev-reactor', 'dev-server'],
+      'dev-css',
+      'dev-main',
+      'dev-template'
+    )
   })
 }
 
