@@ -9,7 +9,7 @@ import { initStream } from '../../src/tasks/init'
 chai.use(chaifs)
 
 describe('init', () => {
-  it.only('inits the root files', done => {
+  it('inits the root files', done => {
     const { name: dir } = tmp.dirSync({ unsafeCleanup: true })
     initStream(dir)
       .on('end', () => {

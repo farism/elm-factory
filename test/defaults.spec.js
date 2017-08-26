@@ -22,6 +22,7 @@ describe('defaults', () => {
       port: 8000,
       reactorHost: '127.0.0.1',
       reactorPort: 8001,
+      lrPort: 35729,
     })
   })
 

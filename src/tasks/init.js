@@ -4,7 +4,6 @@ const gulp = require('gulp')
 const path = require('path')
 const pump = require('pump')
 const rename = require('gulp-rename')
-const debug = require('gulp-debug')
 
 const src = glob => path.resolve(__dirname, '../tmpl/boilerplate/', glob)
 
