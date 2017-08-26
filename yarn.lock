@@ -2167,9 +2167,9 @@ growl@1.9.2:
   version "1.9.2"
   resolved "https://registry.yarnpkg.com/growl/-/growl-1.9.2.tgz#0ea7743715db8d8de2c5ede1775e1b45ac85c02f"
 
-gulp-any-template@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/gulp-any-template/-/gulp-any-template-0.2.0.tgz#dcc04cbc6cd6decd9f2a118a00cd64233d01c3cb"
+gulp-any-template@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/gulp-any-template/-/gulp-any-template-0.3.0.tgz#343ff5422c86ebacf12d12920de7f03915276f84"
   dependencies:
     dustjs-linkedin "^2.7.5"
     ejs "^2.5.7"
@@ -2183,14 +2183,6 @@ gulp-any-template@^0.2.0:
     through2 "^2.0.3"
     underscore.template "^0.1.7"
     vinyl "^2.1.0"
-
-gulp-compile-handlebars@^0.6.1:
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/gulp-compile-handlebars/-/gulp-compile-handlebars-0.6.1.tgz#9cc1d9cb951105dfae530928d2a904a14d74c5d3"
-  dependencies:
-    gulp-util "^3.0.3"
-    handlebars ">=3.0.0"
-    through2 "^0.6.3"
 
 gulp-connect@^5.0.0:
   version "5.0.0"
@@ -2310,7 +2302,7 @@ gulp-uglify@^3.0.0:
     uglify-js "^3.0.5"
     vinyl-sourcemaps-apply "^0.2.0"
 
-gulp-util@^3.0.0, gulp-util@^3.0.1, gulp-util@^3.0.2, gulp-util@^3.0.3, gulp-util@^3.0.6, gulp-util@^3.0.7, gulp-util@^3.0.8:
+gulp-util@^3.0.0, gulp-util@^3.0.1, gulp-util@^3.0.2, gulp-util@^3.0.6, gulp-util@^3.0.7, gulp-util@^3.0.8:
   version "3.0.8"
   resolved "https://registry.yarnpkg.com/gulp-util/-/gulp-util-3.0.8.tgz#0054e1e744502e27c04c187c3ecc505dd54bbb4f"
   dependencies:
@@ -2370,7 +2362,7 @@ gulplog@^1.0.0:
   dependencies:
     glogg "^1.0.0"
 
-handlebars@>=3.0.0, handlebars@^4.0.10:
+handlebars@^4.0.10:
   version "4.0.10"
   resolved "https://registry.yarnpkg.com/handlebars/-/handlebars-4.0.10.tgz#3d30c718b09a3d96f23ea4cc1f403c4d3ba9ff4f"
   dependencies:
@@ -3625,6 +3617,10 @@ negotiator@0.5.3:
 negotiator@0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.1.tgz#2b327184e8992101177b28563fb5e7102acd0ca9"
+
+nocache@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/nocache/-/nocache-2.0.0.tgz#202b48021a0c4cbde2df80de15a17443c8b43980"
 
 node-elm-compiler@2.3.2:
   version "2.3.2"
@@ -5373,13 +5369,6 @@ uglify-js@^2.6.1:
     yargs "~3.10.0"
   optionalDependencies:
     uglify-to-browserify "~1.0.0"
-
-uglify-js@^3.0.27:
-  version "3.0.27"
-  resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.0.27.tgz#a97db8c8ba6b9dba4e2f88d86aa9548fa6320034"
-  dependencies:
-    commander "~2.11.0"
-    source-map "~0.5.1"
 
 uglify-js@^3.0.5:
   version "3.0.28"
