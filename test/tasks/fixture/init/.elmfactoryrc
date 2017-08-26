@@ -1,0 +1,10 @@
+{
+  "main": "./src/Main.elm",
+  "stylesheets": "./src/Stylesheets.elm",
+  "build": {
+    "outputPath": "./build"
+  },
+  "dev": {
+    "port": 8000
+  }
+}

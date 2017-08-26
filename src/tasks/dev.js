@@ -16,7 +16,7 @@ const elmCss = require('gulp-elm-css')
 const defaults = require('../defaults').dev
 
 const dev = options => {
-  const { name: tmpDir } = tmp.dirSync()
+  const { name: tmpDir } = tmp.dirSync({ unsafeCleanup: true })
   const {
     main = defaults.main,
     stylesheets = defaults.stylesheets,
