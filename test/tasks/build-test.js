@@ -1,6 +1,7 @@
 import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
 import dirCompare from 'dir-compare'
+import mkdirp from 'mkdirp'
 import path from 'path'
 import tmp from 'tmp'
 
@@ -19,34 +20,31 @@ chai.use(chaifs)
 describe('build', function() {
   this.timeout(6000000)
 
-  const dir = path.join(__dirname, 'tmp')
+  const dir = path.join(__dirname, 'tmp', 'build')
   let outputPath = ''
   let tmpCleanup = () => {}
 
   before(done => {
+    mkdirp.sync(dir)
     process.chdir(dir)
     init('.').on('end', () => done())
   })
 
   beforeEach(() => {
-    const { name, removeCallback } = tmp.dirSync({
-      dir,
-      unsafeCleanup: true,
-      keep: true,
-    })
+    const { name, removeCallback } = tmp.dirSync({ dir, unsafeCleanup: true })
 
     outputPath = name
     tmpCleanup = removeCallback
   })
 
   afterEach(() => {
-    // tmpCleanup()
+    tmpCleanup()
   })
 
   describe('helpers', () => {
     describe('getHash', () => {
       it('given a buffer, generates an xxh hash', () => {
-        expect(getHash(Buffer('ELM-FACTORY'))).to.eql('af2ffec2')
+        expect(getHash(Buffer('elm-factory'))).to.eql('f1526942')
       })
     })
     describe('getPublicPath', () => {

@@ -10,7 +10,8 @@ chai.use(chaifs)
 
 describe('init', () => {
   it('inits the root files', done => {
-    const { name: dir } = tmp.dirSync({ unsafeCleanup: true })
+    const dir = path.join(__dirname, 'tmp', 'init')
+
     init(dir).on('end', () => {
       expect(dir).to.be.a
         .directory()

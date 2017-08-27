@@ -1,5 +1,5 @@
 const build = require('./build').task
-const dev = require('./dev').dev
+const dev = require('./dev').task
 const init = require('./init').task
 
 module.exports = {

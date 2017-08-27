@@ -48,6 +48,7 @@
     "gulp-rev-all": "^0.9.7",
     "gulp-through": "^0.4.0",
     "gulp-uglify": "^3.0.0",
+    "hook-std": "^0.4.0",
     "http-proxy-middleware": "^0.17.4",
     "nocache": "^2.0.0",
     "postcss": "^6.0.9",
@@ -66,8 +67,11 @@
     "chai-fs": "^1.0.0",
     "dir-compare": "^1.4.0",
     "husky": "^0.14.3",
+    "jsdom": "^11.2.0",
     "lint-staged": "^4.0.4",
+    "mkdirp": "^0.5.1",
     "mocha": "^3.5.0",
+    "sinon": "^3.2.1",
     "stream-assert": "^2.0.3"
   }
 }
