@@ -40,6 +40,7 @@ const startReactor = (host, port, callback) =>
           process.kill(-reactor.pid)
           process.exit(code)
         }
+        process.on('exit', exit(0))
         process.on('uncaughtException', exit(1))
         process.on('SIGINT', exit(0))
         process.on('SIGTERM', exit(0))

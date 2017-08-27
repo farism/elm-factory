@@ -2,8 +2,10 @@ import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
 import dirCompare from 'dir-compare'
 import gulp from 'gulp'
+import http from 'http'
 import mkdirp from 'mkdirp'
 import path from 'path'
+import portscanner from 'portscanner'
 import tmp from 'tmp'
 
 import { getWatchedFiles, startReactor } from '../../src/tasks/dev'
@@ -42,12 +44,32 @@ describe('dev', function() {
   })
 
   describe('_reactor', () => {
-    it.only('starts up an elm-reactor process', done => {
-      startReactor(defaults.reactorHost, defaults.reactorPort)
-        .then(reactor => done())
-        .catch(e => {
-          // console.error(e)
+    it('starts up an elm-reactor process', done => {
+      portscanner
+        .findAPortNotInUse(
+          defaults.reactorPort,
+          defaults.reactorPort + 10,
+          defaults.reactorHost
+        )
+        .then(port => startReactor(defaults.reactorHost, port))
+        .then(() => done())
+        .catch(e => console.error(e))
+    })
+
+    it.only('fails when port is in use', done => {
+      portscanner
+        .findAPortNotInUse(
+          defaults.reactorPort,
+          defaults.reactorPort + 10,
+          defaults.reactorHost
+        )
+        .then(port => {
+          http.createServer(() => {}).listen(port, defaults.reactorHost)
+
+          return startReactor(defaults.reactorHost, port)
         })
+        .then(() => done(new Error('does not fail when port is in use')))
+        .catch(e => done())
     })
   })
 
