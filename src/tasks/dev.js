@@ -64,27 +64,40 @@ const startReactor = (host, port, callback) =>
 const startExpress = (dir, host, port, reactor, lrPort, handler) =>
   new Promise((resolve, reject) => {
     const app = new express()
-      // add no cache headers
-      .use(nocache())
-      // serve static assets
-      .use('/public', express.static(dir))
-      // proxy _compile to {reactor}/_compile and do livereload
-      .use('/_compile', [
-        lrConnect({ port: lrPort }),
-        proxy({ target: reactor }),
-      ])
-      // serve up elm file with custom template middleware and do livereload
-      .get('*.elm', [
-        lrConnect({ port: lrPort, include: [/.*\.elm/] }),
-        handler,
-      ])
-      // proxy all other requests to elm-reactor
-      .use(proxy({ target: reactor }))
-      // begin the dev server
+
+    // begin the dev server
+    app
       .listen(port, host, err => {
+        if (err) {
+          reject(err)
+          return
+        }
+
+        app
+          // add no cache headers
+          .use(nocache())
+          // serve static assets
+          .use('/public', express.static(dir))
+          // proxy _compile to {reactor}/_compile and do livereload
+          .use('/_compile', [
+            lrConnect({ port: lrPort }),
+            proxy({ target: reactor }),
+          ])
+          // serve up elm file with custom template middleware and do livereload
+          .get('*.elm', [
+            lrConnect({ port: lrPort, include: [/.*\.elm/] }),
+            handler,
+          ])
+          // proxy all other requests to elm-reactor
+          .use(proxy({ target: reactor }))
+
         // begin the livereload server
         lr.listen({ port: lrPort })
+
         resolve(app)
+      })
+      .on('error', e => {
+        reject(e)
       })
   })
 

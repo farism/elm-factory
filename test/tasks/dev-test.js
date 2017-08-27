@@ -8,17 +8,34 @@ import path from 'path'
 import portscanner from 'portscanner'
 import tmp from 'tmp'
 
-import { getWatchedFiles, startReactor } from '../../src/tasks/dev'
+import {
+  getWatchedFiles,
+  startReactor,
+  startExpress,
+} from '../../src/tasks/dev'
 import { init } from '../../src/tasks/init'
 import { dev as defaults } from '../../src/defaults'
 
 chai.use(chaifs)
 
-describe('dev', function() {
-  this.timeout(6000000)
+const dir = path.join(__dirname, 'tmp', 'dev')
 
-  const dir = path.join(__dirname, 'tmp', 'dev')
-  let tmpCleanup = () => {}
+const createOccupiedServer = (host, port) =>
+  new Promise((resolve, reject) => {
+    http.createServer(() => {}).listen(port, host, () => {
+      resolve(port)
+    })
+  })
+
+const getPort = (host, port) => () =>
+  portscanner.findAPortNotInUse(port, port + 1000, host)
+
+const getReactorPort = getPort(defaults.reactorHost, defaults.reactorPort)
+
+const getExpressPort = getPort(defaults.host, defaults.port)
+
+describe.only('dev', function() {
+  this.timeout(6000000)
 
   before(done => {
     mkdirp.sync(dir)
@@ -29,51 +46,87 @@ describe('dev', function() {
   describe('helpers', () => {
     describe('getWatchedFiles', () => {
       it('given a watcher, returns an array of all watched files', () => {
-        expect(
-          getWatchedFiles({
-            _watcher: {
-              _watched: {
-                'foo/bar': ['foo/bar', 'ping/pong'],
-                'bing/baz': ['bing/baz'],
-              },
+        const actual = getWatchedFiles({
+          _watcher: {
+            _watched: {
+              'foo/bar': ['foo/bar', 'ping/pong'],
+              'bing/baz': ['bing/baz'],
             },
-          })
-        ).to.eql(['foo/bar', 'ping/pong', 'bing/baz'])
+          },
+        })
+
+        expect(['foo/bar', 'ping/pong', 'bing/baz']).to.eql(actual)
       })
     })
   })
 
-  describe('_reactor', () => {
-    it('starts up an elm-reactor process', done => {
-      portscanner
-        .findAPortNotInUse(
-          defaults.reactorPort,
-          defaults.reactorPort + 10,
-          defaults.reactorHost
-        )
+  describe('startReactor', () => {
+    it('fails when port is in use', done => {
+      getReactorPort()
+        .then(port => createOccupiedServer(defaults.reactorHost, port))
         .then(port => startReactor(defaults.reactorHost, port))
-        .then(() => done())
-        .catch(e => console.error(e))
+        .then(() => done(new Error('should not succeed when port is not free')))
+        .catch(e => done())
     })
 
-    it.only('fails when port is in use', done => {
-      portscanner
-        .findAPortNotInUse(
-          defaults.reactorPort,
-          defaults.reactorPort + 10,
-          defaults.reactorHost
-        )
-        .then(port => {
-          http.createServer(() => {}).listen(port, defaults.reactorHost)
-
-          return startReactor(defaults.reactorHost, port)
-        })
-        .then(() => done(new Error('does not fail when port is in use')))
-        .catch(e => done())
+    it('starts up an elm-reactor process', done => {
+      getReactorPort()
+        .then(port => startReactor(defaults.reactorHost, port))
+        .then(() => done())
+        .catch(e => done(new Error('should not fail when port is free')))
     })
   })
 
-  describe('_express', () => {})
+  describe('startExpress', () => {
+    let tmpDir = ''
+    let tmpCleanup = () => {}
+
+    before(() => {})
+
+    beforeEach(() => {
+      const { name, removeCallback } = tmp.dirSync({ dir, unsafeCleanup: true })
+
+      tmpDir = name
+      tmpCleanup = removeCallback
+    })
+
+    afterEach(() => {
+      tmpCleanup()
+    })
+
+    it('fails when port is in use', done => {
+      getExpressPort()
+        .then(port => createOccupiedServer(defaults.host, port))
+        .then(port =>
+          startExpress(
+            tmpDir,
+            defaults.host,
+            port,
+            'reactor',
+            defaults.lrPort,
+            () => {}
+          )
+        )
+        .then(() => done(new Error('should not succeed when port is not free')))
+        .catch(e => done())
+    })
+
+    it('starts up an express server', done => {
+      getExpressPort()
+        .then(port =>
+          startExpress(
+            tmpDir,
+            defaults.host,
+            port,
+            'reactor',
+            defaults.lrPort,
+            () => {}
+          )
+        )
+        .then(() => done())
+        .catch(e => done(new Error('should not fail when port is free')))
+    })
+  })
 
   describe('_template', () => {})
 
