@@ -19,27 +19,28 @@ chai.use(chaifs)
 describe('build', function() {
   this.timeout(6000000)
 
-  let dir = ''
-  let removeCallback = () => {}
+  const dir = path.join(__dirname, 'tmp')
+  let outputPath = ''
+  let tmpCleanup = () => {}
 
-  before(function(done) {
-    // create a tmp folder
-    const tmpDir = tmp.dirSync({ unsafeCleanup: true })
-
-    // get the dir name and cleanup callback
-    dir = tmpDir.name
-    removeCallback = tmpDir.removeCallback
-
-    // chdir to run builds from tmp project dir
+  before(done => {
     process.chdir(dir)
-
-    // use the `init` task to create a tmp project
     init('.').on('end', () => done())
   })
 
-  after(function() {
-    // cleanup the tmp folder
-    removeCallback()
+  beforeEach(() => {
+    const { name, removeCallback } = tmp.dirSync({
+      dir,
+      unsafeCleanup: true,
+      keep: true,
+    })
+
+    outputPath = name
+    tmpCleanup = removeCallback
+  })
+
+  afterEach(() => {
+    // tmpCleanup()
   })
 
   describe('helpers', () => {
@@ -61,6 +62,9 @@ describe('build', function() {
         expect(getPublicPath('a/b/', '/b/c/d.png')).to.eql('/a/b/d.png')
         expect(getPublicPath('http://foo.bar/', '/a.png')).to.eql(
           'http://foo.bar/a.png'
+        )
+        expect(getPublicPath('http://foo.bar/', 'a/b.png')).to.eql(
+          'http://foo.bar/b.png'
         )
       })
     })
@@ -85,14 +89,50 @@ describe('build', function() {
 
   describe('buildCss', () => {
     it('builds into the correct outputPath', done => {
-      const outputPath = 'build-css-outputPath'
-
       buildCss(
         defaults.stylesheets,
         outputPath,
-        defaults.publicPath
+        defaults.publicPath,
+        false,
+        dir
       ).on('end', () => {
-        expect(`${dir}/${outputPath}`).to.be.a
+        expect(outputPath).to.be.a
+          .directory()
+          .with.deep.files([
+            '8855f72a.css',
+            'css-manifest.json',
+            'f083965f.png',
+          ])
+
+        done()
+      })
+    })
+    it('builds with correct publicPath', done => {
+      buildCss(
+        defaults.stylesheets,
+        outputPath,
+        'http://somecdn.com/',
+        false
+      ).on('end', () => {
+        expect(outputPath).to.be.a
+          .directory()
+          .with.deep.files([
+            'a9c81025.css',
+            'css-manifest.json',
+            'f083965f.png',
+          ])
+
+        done()
+      })
+    })
+    it('does minification', done => {
+      buildCss(
+        defaults.stylesheets,
+        outputPath,
+        defaults.publicPath,
+        true
+      ).on('end', () => {
+        expect(outputPath).to.be.a
           .directory()
           .with.deep.files([
             'css-manifest.json',
@@ -103,36 +143,16 @@ describe('build', function() {
         done()
       })
     })
-    it('builds with correct publicPath', done => {
-      const outputPath = 'build-css-publicPath'
-
-      buildCss(
-        defaults.stylesheets,
-        outputPath,
-        'http://somecdn.com/'
-      ).on('end', () => {
-        expect(`${dir}/${outputPath}`).to.be.a
-          .directory()
-          .with.deep.files([
-            'css-manifest.json',
-            'a7c2d4f7.css',
-            'f083965f.png',
-          ])
-
-        done()
-      })
-    })
     it('generates a valid css-manifest.json', done => {
-      const outputPath = 'build-css-manifest'
-
       buildCss(
         defaults.stylesheets,
         outputPath,
-        defaults.publicPath
+        defaults.publicPath,
+        false
       ).on('end', () => {
-        expect(`${dir}/${outputPath}/css-manifest.json`).to.be.a
+        expect(`${outputPath}/css-manifest.json`).to.be.a
           .file()
-          .with.contents('{\n  "index.css": "eaa60ed2.css"\n}')
+          .with.contents('{\n  "index.css": "8855f72a.css"\n}')
 
         done()
       })
@@ -141,14 +161,13 @@ describe('build', function() {
 
   describe('buildMain', () => {
     it('builds into the correct outputPath', done => {
-      const outputPath = 'build-main-outputPath'
-
       buildMain(
         defaults.main,
         outputPath,
-        defaults.publicPath
+        defaults.publicPath,
+        false
       ).on('end', () => {
-        expect(`${dir}/${outputPath}`).to.be.a
+        expect(outputPath).to.be.a
           .directory()
           .with.deep.files(['d50146ff.js', 'f083965f.png', 'js-manifest.json'])
 
@@ -156,29 +175,41 @@ describe('build', function() {
       })
     })
     it('builds with correct publicPath', done => {
-      const outputPath = 'build-main-publicPath'
-
       buildMain(
         defaults.main,
         outputPath,
-        'http://somecdn.com/'
+        'http://somecdn.com/',
+        false
       ).on('end', () => {
-        expect(`${dir}/${outputPath}`).to.be.a
+        expect(outputPath).to.be.a
           .directory()
           .with.deep.files(['d50146ff.js', 'f083965f.png', 'js-manifest.json'])
 
         done()
       })
     })
-    it('generates a valid js-manifest.json', done => {
-      const outputPath = 'build-main-manifest'
-
+    it('does minification', done => {
       buildMain(
         defaults.main,
         outputPath,
-        defaults.publicPath
+        defaults.publicPath,
+        true
       ).on('end', () => {
-        expect(`${dir}/${outputPath}/js-manifest.json`).to.be.a
+        expect(outputPath).to.be.a
+          .directory()
+          .with.deep.files(['js-manifest.json', 'd50146ff.js', 'f083965f.png'])
+
+        done()
+      })
+    })
+    it('generates a valid js-manifest.json', done => {
+      buildMain(
+        defaults.main,
+        outputPath,
+        defaults.publicPath,
+        false
+      ).on('end', () => {
+        expect(`${outputPath}/js-manifest.json`).to.be.a
           .file()
           .with.contents('{\n  "Main.js": "d50146ff.js"\n}')
 

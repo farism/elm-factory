@@ -4,3 +4,4 @@ dist/
 elm-stuff/
 node_modules/
 lib/
+tmp/
