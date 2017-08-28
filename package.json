@@ -69,7 +69,6 @@
     "chokidar": "^1.7.0",
     "dir-compare": "^1.4.0",
     "husky": "^0.14.3",
-    "jsdom": "^11.2.0",
     "lint-staged": "^4.0.4",
     "mocha": "^3.5.0",
     "portscanner": "^2.1.1",

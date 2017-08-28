@@ -77,23 +77,34 @@ const startExpress = (host, port, reactor, lrPort, dir, handler) =>
           return
         }
 
-        app
-          // add no cache headers
-          .use(nocache())
-          // serve /public static assets from the tmp dir
-          .use('/public', express.static(dir))
+        // add no cache headers
+        app.use(nocache())
+
+        // serve /public static assets from the tmp dir
+        if (dir) {
+          app.use('/public', express.static(dir))
+        }
+
+        if (reactor) {
           // proxy _compile to {reactor}/_compile and do livereload
-          .use('/_compile', [
+          app.use('/_compile', [
             lrConnect({ port: lrPort }),
             proxy({ target: reactor }),
           ])
-          // serve up elm file with custom template middleware and do livereload
-          .get('*.elm', [
+        }
+
+        // serve up elm file with custom template middleware and do livereload
+        if (handler) {
+          app.get('*.elm', [
             lrConnect({ port: lrPort, include: [/.*\.elm/] }),
             handler,
           ])
+        }
+
+        if (reactor) {
           // proxy all other requests to elm-reactor
-          .use(proxy({ target: reactor }))
+          app.use(proxy({ target: reactor }))
+        }
 
         // begin the livereload server
         lr.listen({ port: lrPort })

@@ -28,11 +28,33 @@ const findPort = (host, port) =>
 const occupyPort = (host, port) =>
   new Promise((resolve, reject) =>
     http.createServer(() => {}).listen(port, host, () => {
-      resolve(port)
+      resolve()
     })
   )
 
-describe('dev', function() {
+describe('dev helpers', () => {
+  describe('getWatchedFiles', () => {
+    it('given a watcher, returns an array of all watched files', () => {
+      const actual = getWatchedFiles({
+        _watcher: {
+          _watched: {
+            'foo/bar': ['foo/bar', 'ping/pong'],
+            'bing/baz': ['bing/baz'],
+          },
+        },
+      })
+
+      expect(['foo/bar', 'ping/pong', 'bing/baz']).to.eql(actual)
+    })
+  })
+})
+
+describe('dev tasks', function() {
+  let expressPort
+  let expressUrl
+  let reactorPort
+  let reactorUrl
+
   this.timeout(6000000)
 
   before(done => {
@@ -42,53 +64,35 @@ describe('dev', function() {
     })
   })
 
-  describe('helpers', () => {
-    describe('getWatchedFiles', () => {
-      it('given a watcher, returns an array of all watched files', () => {
-        const actual = getWatchedFiles({
-          _watcher: {
-            _watched: {
-              'foo/bar': ['foo/bar', 'ping/pong'],
-              'bing/baz': ['bing/baz'],
-            },
-          },
-        })
+  beforeEach(done => {
+    findPort(defaults.host, defaults.port)
+      .then(port => {
+        expressPort = port
+        expressUrl = `http://${defaults.host}:${expressPort}`
 
-        expect(['foo/bar', 'ping/pong', 'bing/baz']).to.eql(actual)
+        return findPort(defaults.reactorHost, defaults.reactorPort)
       })
-    })
+      .then(port => {
+        reactorPort = port
+        reactorUrl = `http://${defaults.reactorHost}:${reactorPort}`
+        done()
+      })
   })
 
   describe('startReactor', () => {
-    let port
-    let server
-
-    beforeEach(done => {
-      findPort(defaults.host, defaults.port).then(_port => {
-        port = _port
-        done()
-      })
-    })
-
-    afterEach(() => {
-      server && process.kill(-server.pid) // use ESRCH
-      server = null
-    })
-
     it('fails when port is in use', done => {
-      occupyPort(defaults.reactorHost, port)
-        .then(port => startReactor(defaults.reactorHost, port))
-        .then(_server => {
-          server = _server
+      occupyPort(defaults.reactorHost, reactorPort)
+        .then(() => startReactor(defaults.reactorHost, reactorPort))
+        .then(() => {
           done(new Error('should not succeed when port is not free'))
         })
         .catch(e => done())
     })
 
     it('starts up an elm-reactor process', done => {
-      startReactor(defaults.reactorHost, port)
-        .then(_server => {
-          server = _server
+      startReactor(defaults.reactorHost, reactorPort)
+        .then(server => {
+          process.kill(-server.pid) // use ESRCH
           done()
         })
         .catch(done)
@@ -96,81 +100,55 @@ describe('dev', function() {
   })
 
   describe('startExpress', () => {
-    let port
-    let server
-
-    beforeEach(done => {
-      findPort(defaults.host, defaults.port).then(_port => {
-        port = _port
-        done()
-      })
-    })
-
-    afterEach(() => {
-      server && server.close()
-      server = null
-    })
-
     it('fails when port is in use', done => {
-      occupyPort(defaults.host, port)
-        .then(port =>
-          startExpress(
-            defaults.host,
-            port,
-            'reactor',
-            defaults.lrPort,
-            '',
-            () => {}
-          )
-        )
-        .then(_server => {
-          server = _server
+      occupyPort(defaults.host, expressPort)
+        .then(port => startExpress(defaults.host, expressPort, ''))
+        .then(server => {
+          server.close()
           done(new Error('should not succeed when port is taken'))
         })
         .catch(e => done())
     })
 
     it('starts up an express server', done => {
-      startExpress(
-        defaults.host,
-        port,
-        'reactor',
-        defaults.lrPort,
-        '/',
-        () => {}
-      )
-        .then(_server => {
-          server = _server
+      startExpress(defaults.host, expressPort, 'reactor', defaults.lrPort, '/')
+        .then(server => {
+          server.close()
           done()
         })
         .catch(done)
     })
 
     it('creates a virtual static /public dir', done => {
-      const staticDir = tmp.dirSync({ dir, unsafeCleanup: true })
+      const staticDir = tmp.dirSync({ dir })
       const staticFile = tmp.fileSync({ dir: staticDir.name, postfix: '.css' })
       fs.writeSync(staticFile.fd, Buffer('.elm-reactor{color:#FFFFFF}'))
 
-      startExpress(
-        defaults.host,
-        port,
-        'reactor',
-        defaults.lrPort,
-        staticDir.name,
-        () => {}
-      )
-        .then(_server => {
-          server = _server
-
-          return request(
-            `http://${defaults.host}:${port}/public/${path.basename(
-              staticFile.name
-            )}`
+      startExpress(defaults.host, expressPort, null, null, staticDir.name)
+        .then(server =>
+          request(
+            `${expressUrl}/public/${path.basename(staticFile.name)}`
           ).then(response => {
             expect(response).to.eql('.elm-reactor{color:#FFFFFF}')
+            staticFile.removeCallback()
+            staticDir.removeCallback()
+            server.close()
             done()
           })
-        })
+        )
+        .catch(done)
+    })
+
+    it.only('proxies elm-reactor', done => {
+      startReactor(defaults.reactorHost, reactorPort)
+        .then(reactor =>
+          startExpress(defaults.host, expressPort, reactorUrl).then(server =>
+            request(expressUrl).then(response => {
+              expect(response).to.include('<script src="/_reactor/index.js">')
+              done()
+            })
+          )
+        )
         .catch(done)
     })
   })
