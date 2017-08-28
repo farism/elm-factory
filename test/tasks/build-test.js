@@ -17,9 +17,7 @@ import { build as defaults } from '../../src/defaults'
 
 chai.use(chaifs)
 
-describe('build', function() {
-  this.timeout(6000000)
-
+describe('build', () => {
   const dir = path.join(__dirname, 'tmp', 'build')
   let outputPath = ''
   let tmpCleanup = () => {}
@@ -85,7 +83,9 @@ describe('build', function() {
     })
   })
 
-  describe('buildCss', () => {
+  describe('buildCss', function() {
+    this.timeout(6000000)
+
     it('builds into the correct outputPath', done => {
       buildCss(
         defaults.stylesheets,
@@ -157,7 +157,9 @@ describe('build', function() {
     })
   })
 
-  describe('buildMain', () => {
+  describe('buildMain', function() {
+    this.timeout(6000000)
+
     it('builds into the correct outputPath', done => {
       buildMain(
         defaults.main,

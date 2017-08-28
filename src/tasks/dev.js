@@ -68,7 +68,7 @@ const startReactor = (host, port) =>
     reactor.unref()
   })
 
-const startExpress = (host, port, reactor, lrPort, dir, handler) =>
+const startExpress = (host, port, reactor, lrPort, handler, dir) =>
   new Promise((resolve, reject) => {
     const app = new express()
 
@@ -83,21 +83,15 @@ const startExpress = (host, port, reactor, lrPort, dir, handler) =>
         // add no cache headers
         app.use(nocache())
 
-        // serve /public static assets from the tmp dir
-        if (dir) {
-          app.use('/public', express.static(dir))
-        }
-
         if (reactor) {
           // proxy _compile to {reactor}/_compile and do livereload
-          app.use('/_compile', [
-            lrConnect({ port: lrPort }),
-            proxy({ target: reactor }),
-            // (request, response) => {
-            //   console.log('=============')
-            //   console.log(reactor)
-            // },
-          ])
+          app.use(
+            '/_compile',
+            [
+              lrPort && lrConnect({ port: lrPort }),
+              proxy({ target: reactor }),
+            ].filter(m => m)
+          )
         }
 
         // serve up elm file with custom template middleware and do livereload
@@ -108,13 +102,20 @@ const startExpress = (host, port, reactor, lrPort, dir, handler) =>
           ])
         }
 
+        // serve /public static assets from the tmp dir
+        if (dir) {
+          app.use('/public', express.static(dir))
+        }
+
         if (reactor) {
           // proxy all other requests to elm-reactor
           app.use(proxy({ target: reactor }))
         }
 
         // begin the livereload server
-        lr.listen({ port: lrPort })
+        if (lrPort) {
+          lr.listen({ port: lrPort })
+        }
 
         resolve(server)
       })
@@ -141,7 +142,7 @@ const watchCss = (cssWatcher, stylesheets) =>
   pump(
     gulp.src(stylesheets),
     elmFindDependencies(),
-    through.obj(function(file, encode, callback) {
+    through.obj((file, encode, callback) => {
       cssWatcher._watcher.add(file.path)
       callback()
     })

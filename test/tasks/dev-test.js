@@ -22,7 +22,7 @@ tmp.setGracefulCleanup()
 
 const dir = path.join(__dirname, 'tmp', 'dev')
 
-const findAddress = (host, port) =>
+const findPort = (host, port) =>
   portscanner.findAPortNotInUse(port, port + 1000, host).then(port => ({
     host,
     port,
@@ -30,11 +30,21 @@ const findAddress = (host, port) =>
   }))
 
 const occupyPort = (host, port) =>
-  new Promise((resolve, reject) => {
-    const server = http.createServer(() => {})
+  new Promise((resolve, reject) =>
+    http
+      .createServer(() => {})
+      .listen(port, host, err => {
+        resolve({ host, port })
+      })
+      .on('error', reject)
+  )
 
-    server.listen(port, host, () => resolve({ host, port, server }))
-  })
+const checkResponse = (str, response) =>
+  assert.equal(
+    response.includes(str),
+    true,
+    `response is missing string '${str}'`
+  )
 
 describe('dev helpers', () => {
   describe('getWatchedFiles', () => {
@@ -64,7 +74,7 @@ describe('dev tasks', function() {
   describe('startReactor', () => {
     it('fails to start when port is in use', () => {
       return expect(
-        findAddress(defaults.reactorHost, defaults.reactorPort)
+        findPort(defaults.reactorHost, defaults.reactorPort)
           .then(({ host, port }) => occupyPort(host, port))
           .then(({ host, port, server }) => startReactor(host, port))
           .catch(() => server.close())
@@ -73,7 +83,7 @@ describe('dev tasks', function() {
 
     it('starts an elm-reactor server when port is free', () => {
       return expect(
-        findAddress(
+        findPort(
           defaults.reactorHost,
           defaults.reactorPort
         ).then(({ host, port }) =>
@@ -85,10 +95,10 @@ describe('dev tasks', function() {
     })
   })
 
-  describe.only('startExpress', () => {
+  describe('startExpress', () => {
     it('fails to start when port is in use', () => {
       return expect(
-        findAddress(defaults.host, defaults.port)
+        findPort(defaults.host, defaults.port)
           .then(({ host, port }) => occupyPort(host, port))
           .then(({ host, port, server }) => startExpress(host, port, ''))
           .catch(() => {
@@ -99,7 +109,7 @@ describe('dev tasks', function() {
 
     it('starts an express server when port is free', () => {
       return expect(
-        findAddress(defaults.host, defaults.port).then(({ host, port }) =>
+        findPort(defaults.host, defaults.port).then(({ host, port }) =>
           startExpress(host, port).then(server => {
             server.close()
           })
@@ -107,16 +117,26 @@ describe('dev tasks', function() {
       ).to.eventually.be.fulfilled
     })
 
+    it('starts the livereload server', function() {
+      return expect(
+        findPort(defaults.host, defaults.port).then(({ host, port, url }) =>
+          startExpress(host, port, null, defaults.lrPort).then(server =>
+            occupyPort(null, defaults.lrPort)
+          )
+        )
+      ).to.eventually.be.rejected
+    })
+
     it('creates a virtual static /public dir', done => {
       const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
       const tmpFile = tmp.fileSync({ dir: tmpDir.name, postfix: '.css' })
       fs.writeSync(tmpFile.fd, Buffer('.elm-reactor{color:#FFFFFF}'))
 
-      findAddress(defaults.host, defaults.port)
-        .then(({ host, port }) =>
+      findPort(defaults.host, defaults.port)
+        .then(({ host, port, url }) =>
           startExpress(host, port, null, null, tmpDir.name).then(server =>
             request(
-              `http://${host}:${port}/public/${path.basename(tmpFile.name)}`
+              `${url}/public/${path.basename(tmpFile.name)}`
             ).then(response => {
               expect(response).to.eql('.elm-reactor{color:#FFFFFF}')
               tmpFile.removeCallback()
@@ -129,38 +149,44 @@ describe('dev tasks', function() {
         .catch(done)
     })
 
-    it('proxies elm-reactor', done => {
+    it.only('*.elm files render a custom template', done => {
+      findPort(defaults.host, defaults.port).then(({ host, port, url }) =>
+        startExpress(host, port, null, null, (req, res) => {
+          res.send('<title>elm-factory</elm>')
+        }).then(server =>
+          request(`${url}/src/Main.elm`)
+            .then(response => {
+              checkResponse('<title>elm-factory</elm>', response)
+              server.close()
+              done()
+            })
+            .catch(done)
+        )
+      )
+    })
+
+    it('proxies elm-reactor', function(done) {
+      this.timeout(600000)
+
       // find an open port
-      findAddress(defaults.reactorHost, defaults.reactorPort)
+      findPort(defaults.reactorHost, defaults.reactorPort)
         .then(({ host: reactorHost, port: reactorPort, url: reactorUrl }) =>
           // start reactor
           startReactor(reactorHost, reactorPort).then(reactor =>
             // find an open port
-            findAddress(
-              defaults.host,
-              defaults.port
-            ).then(({ host, port, url }) =>
+            findPort(defaults.host, defaults.port).then(({ host, port, url }) =>
               // start express
               startExpress(host, port, reactorUrl)
                 // test proxies
                 .then(server =>
                   request(url)
-                    .then(response => {
-                      expect(response).to.include(
-                        '<script src="/_reactor/index.js">'
-                      )
-                      // return request(expressUrl)
+                    .then(res => {
+                      checkResponse('<script src="/_reactor/index.js">', res)
+
                       return request(`${url}/_compile/src/Main.elm`)
                     })
                     .then(response => {
-                      const str = `var runElmProgram = `
-
-                      assert.equal(
-                        response.includes(str),
-                        true,
-                        `response is missing '${str}'`
-                      )
-
+                      checkResponse('var runElmProgram = ')
                       done()
                     })
                 )
