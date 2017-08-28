@@ -32,7 +32,10 @@ const startReactor = (host, port) =>
     const unhook = hookStd.stderr({ silent: false }, output => {
       unhook()
       reactor.stderr.pipe(devnull())
-      if (output.includes('Address already in use')) {
+      if (
+        output.includes('Error') ||
+        output.includes('Address already in use')
+      ) {
         reject('elm-reactor could not start: address already in use')
 
         return ''
@@ -90,6 +93,10 @@ const startExpress = (host, port, reactor, lrPort, dir, handler) =>
           app.use('/_compile', [
             lrConnect({ port: lrPort }),
             proxy({ target: reactor }),
+            // (request, response) => {
+            //   console.log('=============')
+            //   console.log(reactor)
+            // },
           ])
         }
 

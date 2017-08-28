@@ -825,6 +825,12 @@ center-align@^0.1.1:
     align-text "^0.1.3"
     lazy-cache "^1.0.3"
 
+chai-as-promised@^7.1.1:
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/chai-as-promised/-/chai-as-promised-7.1.1.tgz#08645d825deb8696ee61725dbf590c012eb00ca0"
+  dependencies:
+    check-error "^1.0.2"
+
 chai-fs@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/chai-fs/-/chai-fs-1.0.0.tgz#8b242852748a54f1df91f1ea430bb39748cf7421"
@@ -895,7 +901,7 @@ character-parser@^2.1.1:
   dependencies:
     is-regex "^1.0.3"
 
-check-error@^1.0.1:
+check-error@^1.0.1, check-error@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/check-error/-/check-error-1.0.2.tgz#574d312edd88bb5dd8912e9286dd6c0aed4aac82"
 
