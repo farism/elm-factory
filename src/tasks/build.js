@@ -112,6 +112,8 @@ const task = options => {
   gulp.task('_main', () => buildMain(main, outputPath, publicPath, cwd))
 
   gulp.task('build', () => runSequence('_clean', '_css', '_main'))
+
+  return gulp
 }
 
 module.exports = {

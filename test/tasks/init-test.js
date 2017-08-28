@@ -1,17 +1,26 @@
 import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
-import dirCompare from 'dir-compare'
 import path from 'path'
-import tmp from 'tmp'
 
-import { init } from '../../src/tasks/init'
+import { init, task } from '../../src/tasks/init'
 
 chai.use(chaifs)
 
-describe('init', () => {
-  it('inits the root files', done => {
-    const dir = path.join(__dirname, 'tmp', 'init')
+const dir = path.join(__dirname, 'tmp', 'init')
 
+describe('init task', () => {
+  it('adds the tasks to gulp', () => {
+    const gulp = task({})
+    expect(gulp).to.have.a.nested.property('tasks.init')
+  })
+})
+
+describe('init', () => {
+  it('throws an error if a directory is not provided', () => {
+    expect(() => init()).to.throw()
+  })
+
+  it('inits a project', done => {
     init(dir).on('end', () => {
       expect(dir).to.be.a
         .directory()
@@ -27,6 +36,7 @@ describe('init', () => {
           'src/Stylesheets.elm',
           'src/assets/css3.png',
         ])
+
       done()
     })
   })

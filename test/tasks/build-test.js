@@ -1,7 +1,5 @@
 import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
-import dirCompare from 'dir-compare'
-import mkdirp from 'mkdirp'
 import path from 'path'
 import tmp from 'tmp'
 
@@ -11,11 +9,22 @@ import {
   getHash,
   getPublicPath,
   getTransformedFilename,
+  task,
 } from '../../src/tasks/build'
 import { init } from '../../src/tasks/init'
 import { build as defaults } from '../../src/defaults'
 
 chai.use(chaifs)
+
+describe('build task', () => {
+  it('adds the tasks to gulp', () => {
+    const gulp = task({})
+    expect(gulp.tasks).to.have.a.property('_clean')
+    expect(gulp.tasks).to.have.a.property('_css')
+    expect(gulp.tasks).to.have.a.property('_main')
+    expect(gulp.tasks).to.have.a.property('build')
+  })
+})
 
 describe('build', () => {
   const dir = path.join(__dirname, 'tmp', 'build')
@@ -23,9 +32,10 @@ describe('build', () => {
   let tmpCleanup = () => {}
 
   before(done => {
-    mkdirp.sync(dir)
-    process.chdir(dir)
-    init('.').on('end', () => done())
+    init(dir).on('end', () => {
+      process.chdir(dir)
+      done()
+    })
   })
 
   beforeEach(() => {

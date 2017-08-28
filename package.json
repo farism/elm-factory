@@ -20,8 +20,9 @@
   },
   "scripts": {
     "build": "babel src -d lib",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
     "prepublish": "npm run build",
-    "test": "NODE_ENV='test' mocha"
+    "test": "nyc --reporter=html --reporter=text mocha"
   },
   "dependencies": {
     "connect-livereload": "^0.6.0",
@@ -68,10 +69,12 @@
     "chai-as-promised": "^7.1.1",
     "chai-fs": "^1.0.0",
     "chokidar": "^1.7.0",
+    "coveralls": "^2.13.1",
     "dir-compare": "^1.4.0",
     "husky": "^0.14.3",
     "lint-staged": "^4.0.4",
     "mocha": "^3.5.0",
+    "nyc": "^11.1.0",
     "portscanner": "^2.1.1",
     "request-promise-native": "^1.0.4",
     "sinon": "^3.2.1",

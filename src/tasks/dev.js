@@ -18,14 +18,21 @@ const tmp = require('tmp')
 
 const defaults = require('../defaults').dev
 
-// is there a better way to link the _express and _template tasks...?
-let templateCompiler = () => Promise.resolve('template is compiling...')
+const defaultTemplateCompiler = () =>
+  Promise.resolve('template is compiling...')
 
-const getWatchedFiles = ({ _watcher: { _watched = {} } = {} } = {}) =>
-  Object.keys(_watched).reduce(
-    (acc, key) => [...acc, ...(_watched[key] || [])],
-    []
-  )
+// what is the pure way to link a watched template to express...?
+let templateCompiler = defaultTemplateCompiler
+
+const getWatchedPaths = ({ _watcher }) =>
+  Object.keys(_watcher.watched())
+    .reduce((acc, key) => [...acc, ...(_watcher.watched()[key] || [])], [])
+    .sort()
+
+const resetWatcher = (taskName, watcher) => {
+  watcher && watcher.end()
+  return gulp.watch(template, [taskName])
+}
 
 const startReactor = (host, port) =>
   new Promise((resolve, reject) => {
@@ -74,12 +81,7 @@ const startExpress = (host, port, reactor, lrPort, handler, dir) =>
 
     // begin the dev server
     const server = app
-      .listen(port, host, err => {
-        if (err) {
-          reject(err)
-          return
-        }
-
+      .listen(port, host, () => {
         // add no cache headers
         app.use(nocache())
 
@@ -124,8 +126,12 @@ const startExpress = (host, port, reactor, lrPort, handler, dir) =>
       })
   })
 
-const compileTemplate = template =>
-  pump(
+const compileTemplate = template => {
+  if (!template) {
+    throw new Error('template required')
+  }
+
+  return pump(
     gulp.src(template),
     through.obj(function(file, encode, callback) {
       templateCompiler = anyTemplate.compiler(file)
@@ -134,22 +140,86 @@ const compileTemplate = template =>
     }),
     lr()
   )
+}
 
-const compileCss = (out, stylesheets) =>
-  pump(gulp.src(stylesheets), elmCss({ out }), lr())
+const compileCss = (out, stylesheets, cwd = process.cwd()) => {
+  if (!out) {
+    throw new Error('param `out` required')
+  }
 
-const watchCss = (cssWatcher, stylesheets) =>
-  pump(
+  if (!stylesheets) {
+    throw new Error('param `stylesheets` required')
+  }
+
+  return pump(gulp.src(stylesheets), elmCss({ cwd, out }), lr())
+}
+
+const watch = filter => {
+  if (typeof filter !== 'undefined' && typeof filter !== 'function') {
+    throw new Error('param `filter` must be a function')
+  }
+
+  return (watcher, src) =>
+    new Promise((resolve, reject) => {
+      if (!watcher) {
+        reject(new Error('param `watcher` required'))
+      }
+
+      if (!src) {
+        reject(new Error('param `src` required'))
+      }
+
+      return pump(
+        gulp.src(src),
+        elmFindDependencies(),
+        through.obj((file, encode, callback) => {
+          const watch = filter ? filter(file) : true
+
+          if (watch) {
+            watcher._watcher.add(file.path)
+          }
+
+          callback()
+        }),
+        () => resolve(getWatchedPaths(watcher))
+      )
+    })
+}
+
+const watchCss = (cssWatcher, stylesheets) => {
+  if (!cssWatcher) {
+    throw new Error('cssWatcher required')
+  }
+
+  if (!stylesheets) {
+    throw new Error('stylesheets required')
+  }
+
+  return pump(
     gulp.src(stylesheets),
     elmFindDependencies(),
     through.obj((file, encode, callback) => {
+      // console.log(file.path)
       cssWatcher._watcher.add(file.path)
       callback()
     })
   )
+}
 
-const watchMain = (cssWatchedFiles, mainWatcher, main) =>
-  pump(
+const watchMain = (cssWatchedFiles, mainWatcher, main) => {
+  if (!cssWatchedFiles) {
+    throw new Error('cssWatcher required')
+  }
+
+  if (!mainWatcher) {
+    throw new Error('mainWatcher required')
+  }
+
+  if (!main) {
+    throw new Error('main required')
+  }
+
+  return pump(
     gulp.src(main),
     elmFindDependencies(),
     through.obj((file, encode, callback) => {
@@ -161,6 +231,7 @@ const watchMain = (cssWatchedFiles, mainWatcher, main) =>
       callback()
     })
   )
+}
 
 const task = options => {
   const {
@@ -171,11 +242,23 @@ const task = options => {
     port = defaults.port,
     reactorHost = defaults.reactorHost,
     reactorPort = defaults.reactorPort,
-    lrServer = defaults.lrServer,
     lrPort = defaults.lrPort,
+    cwd = process.cwd(),
   } = options
 
+  // tmp dir for serving static css files
   const { name: tmpDir } = tmp.dirSync({ unsafeCleanup: true })
+
+  // custom template handler
+  const handler = (request, response) => {
+    templateCompiler({
+      environment: 'development',
+      options,
+      request,
+    })
+      .then(res => response.send(res))
+      .catch(e => console.error(e.message))
+  }
 
   // is there a better way to use gulp.watch and find-elm-dependencies...?
   let templateWatcher
@@ -183,6 +266,7 @@ const task = options => {
   let cssWatcher
 
   gulp.task('_template', () => {
+    // resetWatcher('_template', templateWatcher)
     templateWatcher && templateWatcher.end()
     templateWatcher = gulp.watch(template, ['_template'])
 
@@ -205,42 +289,35 @@ const task = options => {
     // hard reload
     lr.reload()
 
-    return watchMain(getWatchedFiles(cssWatcher), mainWatcher, main)
+    return watchMain(getWatchedPaths(cssWatcher), mainWatcher, main)
   })
 
   gulp.task('dev', () => {
     return startReactor(reactorHost, reactorPort)
       .then(reactor => {
-        const handler = (request, response) => {
-          templateCompiler({
-            environment: 'development',
-            lrServer,
-            options,
-            request,
-          })
-            .then(res => response.send(res))
-            .catch(e => console.error(e.message))
-        }
-
         return startExpress(
           host,
           port,
           `http://${reactorHost}:${reactorPort}`,
           lrPort,
-          tmpDir,
-          handler
+          handler,
+          tmpDir
         )
       })
       .then(app => runSequence('_template', '_css', '_main'))
       .catch(e => console.error(e))
   })
+
+  return gulp
 }
 
 module.exports = {
-  getWatchedFiles,
+  defaultTemplateCompiler,
+  getWatchedPaths,
   startReactor,
   startExpress,
   compileTemplate,
+  watch,
   watchCss,
   compileCss,
   watchMain,
