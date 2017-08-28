@@ -1,11 +1,12 @@
 import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
 import dirCompare from 'dir-compare'
+import fs from 'fs'
 import gulp from 'gulp'
 import http from 'http'
-import mkdirp from 'mkdirp'
 import path from 'path'
 import portscanner from 'portscanner'
+import request from 'request-promise-native'
 import tmp from 'tmp'
 
 import {
@@ -17,30 +18,28 @@ import { init } from '../../src/tasks/init'
 import { dev as defaults } from '../../src/defaults'
 
 chai.use(chaifs)
+tmp.setGracefulCleanup()
 
 const dir = path.join(__dirname, 'tmp', 'dev')
 
-const createOccupiedServer = (host, port) =>
-  new Promise((resolve, reject) => {
+const findPort = (host, port) =>
+  portscanner.findAPortNotInUse(port, port + 1000, host)
+
+const occupyPort = (host, port) =>
+  new Promise((resolve, reject) =>
     http.createServer(() => {}).listen(port, host, () => {
       resolve(port)
     })
-  })
+  )
 
-const getPort = (host, port) => () =>
-  portscanner.findAPortNotInUse(port, port + 1000, host)
-
-const getReactorPort = getPort(defaults.reactorHost, defaults.reactorPort)
-
-const getExpressPort = getPort(defaults.host, defaults.port)
-
-describe.only('dev', function() {
+describe('dev', function() {
   this.timeout(6000000)
 
   before(done => {
-    mkdirp.sync(dir)
-    process.chdir(dir)
-    init('.').on('end', () => done())
+    init(dir).on('end', () => {
+      process.chdir(dir)
+      done()
+    })
   })
 
   describe('helpers', () => {
@@ -61,70 +60,118 @@ describe.only('dev', function() {
   })
 
   describe('startReactor', () => {
+    let port
+    let server
+
+    beforeEach(done => {
+      findPort(defaults.host, defaults.port).then(_port => {
+        port = _port
+        done()
+      })
+    })
+
+    afterEach(() => {
+      server && process.kill(-server.pid) // use ESRCH
+      server = null
+    })
+
     it('fails when port is in use', done => {
-      getReactorPort()
-        .then(port => createOccupiedServer(defaults.reactorHost, port))
+      occupyPort(defaults.reactorHost, port)
         .then(port => startReactor(defaults.reactorHost, port))
-        .then(() => done(new Error('should not succeed when port is not free')))
+        .then(_server => {
+          server = _server
+          done(new Error('should not succeed when port is not free'))
+        })
         .catch(e => done())
     })
 
     it('starts up an elm-reactor process', done => {
-      getReactorPort()
-        .then(port => startReactor(defaults.reactorHost, port))
-        .then(() => done())
-        .catch(e => done(new Error('should not fail when port is free')))
+      startReactor(defaults.reactorHost, port)
+        .then(_server => {
+          server = _server
+          done()
+        })
+        .catch(done)
     })
   })
 
   describe('startExpress', () => {
-    let tmpDir = ''
-    let tmpCleanup = () => {}
+    let port
+    let server
 
-    before(() => {})
-
-    beforeEach(() => {
-      const { name, removeCallback } = tmp.dirSync({ dir, unsafeCleanup: true })
-
-      tmpDir = name
-      tmpCleanup = removeCallback
+    beforeEach(done => {
+      findPort(defaults.host, defaults.port).then(_port => {
+        port = _port
+        done()
+      })
     })
 
     afterEach(() => {
-      tmpCleanup()
+      server && server.close()
+      server = null
     })
 
     it('fails when port is in use', done => {
-      getExpressPort()
-        .then(port => createOccupiedServer(defaults.host, port))
+      occupyPort(defaults.host, port)
         .then(port =>
           startExpress(
-            tmpDir,
             defaults.host,
             port,
             'reactor',
             defaults.lrPort,
+            '',
             () => {}
           )
         )
-        .then(() => done(new Error('should not succeed when port is not free')))
+        .then(_server => {
+          server = _server
+          done(new Error('should not succeed when port is taken'))
+        })
         .catch(e => done())
     })
 
     it('starts up an express server', done => {
-      getExpressPort()
-        .then(port =>
-          startExpress(
-            tmpDir,
-            defaults.host,
-            port,
-            'reactor',
-            defaults.lrPort,
-            () => {}
-          )
-        )
-        .then(() => done())
-        .catch(e => done(new Error('should not fail when port is free')))
+      startExpress(
+        defaults.host,
+        port,
+        'reactor',
+        defaults.lrPort,
+        '/',
+        () => {}
+      )
+        .then(_server => {
+          server = _server
+          done()
+        })
+        .catch(done)
+    })
+
+    it('creates a virtual static /public dir', done => {
+      const staticDir = tmp.dirSync({ dir, unsafeCleanup: true })
+      const staticFile = tmp.fileSync({ dir: staticDir.name, postfix: '.css' })
+      fs.writeSync(staticFile.fd, Buffer('.elm-reactor{color:#FFFFFF}'))
+
+      startExpress(
+        defaults.host,
+        port,
+        'reactor',
+        defaults.lrPort,
+        staticDir.name,
+        () => {}
+      )
+        .then(_server => {
+          server = _server
+
+          return request(
+            `http://${defaults.host}:${port}/public/${path.basename(
+              staticFile.name
+            )}`
+          ).then(response => {
+            expect(response).to.eql('.elm-reactor{color:#FFFFFF}')
+            done()
+          })
+        })
+        .catch(done)
     })
   })
 

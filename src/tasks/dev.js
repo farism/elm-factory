@@ -1,4 +1,5 @@
 const anyTemplate = require('gulp-any-template')
+const devnull = require('dev-null')
 const elmCss = require('gulp-elm-css')
 const elmFindDependencies = require('gulp-elm-find-dependencies')
 const express = require('express')
@@ -26,10 +27,11 @@ const getWatchedFiles = ({ _watcher: { _watched = {} } = {} } = {}) =>
     []
   )
 
-const startReactor = (host, port, callback) =>
+const startReactor = (host, port) =>
   new Promise((resolve, reject) => {
     const unhook = hookStd.stderr({ silent: false }, output => {
       unhook()
+      reactor.stderr.pipe(devnull())
       if (output.includes('Address already in use')) {
         reject('elm-reactor could not start: address already in use')
 
@@ -37,11 +39,13 @@ const startReactor = (host, port, callback) =>
       } else {
         // because elm-reactor is running in detached mode, make sure it's killed
         const exit = code => () => {
-          process.kill(-reactor.pid)
+          try {
+            process.kill(-reactor.pid) // use ESRCH
+          } catch (e) {}
           process.exit(code)
         }
-        process.on('exit', exit(0))
         process.on('uncaughtException', exit(1))
+        process.on('exit', exit(0))
         process.on('SIGINT', exit(0))
         process.on('SIGTERM', exit(0))
 
@@ -61,12 +65,12 @@ const startReactor = (host, port, callback) =>
     reactor.unref()
   })
 
-const startExpress = (dir, host, port, reactor, lrPort, handler) =>
+const startExpress = (host, port, reactor, lrPort, dir, handler) =>
   new Promise((resolve, reject) => {
     const app = new express()
 
     // begin the dev server
-    app
+    const server = app
       .listen(port, host, err => {
         if (err) {
           reject(err)
@@ -76,7 +80,7 @@ const startExpress = (dir, host, port, reactor, lrPort, handler) =>
         app
           // add no cache headers
           .use(nocache())
-          // serve static assets
+          // serve /public static assets from the tmp dir
           .use('/public', express.static(dir))
           // proxy _compile to {reactor}/_compile and do livereload
           .use('/_compile', [
@@ -94,7 +98,7 @@ const startExpress = (dir, host, port, reactor, lrPort, handler) =>
         // begin the livereload server
         lr.listen({ port: lrPort })
 
-        resolve(app)
+        resolve(server)
       })
       .on('error', e => {
         reject(e)
@@ -112,6 +116,9 @@ const compileTemplate = template =>
     lr()
   )
 
+const compileCss = (out, stylesheets) =>
+  pump(gulp.src(stylesheets), elmCss({ out }), lr())
+
 const watchCss = (cssWatcher, stylesheets) =>
   pump(
     gulp.src(stylesheets),
@@ -121,9 +128,6 @@ const watchCss = (cssWatcher, stylesheets) =>
       callback()
     })
   )
-
-const compileCss = (out, stylesheets) =>
-  pump(gulp.src(stylesheets), elmCss({ out }), lr())
 
 const watchMain = (cssWatchedFiles, mainWatcher, main) =>
   pump(
@@ -140,7 +144,6 @@ const watchMain = (cssWatchedFiles, mainWatcher, main) =>
   )
 
 const task = options => {
-  const { name: tmpDir } = tmp.dirSync({ unsafeCleanup: true })
   const {
     main = defaults.main,
     stylesheets = defaults.stylesheets,
@@ -153,18 +156,12 @@ const task = options => {
     lrPort = defaults.lrPort,
   } = options
 
+  const { name: tmpDir } = tmp.dirSync({ unsafeCleanup: true })
+
   // is there a better way to use gulp.watch and find-elm-dependencies...?
   let templateWatcher
   let mainWatcher
   let cssWatcher
-
-  gulp.task('_reactor', callback => {
-    startReactor(reactorHost, reactorPort, callback)
-  })
-
-  gulp.task('_express', callback => {
-    startExpress(tmpDir, host, port, reactor, lrPort, expressHandler, callback)
-  })
 
   gulp.task('_template', () => {
     templateWatcher && templateWatcher.end()
@@ -207,11 +204,11 @@ const task = options => {
         }
 
         return startExpress(
-          tmpDir,
           host,
           port,
           `http://${reactorHost}:${reactorPort}`,
           lrPort,
+          tmpDir,
           handler
         )
       })
