@@ -207,17 +207,7 @@ const watch = filter => {
 }
 
 const task = options => {
-  const {
-    main = defaults.main,
-    stylesheets = defaults.stylesheets,
-    template = defaults.template,
-    host = defaults.host,
-    port = defaults.port,
-    reactorHost = defaults.reactorHost,
-    reactorPort = defaults.reactorPort,
-    lrPort = defaults.lrPort,
-    cwd = process.cwd(),
-  } = options
+  const opts = Object.assign({}, defaults, options)
 
   // tmp dir for serving static css files
   const { name: tmpDir } = tmp.dirSync({ unsafeCleanup: true })
@@ -241,43 +231,43 @@ const task = options => {
   /* istanbul ignore next  */
   gulp.task('_template', () => {
     templateWatcher && templateWatcher.end()
-    templateWatcher = gulp.watch(template, ['_template'])
+    templateWatcher = gulp.watch(opts.template, ['_template'])
 
-    return compileTemplate(template)
+    return compileTemplate(opts.template)
   })
 
   /* istanbul ignore next  */
   gulp.task('_css', () => {
-    templateWatcher && templateWatcher.end()
-    templateWatcher = gulp.watch(template, ['_template'])
+    cssWatcher && cssWatcher.end()
+    cssWatcher = gulp.watch(opts.stylesheets, ['_css'])
 
-    watch()(cssWatcher, stylesheets)
+    watch()(cssWatcher, opts.stylesheets)
 
-    return compileCss(tmpDir, stylesheets)
+    return compileCss(tmpDir, opts.stylesheets, opts.cwd)
   })
 
   /* istanbul ignore next  */
   gulp.task('_main', () => {
     tinylr.changed('')
 
-    templateWatcher && templateWatcher.end()
-    templateWatcher = gulp.watch(template, ['_template'])
+    mainWatcher && mainWatcher.end()
+    mainWatcher = gulp.watch(opts.main, ['_main'])
 
     const filter = file => !getWatchedPaths(cssWatcher).includes(file.path)
 
-    watch(filter)(mainWatcher, main)
+    watch(filter)(mainWatcher, opts.main)
   })
 
   /* istanbul ignore next  */
   gulp.task('dev', () => {
-    return startReactor(reactorHost, reactorPort)
+    return startReactor(opts.reactorHost, opts.reactorPort)
       .then(reactor => {
         return startExpress(
-          host,
-          port,
-          `http://${reactorHost}:${reactorPort}`,
-          lrPort,
-          handler,
+          opts.host,
+          opts.port,
+          `http://${opts.reactorHost}:${opts.reactorPort}`,
+          opts.lrPort,
+          opts.handler,
           tmpDir
         )
       })

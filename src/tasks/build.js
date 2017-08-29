@@ -19,14 +19,13 @@ const crypto = require('crypto')
 const defaults = require('../defaults').build
 
 const getHash = contents =>
-  crypto
-    .createHash('sha1')
-    .update(String(contents))
-    .digest('hex')
-    .toString(16)
-    .substr(0, 8)
-
-// xxh.h64(0).update(String(contents)).digest().toString(16).substr(0, 8)
+  xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
+// crypto
+//   .createHash('sha1')
+//   .update(String(contents))
+//   .digest('hex')
+//   .toString(16)
+//   .substr(0, 8)
 
 const getPublicPath = (publicPath, filename) =>
   publicPath.startsWith('http')
@@ -107,23 +106,20 @@ const buildMain = (
     .pipe(gulp.dest(outputPath))
 
 const task = options => {
-  const {
-    main = defaults.main,
-    stylesheets = defaults.stylesheets,
-    outputPath = defaults.outputPath,
-    publicPath = defaults.publicPath,
-    template = defaults.template,
-    cwd = process.cwd(),
-  } = options
+  const opts = Object.assign({}, defaults, options)
 
   /* istanbul ignore next  */
-  gulp.task('_clean', () => del(outputPath))
+  gulp.task('_clean', () => del(opts.outputPath))
 
   /* istanbul ignore next  */
-  gulp.task('_css', () => buildCss(stylesheets, outputPath, publicPath, cwd))
+  gulp.task('_css', () =>
+    buildCss(opts.stylesheets, opts.outputPath, opts.publicPath, opts.cwd)
+  )
 
   /* istanbul ignore next  */
-  gulp.task('_main', () => buildMain(main, outputPath, publicPath, cwd))
+  gulp.task('_main', () =>
+    buildMain(opts.main, opts.outputPath, opts.publicPath, opts.cwd)
+  )
 
   /* istanbul ignore next  */
   gulp.task('build', () => runSequence('_clean', '_css', '_main'))

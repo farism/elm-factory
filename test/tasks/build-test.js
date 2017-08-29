@@ -16,7 +16,7 @@ import { build as defaults } from '../../src/defaults'
 
 chai.use(chaifs)
 
-describe.only('build', () => {
+describe('build', () => {
   const dir = path.join(__dirname, 'tmp', 'build')
   let outputPath = ''
   let tmpCleanup = () => {}
