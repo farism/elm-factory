@@ -7,7 +7,7 @@ describe('defaults', () => {
     expect(build).to.eql({
       main: './src/Main.elm',
       stylesheets: './src/Stylesheets.elm',
-      template: undefined,
+      html: undefined,
       outputPath: 'build',
       publicPath: '/public/',
     })
@@ -17,7 +17,7 @@ describe('defaults', () => {
     expect(dev).to.eql({
       main: './src/Main.elm',
       stylesheets: './src/Stylesheets.elm',
-      template: './index.ejs',
+      html: './index.ejs',
       host: '127.0.0.1',
       port: 8000,
       reactorHost: '127.0.0.1',

@@ -13,8 +13,8 @@ import tmp from 'tmp'
 import {
   compileCss,
   compileMain,
-  compileTemplate,
-  defaultTemplateCompiler,
+  compileHtml,
+  defaultHtmlCompiler,
   getWatchedPaths,
   resetWatcher,
   startReactor,
@@ -32,22 +32,24 @@ tmp.setGracefulCleanup()
 
 const dir = path.join(__dirname, 'tmp', 'dev')
 
-const findPort = (host, port) =>
-  portscanner.findAPortNotInUse(port, port + 1000, host).then(port => ({
-    host,
-    port,
-    url: `http://${host}:${port}`,
-  }))
+const findFreePort = (host, port) =>
+  portscanner.findAPortNotInUse(port, port + 1000, host).then(port => {
+    return {
+      host,
+      port,
+      url: `http://${host}:${port}`,
+    }
+  })
 
 const occupyPort = (host, port) =>
-  new Promise((resolve, reject) =>
-    http
-      .createServer(() => {})
+  new Promise((resolve, reject) => {
+    const server = http.createServer(() => {})
+    server
       .listen(port, host, err => {
-        resolve({ host, port })
+        resolve({ host, port, server })
       })
       .on('error', reject)
-  )
+  })
 
 const includes = (str = '', response = '') =>
   assert.equal(
@@ -67,7 +69,7 @@ describe('dev', function() {
   describe('task', () => {
     it('adds the tasks to gulp', () => {
       const gulp = task({})
-      expect(gulp.tasks).to.have.a.property('_template')
+      expect(gulp.tasks).to.have.a.property('_html')
       expect(gulp.tasks).to.have.a.property('_css')
       expect(gulp.tasks).to.have.a.property('_main')
       expect(gulp.tasks).to.have.a.property('dev')
@@ -75,10 +77,10 @@ describe('dev', function() {
   })
 
   describe('helpers', () => {
-    describe('defaultTemplateCompiler', () => {
-      it('defaultTemplateCompiler', () => {
-        return expect(defaultTemplateCompiler()).to.eventually.equal(
-          'template is compiling...'
+    describe('defaultHtmlCompiler', () => {
+      it('defaultHtmlCompiler', () => {
+        return expect(defaultHtmlCompiler()).to.eventually.equal(
+          'html is compiling...'
         )
       })
     })
@@ -107,19 +109,27 @@ describe('dev', function() {
   describe('startReactor', () => {
     it('fails to start when port is in use', () => {
       return expect(
-        findPort(defaults.reactorHost, defaults.reactorPort)
+        findFreePort(defaults.reactorHost, defaults.reactorPort)
           .then(({ host, port }) => occupyPort(host, port))
-          .then(({ host, port, server }) => startReactor(host, port))
-          .catch(() => server.close())
+          .then(({ host, port, server }) =>
+            startReactor(host, port, false).catch(() => {
+              server.close()
+              throw new Error()
+            })
+          )
       ).to.eventually.be.rejected
     })
 
     it('starts an elm-reactor server when port is free', () => {
       return expect(
-        findPort(
+        findFreePort(
           defaults.reactorHost,
           defaults.reactorPort
-        ).then(({ host, port }) => startReactor(host, port))
+        ).then(({ host, port }) =>
+          startReactor(host, port, false).then(server => {
+            server.close()
+          })
+        )
       ).to.eventually.be.fulfilled
     })
   })
@@ -127,18 +137,20 @@ describe('dev', function() {
   describe('startExpress', () => {
     it('fails to start when port is in use', () => {
       return expect(
-        findPort(defaults.host, defaults.port)
+        findFreePort(defaults.host, defaults.port)
           .then(({ host, port }) => occupyPort(host, port))
-          .then(({ host, port, server }) => startExpress(host, port, ''))
-          .catch(() => {
-            server.close()
-          })
+          .then(({ host, port, server }) =>
+            startExpress(host, port, '').catch(() => {
+              server.close()
+              throw new Error()
+            })
+          )
       ).to.eventually.be.rejected
     })
 
     it('starts an express server when port is free', () => {
       return expect(
-        findPort(defaults.host, defaults.port).then(({ host, port }) =>
+        findFreePort(defaults.host, defaults.port).then(({ host, port }) =>
           startExpress(host, port).then(server => {
             server.close()
           })
@@ -149,9 +161,12 @@ describe('dev', function() {
     it('starts the livereload server', function() {
       const lrPort = defaults.lrPort + 1
       return expect(
-        findPort(defaults.host, defaults.port).then(({ host, port, url }) =>
+        findFreePort(defaults.host, defaults.port).then(({ host, port, url }) =>
           startExpress(host, port, null, lrPort).then(server =>
-            occupyPort(null, lrPort)
+            occupyPort(null, lrPort).catch(() => {
+              // server.close()
+              throw new Error()
+            })
           )
         )
       ).to.eventually.be.rejected
@@ -162,7 +177,7 @@ describe('dev', function() {
       const tmpFile = tmp.fileSync({ dir: tmpDir.name, postfix: '.css' })
       fs.writeSync(tmpFile.fd, Buffer('.elm-reactor{color:#FFFFFF}'))
 
-      findPort(defaults.host, defaults.port)
+      findFreePort(defaults.host, defaults.port)
         .then(({ host, port, url }) =>
           startExpress(host, port, null, null, null, tmpDir.name).then(server =>
             request(
@@ -179,8 +194,8 @@ describe('dev', function() {
         .catch(done)
     })
 
-    it('*.elm files render a custom template', done => {
-      findPort(defaults.host, defaults.port).then(({ host, port, url }) =>
+    it('*.elm files render a custom html template', done => {
+      findFreePort(defaults.host, defaults.port).then(({ host, port, url }) =>
         startExpress(host, port, null, null, (req, res) => {
           res.send('<title>elm-factory</elm>')
         }).then(server =>
@@ -198,28 +213,27 @@ describe('dev', function() {
     it('proxies elm-reactor', function(done) {
       this.timeout(60000)
 
-      // find an open port
-      findPort(defaults.reactorHost, defaults.reactorPort)
+      findFreePort(defaults.reactorHost, defaults.reactorPort)
         .then(({ host: reactorHost, port: reactorPort, url: reactorUrl }) =>
-          // start reactor
-          startReactor(reactorHost, reactorPort).then(reactor =>
-            // find an open port
-            findPort(defaults.host, defaults.port).then(({ host, port, url }) =>
-              // start express
-              startExpress(host, port, reactorUrl)
-                // test proxies
-                .then(server =>
-                  request(url)
-                    .then(res => {
-                      includes('<script src="/_reactor/index.js">', res)
+          startReactor(reactorHost, reactorPort, false).then(reactor =>
+            findFreePort(
+              defaults.host,
+              defaults.port
+            ).then(({ host, port, url }) =>
+              startExpress(host, port, reactorUrl).then(server =>
+                request(url)
+                  .then(res => {
+                    includes('<script src="/_reactor/index.js">', res)
 
-                      return request(`${url}/_compile/src/Main.elm`)
-                    })
-                    .then(res => {
-                      includes('var runElmProgram = ', res)
-                      done()
-                    })
-                )
+                    return request(`${url}/_compile/src/Main.elm`)
+                  })
+                  .then(res => {
+                    includes('var runElmProgram = ', res)
+                    reactor.close()
+                    server.close()
+                    done()
+                  })
+              )
             )
           )
         )
@@ -227,13 +241,13 @@ describe('dev', function() {
     })
   })
 
-  describe('compileTemplate', () => {
-    it('should throw if param `template` is missing', () => {
-      expect(() => compileTemplate()).to.throw()
+  describe('compileHtml', () => {
+    it('should throw if param `html` is missing', () => {
+      expect(() => compileHtml()).to.throw()
     })
     describe('return', () => {
       it('is a stream', () => {
-        expect(compileTemplate(defaults.template)).to.have.property('pipe')
+        expect(compileHtml(defaults.html)).to.have.property('pipe')
       })
     })
   })

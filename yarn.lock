@@ -27,6 +27,13 @@ acorn@^4.0.4, acorn@~4.0.2:
   version "4.0.13"
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-4.0.13.tgz#105495ae5361d697bd195c825192e1ad7f253787"
 
+aggregate-error@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/aggregate-error/-/aggregate-error-1.0.0.tgz#888344dad0220a72e3af50906117f48771925fac"
+  dependencies:
+    clean-stack "^1.0.0"
+    indent-string "^3.0.0"
+
 ajv@^4.9.1:
   version "4.11.8"
   resolved "https://registry.yarnpkg.com/ajv/-/ajv-4.11.8.tgz#82ffb02b29e662ae53bdc20af15947706739c536"
@@ -929,6 +936,10 @@ clean-css@^3.3.0:
     commander "2.8.x"
     source-map "0.4.x"
 
+clean-stack@^1.0.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/clean-stack/-/clean-stack-1.3.0.tgz#9e821501ae979986c46b1d66d2d432db2fd4ae31"
+
 cli-cursor@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/cli-cursor/-/cli-cursor-1.0.2.tgz#64da3f7d56a54412e59794bd62dc35295e8f2987"
@@ -1171,7 +1182,7 @@ coveralls@^2.13.1:
     minimist "1.2.0"
     request "2.79.0"
 
-cross-spawn-async@^2.0.0:
+cross-spawn-async@^2.0.0, cross-spawn-async@^2.1.1:
   version "2.2.5"
   resolved "https://registry.yarnpkg.com/cross-spawn-async/-/cross-spawn-async-2.2.5.tgz#845ff0c0834a3ded9d160daca6d390906bb288cc"
   dependencies:
@@ -1199,7 +1210,7 @@ cross-spawn@^4:
     lru-cache "^4.0.1"
     which "^1.2.9"
 
-cross-spawn@^5.0.1, cross-spawn@^5.1.0:
+cross-spawn@^5.0.1:
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-5.1.0.tgz#e8bd0efee58fcff6f8f94510a0a554bbfa235449"
   dependencies:
@@ -1444,7 +1455,7 @@ encodeurl@~1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/encodeurl/-/encodeurl-1.0.1.tgz#79e3d58655346909fe6f0f45a5de68103b294d20"
 
-end-of-stream@^1.0.0, end-of-stream@^1.4.0:
+end-of-stream@^1.0.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.0.tgz#7a90d833efda6cfa6eac0f4949dbb0fad3a63206"
   dependencies:
@@ -1500,6 +1511,26 @@ etag@~1.8.0:
 eventemitter3@1.x.x:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-1.2.0.tgz#1c86991d816ad1e504750e73874224ecf3bec508"
+
+execa@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/execa/-/execa-0.1.1.tgz#b09c2a9309bc0ef0501479472db3180f8d4c3edd"
+  dependencies:
+    cross-spawn-async "^2.1.1"
+    object-assign "^4.0.1"
+    strip-eof "^1.0.0"
+
+execa@^0.6.3:
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/execa/-/execa-0.6.3.tgz#57b69a594f081759c69e5370f0d17b9cb11658fe"
+  dependencies:
+    cross-spawn "^5.0.1"
+    get-stream "^3.0.0"
+    is-stream "^1.1.0"
+    npm-run-path "^2.0.0"
+    p-finally "^1.0.0"
+    signal-exit "^3.0.0"
+    strip-eof "^1.0.0"
 
 execa@^0.7.0:
   version "0.7.0"
@@ -1708,6 +1739,15 @@ first-chunk-stream@^1.0.0:
 firstline@1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/firstline/-/firstline-1.2.0.tgz#c9f4886e7f7fbf0afc12d71941dce06b192aea05"
+
+fkill@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/fkill/-/fkill-5.0.0.tgz#642f746aa631c965afc76c0d56dcc492a1ee504f"
+  dependencies:
+    aggregate-error "^1.0.0"
+    arrify "^1.0.0"
+    execa "^0.6.3"
+    taskkill "^2.0.0"
 
 flagged-respawn@^0.3.2:
   version "0.3.2"
@@ -5068,6 +5108,13 @@ tar@^2.2.1:
     block-stream "*"
     fstream "^1.0.2"
     inherits "2"
+
+taskkill@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/taskkill/-/taskkill-2.0.0.tgz#a354305702a964357033027aa949eaed5331b784"
+  dependencies:
+    arrify "^1.0.0"
+    execa "^0.1.1"
 
 temp@^0.8.1, temp@^0.8.3:
   version "0.8.3"

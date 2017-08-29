@@ -17,9 +17,9 @@ describe('$ elm-factory dev', () => {
         default: defaults.stylesheets,
       },
       t: {
-        alias: 'template',
+        alias: 'html',
         description: 'html template file',
-        default: defaults.template,
+        default: defaults.html,
       },
       h: {
         alias: 'host',

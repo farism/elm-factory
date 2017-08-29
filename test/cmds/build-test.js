@@ -17,7 +17,7 @@ describe('$ elm-factory build', () => {
         default: defaults.stylesheets,
       },
       t: {
-        alias: 'template',
+        alias: 'html',
         description: 'optional html template file',
         default: '',
       },

@@ -1,16 +1,15 @@
 const anyTemplate = require('gulp-any-template')
 const elmCss = require('gulp-elm-css')
 const elmFindDependencies = require('gulp-elm-find-dependencies')
-const eos = require('end-of-stream')
+const execa = require('execa')
 const express = require('express')
+const fkill = require('fkill')
 const gulp = require('gulp')
-const hookStd = require('hook-std')
 const lrConnect = require('connect-livereload')
 const nocache = require('nocache')
 const path = require('path')
 const plumber = require('gulp-plumber')
 const proxy = require('http-proxy-middleware')
-const spawn = require('cross-spawn')
 const runSequence = require('run-sequence')
 const tinylr = require('tiny-lr')
 const through = require('through2')
@@ -19,72 +18,65 @@ const tmp = require('tmp')
 const defaults = require('../defaults').dev
 const addTask = require('./').addTask
 
-let templateCompiler
+let htmlCompiler
 
-const defaultTemplateCompiler = () =>
-  Promise.resolve('template is compiling...')
+const defaultHtmlCompiler = () => Promise.resolve('html is compiling...')
 
 const getWatchedPaths = ({ _watcher }) =>
   Object.keys(_watcher.watched())
     .reduce((acc, key) => [...acc, ..._watcher.watched()[key]], [])
     .sort()
 
-const startReactor = (host, port) =>
+const startReactor = (
+  host,
+  port,
+  /* istanbul ignore next */ exitParent = true
+) =>
   new Promise((resolve, reject) => {
-    const unhook = hookStd.stderr({ silent: false }, output => {
-      unhook()
-
-      /* istanbul ignore if  */
-      if (output.includes('Error')) {
-        reject('elm-reactor could not start:', output)
-        return
-      }
-
-      if (output.includes('Address already in use')) {
-        reject('elm-reactor could not start: address already in use')
-        return
-      }
-
-      // elm-reactor is running in detached mode, so make sure it's killed
-      const exit = code => () => {
-        try {
-          process.kill(-reactor.pid) // use ESRCH
-        } catch (e) {
-          console.error(e)
-        }
-        process.exit(code)
-      }
-      process.on(
-        'uncaughtException',
-        /* istanbul ignore next  */ e => {
-          console.error(e)
-          exit(1)()
-        }
-      )
-      process.on('exit', exit(0))
-      process.on('SIGINT', exit(0))
-      process.on('SIGTERM', exit(0))
-
-      resolve(reactor)
-
-      return `elm-reactor started on http://${host}:${port}\n`
-    })
-
-    const reactor = spawn(
+    const reactor = execa(
       'elm-reactor',
       [`--address=${host}`, `--port=${port}`],
       { detached: true }
     )
 
-    reactor.stderr.pipe(process.stderr)
-    reactor.unref()
+    const close = () => {
+      fkill(-reactor.pid, { force: true }).catch(e => {
+        console.error('closing elm-reactor failed: ', e)
+      })
+    }
+
+    const exit = code => {
+      close()
+      process.exit(code)
+    }
+
+    if (exitParent) {
+      reactor.on('exit', code => exit(0))
+      reactor.on('SIGTERM', () => exit(0))
+    }
+
+    process.on('exit', code => exit(code))
+    process.on('SIGTERM', () => exit(0))
+    process.on('SIGINT', () => exit(0))
+    process.on('uncaughtException', e => {
+      console.log(e)
+      exit(1)
+    })
+
+    reactor.stderr.on('data', d => {
+      reactor.stderr.on('data', () => {})
+      if (d.toString().includes('Address already in use')) {
+        reject({ close })
+      } else {
+        resolve({ close })
+      }
+    })
   })
 
 const startExpress = (host, port, reactor, lrPort, handler, dir) =>
   new Promise((resolve, reject) => {
     const app = new express()
 
-    // begin the dev server
     const server = app
       .listen(port, host, () => {
         // use no cache headers
@@ -103,7 +95,7 @@ const startExpress = (host, port, reactor, lrPort, handler, dir) =>
           ])
         }
 
-        // serve up elm file with custom template middleware and do livereload
+        // serve up elm file with custom html middleware and do livereload
         if (handler) {
           app.get('*.elm', [
             lrConnect({ port: lrPort, include: [/.*\.elm/] }),
@@ -129,15 +121,15 @@ const startExpress = (host, port, reactor, lrPort, handler, dir) =>
       })
   })
 
-const compileTemplate = template => {
-  if (!template) {
-    throw new Error('template required')
+const compileHtml = html => {
+  if (!html) {
+    throw new Error('html required')
   }
 
-  return gulp.src(template).pipe(
+  return gulp.src(html).pipe(
     through.obj(function(file, encode, callback) {
       this.push(file)
-      templateCompiler = anyTemplate.compiler(file)
+      htmlCompiler = anyTemplate.compiler(file)
       tinylr.changed(file.path)
       callback()
     })
@@ -212,31 +204,28 @@ const task = options => {
   // tmp dir for serving static css files
   const { name: tmpDir } = tmp.dirSync({ unsafeCleanup: true })
 
-  // custom template handler
-  const handler = (request, response) => {
-    return (templateCompiler || defaultTemplateCompiler)({
+  // custom html handler
+  const handler = (request, response) =>
+    (htmlCompiler || defaultHtmlCompiler)({
       environment: 'development',
       options,
       request,
     })
       .then(res => response.send(res))
       .catch(e => console.error(e.message))
-  }
 
   // is there a better way to use gulp.watch and find-elm-dependencies...?
-  let templateWatcher
+  let htmlWatcher
   let mainWatcher
   let cssWatcher
 
-  /* istanbul ignore next  */
-  gulp.task('_template', () => {
-    templateWatcher && templateWatcher.end()
-    templateWatcher = gulp.watch(opts.template, ['_template'])
+  gulp.task('_html', () => {
+    htmlWatcher && htmlWatcher.end()
+    htmlWatcher = gulp.watch(opts.html, ['_html'])
 
-    return compileTemplate(opts.template)
+    return compileHtml(opts.html)
   })
 
-  /* istanbul ignore next  */
   gulp.task('_css', () => {
     cssWatcher && cssWatcher.end()
     cssWatcher = gulp.watch(opts.stylesheets, ['_css'])
@@ -246,7 +235,6 @@ const task = options => {
     return compileCss(tmpDir, opts.stylesheets, opts.cwd)
   })
 
-  /* istanbul ignore next  */
   gulp.task('_main', () => {
     tinylr.changed('')
 
@@ -258,32 +246,33 @@ const task = options => {
     watch(filter)(mainWatcher, opts.main)
   })
 
-  /* istanbul ignore next  */
   gulp.task('dev', () => {
     return startReactor(opts.reactorHost, opts.reactorPort)
-      .then(reactor => {
-        return startExpress(
+      .then(reactor =>
+        startExpress(
           opts.host,
           opts.port,
           `http://${opts.reactorHost}:${opts.reactorPort}`,
           opts.lrPort,
-          opts.handler,
+          handler,
           tmpDir
         )
+      )
+      .then(app => runSequence('_html', '_css', '_main'))
+      .catch(e => {
+        console.error(e)
       })
-      .then(app => runSequence('_template', '_css', '_main'))
-      .catch(e => console.error(e))
   })
 
   return gulp
 }
 
 module.exports = {
-  defaultTemplateCompiler,
+  defaultHtmlCompiler,
   getWatchedPaths,
   startReactor,
   startExpress,
-  compileTemplate,
+  compileHtml,
   compileCss,
   watch,
   task,
