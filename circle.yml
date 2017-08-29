@@ -10,7 +10,9 @@ dependencies:
     - /opt/circleci/nodejs/v8.2.0
     - ~/.cache/yarn
     - sysconfcpus
-    - test/fixture/elm-stuff/packages
+    - test/tasks/tmp/build/elm-stuff/packages
+    - test/tasks/tmp/dev/build/elm-stuff/packages
+
   pre:
     - if [ ! -d sysconfcpus/bin ];
       then
