@@ -16,17 +16,7 @@ import { build as defaults } from '../../src/defaults'
 
 chai.use(chaifs)
 
-describe('build task', () => {
-  it('adds the tasks to gulp', () => {
-    const gulp = task({})
-    expect(gulp.tasks).to.have.a.property('_clean')
-    expect(gulp.tasks).to.have.a.property('_css')
-    expect(gulp.tasks).to.have.a.property('_main')
-    expect(gulp.tasks).to.have.a.property('build')
-  })
-})
-
-describe('build', () => {
+describe.only('build', () => {
   const dir = path.join(__dirname, 'tmp', 'build')
   let outputPath = ''
   let tmpCleanup = () => {}
@@ -47,6 +37,16 @@ describe('build', () => {
 
   afterEach(() => {
     tmpCleanup()
+  })
+
+  describe('task', () => {
+    it('adds the tasks to gulp', () => {
+      const gulp = task({})
+      expect(gulp.tasks).to.have.a.property('_clean')
+      expect(gulp.tasks).to.have.a.property('_css')
+      expect(gulp.tasks).to.have.a.property('_main')
+      expect(gulp.tasks).to.have.a.property('build')
+    })
   })
 
   describe('helpers', () => {

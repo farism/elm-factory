@@ -14,11 +14,19 @@ const runSequence = require('run-sequence')
 const uglify = require('gulp-uglify')
 const urljoin = require('url-join')
 const xxh = require('xxhashjs')
+const crypto = require('crypto')
 
 const defaults = require('../defaults').build
 
 const getHash = contents =>
-  xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
+  crypto
+    .createHash('sha1')
+    .update(String(contents))
+    .digest('hex')
+    .toString(16)
+    .substr(0, 8)
+
+// xxh.h64(0).update(String(contents)).digest().toString(16).substr(0, 8)
 
 const getPublicPath = (publicPath, filename) =>
   publicPath.startsWith('http')

@@ -64,6 +64,16 @@ describe('dev', function() {
     })
   })
 
+  describe('task', () => {
+    it('adds the tasks to gulp', () => {
+      const gulp = task({})
+      expect(gulp.tasks).to.have.a.property('_template')
+      expect(gulp.tasks).to.have.a.property('_css')
+      expect(gulp.tasks).to.have.a.property('_main')
+      expect(gulp.tasks).to.have.a.property('dev')
+    })
+  })
+
   describe('helpers', () => {
     describe('defaultTemplateCompiler', () => {
       it('defaultTemplateCompiler', () => {
@@ -91,16 +101,6 @@ describe('dev', function() {
           getWatchedPaths(gulp.watch(path.join(dir, 'src', 'fakedir')))
         ).to.eql([])
       })
-    })
-  })
-
-  describe('task', () => {
-    it('adds the tasks to gulp', () => {
-      const gulp = task({})
-      expect(gulp.tasks).to.have.a.property('_template')
-      expect(gulp.tasks).to.have.a.property('_css')
-      expect(gulp.tasks).to.have.a.property('_main')
-      expect(gulp.tasks).to.have.a.property('dev')
     })
   })
 
