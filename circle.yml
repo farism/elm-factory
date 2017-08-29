@@ -10,9 +10,6 @@ dependencies:
     - /opt/circleci/nodejs/v8.2.0
     - ~/.cache/yarn
     - sysconfcpus
-    - test/tasks/tmp/build/elm-stuff/packages
-    - test/tasks/tmp/dev/build/elm-stuff/packages
-
   pre:
     - if [ ! -d sysconfcpus/bin ];
       then
@@ -31,7 +28,3 @@ dependencies:
       elm-package install --yes;
       cd ${HOME}/${CIRCLE_PROJECT_REPONAME};
       yarn;
-
-test:
-  override:
-    - npm test
