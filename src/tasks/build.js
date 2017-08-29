@@ -117,10 +117,10 @@ const task = options => {
 }
 
 module.exports = {
-  buildCss,
-  buildMain,
   getHash,
   getPublicPath,
   getTransformedFilename,
+  buildCss,
+  buildMain,
   task,
 }

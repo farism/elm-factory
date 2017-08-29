@@ -1,13 +1,13 @@
 import chai, { assert, expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import fs from 'fs'
-import lr from 'gulp-livereload'
 import http from 'http'
 import gulp from 'gulp'
 import path from 'path'
 import portscanner from 'portscanner'
 import request from 'request-promise-native'
 import sinon from 'sinon'
+import tinylr from 'tiny-lr'
 import tmp from 'tmp'
 
 import {
@@ -16,6 +16,7 @@ import {
   compileTemplate,
   defaultTemplateCompiler,
   getWatchedPaths,
+  resetWatcher,
   startReactor,
   startExpress,
   task,
@@ -55,35 +56,41 @@ const includes = (str = '', response = '') =>
     `response is missing string '${str}'`
   )
 
-describe('dev helpers', () => {
-  describe('defaultTemplateCompiler', () => {
-    it('defaultTemplateCompiler', () => {
-      return expect(defaultTemplateCompiler()).to.eventually.equal(
-        'template is compiling...'
-      )
-    })
-  })
-
-  describe('getWatchedPaths', () => {
-    it('given a watcher, returns an array of all watched paths', () => {
-      expect(getWatchedPaths(gulp.watch(path.join(dir, 'src', '**')))).to.eql([
-        path.join(dir, 'src/'),
-        path.join(dir, 'src/Assets.elm'),
-        path.join(dir, 'src/Main.elm'),
-        path.join(dir, 'src/MainCss.elm'),
-        path.join(dir, 'src/Stylesheets.elm'),
-        path.join(dir, 'src/assets/'),
-        path.join(dir, 'src/assets/css3.png'),
-      ])
-    })
-  })
-})
-
 describe('dev', function() {
   before(done => {
     init(dir).on('end', () => {
       process.chdir(dir)
       done()
+    })
+  })
+
+  describe('helpers', () => {
+    describe('defaultTemplateCompiler', () => {
+      it('defaultTemplateCompiler', () => {
+        return expect(defaultTemplateCompiler()).to.eventually.equal(
+          'template is compiling...'
+        )
+      })
+    })
+
+    describe('getWatchedPaths', () => {
+      it('given a watcher, returns an array of all watched paths', () => {
+        expect(
+          getWatchedPaths(gulp.watch(path.join(dir, 'src', '**')))
+        ).to.eql([
+          path.join(dir, 'src/'),
+          path.join(dir, 'src/Assets.elm'),
+          path.join(dir, 'src/Main.elm'),
+          path.join(dir, 'src/MainCss.elm'),
+          path.join(dir, 'src/Stylesheets.elm'),
+          path.join(dir, 'src/assets/'),
+          path.join(dir, 'src/assets/css3.png'),
+        ])
+
+        expect(
+          getWatchedPaths(gulp.watch(path.join(dir, 'src', 'fakedir')))
+        ).to.eql([])
+      })
     })
   })
 
@@ -112,16 +119,12 @@ describe('dev', function() {
         findPort(
           defaults.reactorHost,
           defaults.reactorPort
-        ).then(({ host, port }) =>
-          startReactor(host, port).then(server => {
-            process.kill(-server.pid) // use ESRCH
-          })
-        )
+        ).then(({ host, port }) => startReactor(host, port))
       ).to.eventually.be.fulfilled
     })
   })
 
-  describe.only('startExpress', () => {
+  describe('startExpress', () => {
     it('fails to start when port is in use', () => {
       return expect(
         findPort(defaults.host, defaults.port)
@@ -144,10 +147,11 @@ describe('dev', function() {
     })
 
     it('starts the livereload server', function() {
+      const lrPort = defaults.lrPort + 1
       return expect(
         findPort(defaults.host, defaults.port).then(({ host, port, url }) =>
-          startExpress(host, port, null, defaults.lrPort).then(server =>
-            occupyPort(null, defaults.lrPort)
+          startExpress(host, port, null, lrPort).then(server =>
+            occupyPort(null, lrPort)
           )
         )
       ).to.eventually.be.rejected
@@ -241,18 +245,23 @@ describe('dev', function() {
     it('should throw if param `stylesheets` is missing', () => {
       expect(() => compileCss(dir, null)).to.throw()
     })
+    it('should throw if param `cwd` is invalid', () => {
+      expect(() => compileCss(dir, null, 'foo/bar/xyz')).to.throw()
+    })
     describe('return', () => {
       it('is a stream that livereloads', function(done) {
         this.timeout(60000)
 
-        const changed = sinon.spy()
-        lr.changed = changed
         const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
+        const changed = sinon.spy()
+        tinylr.changed = changed
+
         const compile = compileCss(tmpDir.name, defaults.stylesheets)
         expect(compile).to.have.property('pipe')
+
         compile.on('end', () => {
-          expect(changed.callCount).to.eql(1)
           tmpDir.removeCallback()
+          expect(changed.callCount).to.eql(1)
           done()
         })
       })
@@ -270,10 +279,10 @@ describe('dev', function() {
     })
     describe('returned function', () => {
       it('should throw if param `watcher` is missing', () => {
-        return expect(watch()(null, 'src')).to.be.rejected
+        return expect(watch()(null, 'src')).to.be.eventually.be.rejected
       })
       it('should throw if param `src` is missing', () => {
-        return expect(watch()({}, null)).to.be.rejected
+        return expect(watch()({}, null)).to.eventually.be.rejected
       })
       it('should watch the correct files', () => {
         return expect(
@@ -295,7 +304,7 @@ describe('dev', function() {
           path.join(dir, 'src/assets/'),
         ])
       })
-      it('should watch and filter the correct files', () => {
+      it('should watch and filter out the correct files', () => {
         const watcher = gulp.watch(defaults.stylesheets)
         const filter = file => !getWatchedPaths(watcher).includes(file.path)
 

@@ -1,60 +1,59 @@
 const anyTemplate = require('gulp-any-template')
-const devnull = require('dev-null')
 const elmCss = require('gulp-elm-css')
 const elmFindDependencies = require('gulp-elm-find-dependencies')
+const eos = require('end-of-stream')
 const express = require('express')
 const gulp = require('gulp')
 const hookStd = require('hook-std')
-const lr = require('gulp-livereload')
 const lrConnect = require('connect-livereload')
 const nocache = require('nocache')
 const path = require('path')
+const plumber = require('gulp-plumber')
 const proxy = require('http-proxy-middleware')
 const pump = require('pump')
 const spawn = require('cross-spawn')
 const runSequence = require('run-sequence')
+const tinylr = require('tiny-lr')
 const through = require('through2')
 const tmp = require('tmp')
 
 const defaults = require('../defaults').dev
 
+let templateCompiler
+
 const defaultTemplateCompiler = () =>
   Promise.resolve('template is compiling...')
 
-// what is the pure way to link a watched template to express...?
-let templateCompiler = defaultTemplateCompiler
-
 const getWatchedPaths = ({ _watcher }) =>
   Object.keys(_watcher.watched())
-    .reduce((acc, key) => [...acc, ...(_watcher.watched()[key] || [])], [])
+    .reduce((acc, key) => [...acc, ..._watcher.watched()[key]], [])
     .sort()
-
-const resetWatcher = (taskName, watcher) => {
-  watcher && watcher.end()
-  return gulp.watch(template, [taskName])
-}
 
 const startReactor = (host, port) =>
   new Promise((resolve, reject) => {
     const unhook = hookStd.stderr({ silent: false }, output => {
       unhook()
-      reactor.stderr.pipe(devnull())
-      if (
-        output.includes('Error') ||
-        output.includes('Address already in use')
-      ) {
-        reject('elm-reactor could not start: address already in use')
 
-        return ''
+      if (output.includes('Error')) {
+        reject('elm-reactor could not start:', output)
+        return
+      } else if (output.includes('Address already in use')) {
+        reject('elm-reactor could not start: address already in use')
+        return
       } else {
-        // because elm-reactor is running in detached mode, make sure it's killed
+        // elm-reactor is running in detached mode, so make sure it's killed
         const exit = code => () => {
           try {
             process.kill(-reactor.pid) // use ESRCH
-          } catch (e) {}
+          } catch (e) {
+            console.error(e)
+          }
           process.exit(code)
         }
-        process.on('uncaughtException', exit(1))
+        process.on('uncaughtException', e => {
+          console.error(e)
+          exit(1)()
+        })
         process.on('exit', exit(0))
         process.on('SIGINT', exit(0))
         process.on('SIGTERM', exit(0))
@@ -82,18 +81,20 @@ const startExpress = (host, port, reactor, lrPort, handler, dir) =>
     // begin the dev server
     const server = app
       .listen(port, host, () => {
-        // add no cache headers
+        // use no cache headers
         app.use(nocache())
+
+        // use tinylr and start listening
+        if (lrPort) {
+          tinylr().listen({ port: lrPort })
+        }
 
         if (reactor) {
           // proxy _compile to {reactor}/_compile and do livereload
-          app.use(
-            '/_compile',
-            [
-              lrPort && lrConnect({ port: lrPort }),
-              proxy({ target: reactor }),
-            ].filter(m => m)
-          )
+          app.use('/_compile', [
+            lrConnect({ port: lrPort }),
+            proxy({ target: reactor }),
+          ])
         }
 
         // serve up elm file with custom template middleware and do livereload
@@ -114,15 +115,11 @@ const startExpress = (host, port, reactor, lrPort, handler, dir) =>
           app.use(proxy({ target: reactor }))
         }
 
-        // begin the livereload server
-        if (lrPort) {
-          lr.listen({ port: lrPort })
-        }
-
         resolve(server)
       })
       .on('error', e => {
         reject(e)
+        return
       })
   })
 
@@ -134,11 +131,11 @@ const compileTemplate = template => {
   return pump(
     gulp.src(template),
     through.obj(function(file, encode, callback) {
-      templateCompiler = anyTemplate.compiler(file)
       this.push(file)
+      templateCompiler = anyTemplate.compiler(file)
+      tinylr.changed(file.path)
       callback()
-    }),
-    lr()
+    })
   )
 }
 
@@ -151,7 +148,19 @@ const compileCss = (out, stylesheets, cwd = process.cwd()) => {
     throw new Error('param `stylesheets` required')
   }
 
-  return pump(gulp.src(stylesheets), elmCss({ cwd, out }), lr())
+  return gulp
+    .src(stylesheets)
+    .pipe(plumber())
+    .pipe(elmCss({ cwd, out }))
+    .pipe(
+      through.obj(function(file, encode, callback) {
+        tinylr.changed(file.path)
+        callback()
+      })
+    )
+    .pipe(plumber.stop())
+    .pipe(gulp.dest(''))
+    .on('error', () => {})
 }
 
 const watch = filter => {
@@ -163,74 +172,33 @@ const watch = filter => {
     new Promise((resolve, reject) => {
       if (!watcher) {
         reject(new Error('param `watcher` required'))
+        return
       }
 
       if (!src) {
         reject(new Error('param `src` required'))
+        return
       }
 
-      return pump(
-        gulp.src(src),
-        elmFindDependencies(),
-        through.obj((file, encode, callback) => {
-          const watch = filter ? filter(file) : true
+      gulp
+        .src(src)
+        .pipe(elmFindDependencies())
+        .pipe(
+          through.obj(function(file, encode, callback) {
+            const watch = filter ? filter(file) : true
 
-          if (watch) {
-            watcher._watcher.add(file.path)
-          }
+            if (watch) {
+              watcher._watcher.add(file.path)
+            }
 
-          callback()
-        }),
-        () => resolve(getWatchedPaths(watcher))
-      )
+            callback()
+          })
+        )
+        .pipe(gulp.dest(''))
+        .on('finish', () => {
+          resolve(getWatchedPaths(watcher))
+        })
     })
-}
-
-const watchCss = (cssWatcher, stylesheets) => {
-  if (!cssWatcher) {
-    throw new Error('cssWatcher required')
-  }
-
-  if (!stylesheets) {
-    throw new Error('stylesheets required')
-  }
-
-  return pump(
-    gulp.src(stylesheets),
-    elmFindDependencies(),
-    through.obj((file, encode, callback) => {
-      // console.log(file.path)
-      cssWatcher._watcher.add(file.path)
-      callback()
-    })
-  )
-}
-
-const watchMain = (cssWatchedFiles, mainWatcher, main) => {
-  if (!cssWatchedFiles) {
-    throw new Error('cssWatcher required')
-  }
-
-  if (!mainWatcher) {
-    throw new Error('mainWatcher required')
-  }
-
-  if (!main) {
-    throw new Error('main required')
-  }
-
-  return pump(
-    gulp.src(main),
-    elmFindDependencies(),
-    through.obj((file, encode, callback) => {
-      // don't watch css injection files
-      if (!cssWatchedFiles.includes(file.path)) {
-        mainWatcher._watcher.add(file.path)
-      }
-
-      callback()
-    })
-  )
 }
 
 const task = options => {
@@ -251,7 +219,7 @@ const task = options => {
 
   // custom template handler
   const handler = (request, response) => {
-    templateCompiler({
+    return (templateCompiler || defaultTemplateCompiler)({
       environment: 'development',
       options,
       request,
@@ -266,7 +234,6 @@ const task = options => {
   let cssWatcher
 
   gulp.task('_template', () => {
-    // resetWatcher('_template', templateWatcher)
     templateWatcher && templateWatcher.end()
     templateWatcher = gulp.watch(template, ['_template'])
 
@@ -274,22 +241,23 @@ const task = options => {
   })
 
   gulp.task('_css', () => {
-    cssWatcher && cssWatcher.end()
-    cssWatcher = gulp.watch(stylesheets, ['_css'])
+    templateWatcher && templateWatcher.end()
+    templateWatcher = gulp.watch(template, ['_template'])
 
-    watchCss(cssWatcher, stylesheets)
+    watch()(cssWatcher, stylesheets)
 
     return compileCss(tmpDir, stylesheets)
   })
 
   gulp.task('_main', () => {
-    mainWatcher && mainWatcher.end()
-    mainWatcher = gulp.watch(main, ['_main'])
+    tinylr.changed('')
 
-    // hard reload
-    lr.reload()
+    templateWatcher && templateWatcher.end()
+    templateWatcher = gulp.watch(template, ['_template'])
 
-    return watchMain(getWatchedPaths(cssWatcher), mainWatcher, main)
+    const filter = file => !getWatchedPaths(cssWatcher).includes(file.path)
+
+    watch(filter)(mainWatcher, main)
   })
 
   gulp.task('dev', () => {
@@ -317,9 +285,7 @@ module.exports = {
   startReactor,
   startExpress,
   compileTemplate,
-  watch,
-  watchCss,
   compileCss,
-  watchMain,
+  watch,
   task,
 }
