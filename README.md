@@ -1,5 +1,7 @@
 # Elm Factory
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/farism/elm-factory.svg)](https://greenkeeper.io/)
+
 An all-in-one, zero-configuration CLI tool for developing, building, and deploying Elm applications. Don't worry about tooling and just code!
 
 ### About
