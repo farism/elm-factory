@@ -19,7 +19,7 @@ const crypto = require('crypto')
 const defaults = require('../defaults').build
 
 const getHash = contents =>
-  xxh.h32(0).update(String(contents)).digest().toString(16).substr(0, 8)
+  xxh.h32(0).update(String(contents), 'utf-8').digest().toString(16).substr(0, 8)
 // crypto
 //   .createHash('sha1')
 //   .update(String(contents))

@@ -3,11 +3,11 @@ machine:
     PATH: "$PATH:~/.config/yarn/global/node_modules/.bin"
     COVERALLS_REPO_TOKEN: qPx1suoyo7HD8uotEhbOrfuk1EJYcOo0N
   node:
-    version: 4.2.0
+    version: 8.2.0
 
 dependencies:
   cache_directories:
-    - /opt/circleci/nodejs/v4.2.0
+    - /opt/circleci/nodejs/v8.2.0
     - ~/.cache/yarn
     - sysconfcpus
     - test/fixture/elm-stuff/packages
