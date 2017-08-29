@@ -10,7 +10,6 @@ const nocache = require('nocache')
 const path = require('path')
 const plumber = require('gulp-plumber')
 const proxy = require('http-proxy-middleware')
-const pump = require('pump')
 const spawn = require('cross-spawn')
 const runSequence = require('run-sequence')
 const tinylr = require('tiny-lr')
@@ -18,6 +17,7 @@ const through = require('through2')
 const tmp = require('tmp')
 
 const defaults = require('../defaults').dev
+const addTask = require('./').addTask
 
 let templateCompiler
 
@@ -34,34 +34,40 @@ const startReactor = (host, port) =>
     const unhook = hookStd.stderr({ silent: false }, output => {
       unhook()
 
+      /* istanbul ignore if  */
       if (output.includes('Error')) {
         reject('elm-reactor could not start:', output)
         return
-      } else if (output.includes('Address already in use')) {
+      }
+
+      if (output.includes('Address already in use')) {
         reject('elm-reactor could not start: address already in use')
         return
-      } else {
-        // elm-reactor is running in detached mode, so make sure it's killed
-        const exit = code => () => {
-          try {
-            process.kill(-reactor.pid) // use ESRCH
-          } catch (e) {
-            console.error(e)
-          }
-          process.exit(code)
+      }
+
+      // elm-reactor is running in detached mode, so make sure it's killed
+      const exit = code => () => {
+        try {
+          process.kill(-reactor.pid) // use ESRCH
+        } catch (e) {
+          console.error(e)
         }
-        process.on('uncaughtException', e => {
+        process.exit(code)
+      }
+      process.on(
+        'uncaughtException',
+        /* istanbul ignore next  */ e => {
           console.error(e)
           exit(1)()
-        })
-        process.on('exit', exit(0))
-        process.on('SIGINT', exit(0))
-        process.on('SIGTERM', exit(0))
+        }
+      )
+      process.on('exit', exit(0))
+      process.on('SIGINT', exit(0))
+      process.on('SIGTERM', exit(0))
 
-        resolve(reactor)
+      resolve(reactor)
 
-        return `elm-reactor started on http://${host}:${port}\n`
-      }
+      return `elm-reactor started on http://${host}:${port}\n`
     })
 
     const reactor = spawn(
@@ -128,8 +134,7 @@ const compileTemplate = template => {
     throw new Error('template required')
   }
 
-  return pump(
-    gulp.src(template),
+  return gulp.src(template).pipe(
     through.obj(function(file, encode, callback) {
       this.push(file)
       templateCompiler = anyTemplate.compiler(file)
@@ -233,6 +238,7 @@ const task = options => {
   let mainWatcher
   let cssWatcher
 
+  /* istanbul ignore next  */
   gulp.task('_template', () => {
     templateWatcher && templateWatcher.end()
     templateWatcher = gulp.watch(template, ['_template'])
@@ -240,6 +246,7 @@ const task = options => {
     return compileTemplate(template)
   })
 
+  /* istanbul ignore next  */
   gulp.task('_css', () => {
     templateWatcher && templateWatcher.end()
     templateWatcher = gulp.watch(template, ['_template'])
@@ -249,6 +256,7 @@ const task = options => {
     return compileCss(tmpDir, stylesheets)
   })
 
+  /* istanbul ignore next  */
   gulp.task('_main', () => {
     tinylr.changed('')
 
@@ -260,6 +268,7 @@ const task = options => {
     watch(filter)(mainWatcher, main)
   })
 
+  /* istanbul ignore next  */
   gulp.task('dev', () => {
     return startReactor(reactorHost, reactorPort)
       .then(reactor => {

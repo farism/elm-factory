@@ -15,11 +15,10 @@ And a few others. However, the above are the core plugins that are used for the 
 Here is a quick example of the `build-css` gulp task in `elm-factory`:
 
 ```js
-gulp.task('build-css', () =>
-  pump(
-    gulp.src(stylesheets),
-    elmCss(),
-    postcss([
+gulp.task('_css', () =>
+  gulp.src(stylesheets)
+    .pipe(elmCss())
+    .pipe(postcss([
       url({
         url: 'copy',
         basePath: path.resolve('./'),
@@ -33,14 +32,13 @@ gulp.task('build-css', () =>
         url: asset => getPublicPath(asset.url),
       }),
       cssnano(),
-    ]),
-    rev.revision({
+    ]))
+    .pipe(rev.revision({
       fileNameManifest: 'css-manifest.json',
       transformFilename,
-    }),
-    gulp.dest(outputPath),
-    rev.manifestFile(),
-    gulp.dest(outputPath)
-  )
+    }))
+    .pipe(gulp.dest(outputPath))
+    .pipe(rev.manifestFile())
+    .pipe(gulp.dest(outputPath))
 )
 ```
