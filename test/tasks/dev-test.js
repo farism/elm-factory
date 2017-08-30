@@ -58,6 +58,18 @@ const includes = (str = '', response = '') =>
     `response is missing string '${str}'`
   )
 
+const tinylrSpy = () => {
+  const old = tinylr.changed
+
+  const restore = () => {
+    tinylr.changed = old
+  }
+
+  tinylr.changed = sinon.spy()
+
+  return { restore }
+}
+
 describe('dev', function() {
   before(done => {
     init(dir).on('end', () => {
@@ -246,8 +258,18 @@ describe('dev', function() {
       expect(() => compileHtml()).to.throw()
     })
     describe('return', () => {
-      it('is a stream', () => {
-        expect(compileHtml(defaults.html)).to.have.property('pipe')
+      it('is a stream that livereloads', () => {
+        const spy = tinylrSpy()
+        const compile = compileHtml(defaults.html)
+
+        expect(compile).to.have.property('pipe')
+
+        compile.on('end', () => {
+          expect(tinylr.changed.callCount).to.eql(1)
+
+          spy.restore()
+          done()
+        })
       })
     })
   })
@@ -266,16 +288,17 @@ describe('dev', function() {
       it('is a stream that livereloads', function(done) {
         this.timeout(60000)
 
+        const spy = tinylrSpy()
         const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
-        const changed = sinon.spy()
-        tinylr.changed = changed
-
         const compile = compileCss(tmpDir.name, defaults.stylesheets)
+
         expect(compile).to.have.property('pipe')
 
         compile.on('end', () => {
+          expect(tinylr.changed.callCount).to.eql(1)
+
           tmpDir.removeCallback()
-          expect(changed.callCount).to.eql(1)
+          spy.restore()
           done()
         })
       })
