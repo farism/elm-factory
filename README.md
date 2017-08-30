@@ -1,4 +1,4 @@
-# Elm Factory
+# Elm Factory [![npm version](https://badge.fury.io/js/elm-factory.svg)](https://badge.fury.io/js/elm-factory) [![Coverage Status](https://coveralls.io/repos/github/farism/elm-factory/badge.svg?branch=specs)](https://coveralls.io/github/farism/elm-factory?branch=specs) [![Circle CI](https://circleci.com/gh/farism/elm-factory/tree/specs.svg?style=svg)](https://circleci.com/gh/farism/elm-factory/tree/specs)
 
 An all-in-one, zero-configuration CLI tool for developing, building, and deploying Elm applications. Don't worry about tooling and just code!
 
@@ -18,7 +18,6 @@ This is where `Elm Factory` comes in. One of the goals of this project was to no
 - CSS injection with livereload
 - Define custom proxy endpoints
 - Production mode builds with cache-busting
-- Deploy to s3 (others coming soon)
 
 ### Getting Started
 
@@ -65,15 +64,15 @@ Please see the [configuration page](https://github.com/farism/elm-factory/blob/m
 
 ### Underlying Libraries
 
-- gulp for orchestrating CLI tasks
-- express server for custom templates
-- elm-reactor for on-the-fly compilation
-- node-elm-compiler for compiling production builds
-- elm-css for managing stylesheets and
-- find-elm-dependencies for dev mode watching
-- livereload for css injection and browser refresh
-- rev-all for production mode cache-busting
-- uglifyjs for production mode builds
+- `gulp` for orchestrating CLI tasks
+- `elm-reactor` for on-the-fly compilation
+- `express` server for custom templates
+- `livereload` for css injection and browser refresh
+- `elm-css` for managing stylesheets and extracting css assets
+- `find-elm-dependencies` for dev mode watching
+- `node-elm-compiler` for compiling production builds
+- `rev-all` for production mode cache-busting
+- `uglifyjs` for production mode minification
 
 ### Contributing
 

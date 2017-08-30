@@ -1,13 +1,13 @@
 const main = './src/Main.elm'
 const stylesheets = './src/Stylesheets.elm'
-const template = './index.ejs'
+const html = './index.ejs'
 const host = '127.0.0.1'
 const port = 8000
 
 const build = {
   main,
   stylesheets,
-  template: undefined,
+  html: undefined,
   outputPath: 'build',
   publicPath: '/public/',
 }
@@ -15,7 +15,7 @@ const build = {
 const dev = {
   main,
   stylesheets,
-  template,
+  html,
   host,
   port,
   reactorHost: host,

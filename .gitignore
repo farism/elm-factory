@@ -1,9 +1,9 @@
-.nyc_output
+.nyc_output/
 coverage/
 dist/
 elm-stuff/
-node_modules/
 lib/
+node_modules/
 tmp/
 *.DS_Store
 *.log

@@ -10,7 +10,7 @@ module.exports = {
     yargs.options(dev.options).config(config)
   },
   handler: function(argv) {
-    require('../../src/tasks/dev')(argv)
+    require('../../src/tasks').dev(argv)
     gulp.start('dev')
   },
 }

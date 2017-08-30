@@ -1,12 +1,5 @@
 sudo: false
 
-cache:
-  yarn: true
-  directories:
-    - node_modules
-    - test/tasks/tmp/elm-stuff/build-artifacts
-    - sysconfcpus
-
 os:
   - linux
   - osx
@@ -15,12 +8,18 @@ env:
   matrix:
     - ELM_VERSION=0.18.0 COVERALLS_REPO_TOKEN=qPx1suoyo7HD8uotEhbOrfuk1EJYcOo0N
 
+language: node_js
+
+cache:
+  yarn: true
+  directories:
+    - $HOME/Library/Caches/Homebrew
+    - node_modules
+    - test/tasks/tmp/elm-stuff/build-artifacts
+    - sysconfcpus
+
 before_install:
-  - if [ ${TRAVIS_OS_NAME} == "osx" ];
-    then brew update; brew install nvm; mkdir ~/.nvm; export NVM_DIR=~/.nvm; source $(brew --prefix nvm)/nvm.sh;
-    fi
-  - | # epic build time improvement - see https://github.com/elm-lang/elm-compiler/issues/1473#issuecomment-245704142
-    if [ ! -d sysconfcpus/bin ];
+  - if [ ! -d sysconfcpus/bin ];
     then
       git clone https://github.com/obmarg/libsysconfcpus.git;
       cd libsysconfcpus;
@@ -31,12 +30,11 @@ before_install:
 
 install:
   - nvm install
-  - nvm use
   - yarn global add elm@$ELM_VERSION
   - mv $(npm config get prefix)/bin/elm-make $(npm config get prefix)/bin/elm-make-old
   - printf "#\041/bin/bash\n\necho \"Running elm-make with sysconfcpus -n 2\"\n\n$TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make-old \"\$@\"" > $(npm config get prefix)/bin/elm-make
   - chmod +x $(npm config get prefix)/bin/elm-make
   - yarn
 
-script:
-  - yarn test
+after_success:
+  yarn run coverage
