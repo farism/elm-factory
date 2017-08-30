@@ -1,5 +1,3 @@
-*.DS_Store
-*.log
 .nyc_output
 coverage/
 dist/
@@ -7,3 +5,5 @@ elm-stuff/
 node_modules/
 lib/
 tmp/
+*.DS_Store
+*.log
