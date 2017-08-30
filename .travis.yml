@@ -1,8 +1,9 @@
 sudo: false
 
 cache:
+  yarn: true
   directories:
-    - ~/.cache/yarn
+    - node_modules
     - test/tasks/tmp/elm-stuff/build-artifacts
     - sysconfcpus
 
@@ -12,9 +13,7 @@ os:
 
 env:
   matrix:
-    - ELM_VERSION=0.18.0
-    - TARGET_NODE_VERSION=node
-    - COVERALLS_REPO_TOKEN=qPx1suoyo7HD8uotEhbOrfuk1EJYcOo0N
+    - ELM_VERSION=0.18.0 COVERALLS_REPO_TOKEN=qPx1suoyo7HD8uotEhbOrfuk1EJYcOo0N
 
 before_install:
   - if [ ${TRAVIS_OS_NAME} == "osx" ];
@@ -29,10 +28,11 @@ before_install:
       make && make install;
       cd ..;
     fi
+
 install:
   - nvm install
-  - nvm use $TARGET_NODE_VERSION
-  - npm install -g elm@$ELM_VERSION
+  - nvm use
+  - yarn global add elm@$ELM_VERSION
   - mv $(npm config get prefix)/bin/elm-make $(npm config get prefix)/bin/elm-make-old
   - printf "#\041/bin/bash\n\necho \"Running elm-make with sysconfcpus -n 2\"\n\n$TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make-old \"\$@\"" > $(npm config get prefix)/bin/elm-make
   - chmod +x $(npm config get prefix)/bin/elm-make

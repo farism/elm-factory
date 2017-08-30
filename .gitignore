@@ -5,6 +5,5 @@ elm-stuff/
 lib/
 node_modules/
 tmp/
-
 *.DS_Store
 *.log
