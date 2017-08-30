@@ -29,6 +29,7 @@ import { dev as defaults } from '../../src/defaults'
 
 chai.use(chaiAsPromised)
 tmp.setGracefulCleanup()
+tinylr.changed = sinon.spy()
 
 const dir = path.join(__dirname, 'tmp')
 
@@ -261,13 +262,10 @@ describe('dev', function() {
       it('is a stream that livereloads', () => {
         const spy = tinylrSpy()
         const compile = compileHtml(defaults.html)
-
         expect(compile).to.have.property('pipe')
-
         compile.on('end', () => {
           expect(tinylr.changed.callCount).to.eql(1)
-
-          spy.restore()
+          tinylr.changed.reset()
           done()
         })
       })
@@ -287,18 +285,14 @@ describe('dev', function() {
     describe('return', () => {
       it('is a stream that livereloads', function(done) {
         this.timeout(60000)
-
         const spy = tinylrSpy()
         const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
         const compile = compileCss(tmpDir.name, defaults.stylesheets)
-
         expect(compile).to.have.property('pipe')
-
         compile.on('end', () => {
           expect(tinylr.changed.callCount).to.eql(1)
-
           tmpDir.removeCallback()
-          spy.restore()
+          tinylr.changed.reset()
           done()
         })
       })
