@@ -1,12 +1,11 @@
 import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
 import path from 'path'
+import tmp from 'tmp'
 
 import { init, task } from '../../src/tasks/init'
 
 chai.use(chaifs)
-
-const dir = path.join(__dirname, 'tmp', 'init')
 
 describe('init task', () => {
   it('adds the tasks to gulp', () => {
@@ -21,8 +20,10 @@ describe('init', () => {
   })
 
   it('inits a project', done => {
-    init(dir).on('end', () => {
-      expect(dir).to.be.a
+    const dir = tmp.dirSync({ unsafeCleanup: true })
+
+    init(dir.name).on('end', () => {
+      expect(dir.name).to.be.a
         .directory()
         .with.deep.files([
           '.elmfactoryrc',
@@ -37,6 +38,7 @@ describe('init', () => {
           'src/assets/css3.png',
         ])
 
+      dir.removeCallback()
       done()
     })
   })

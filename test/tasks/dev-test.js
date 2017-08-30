@@ -30,7 +30,7 @@ import { dev as defaults } from '../../src/defaults'
 chai.use(chaiAsPromised)
 tmp.setGracefulCleanup()
 
-const dir = path.join(__dirname, 'tmp', 'dev')
+const dir = path.join(__dirname, 'tmp')
 
 const findFreePort = (host, port) =>
   portscanner.findAPortNotInUse(port, port + 1000, host).then(port => {
