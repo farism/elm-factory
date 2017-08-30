@@ -1,0 +1,4 @@
+*.log
+build/
+elm-stuff/
+node-modules/
