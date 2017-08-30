@@ -1,12 +1,5 @@
 sudo: false
 
-cache:
-  yarn: true
-  directories:
-    - node_modules
-    - test/tasks/tmp/elm-stuff/build-artifacts
-    - sysconfcpus
-
 os:
   - linux
   - osx
@@ -14,6 +7,15 @@ os:
 env:
   matrix:
     - ELM_VERSION=0.18.0 COVERALLS_REPO_TOKEN=qPx1suoyo7HD8uotEhbOrfuk1EJYcOo0N
+
+language: node_js
+
+cache:
+  yarn: true
+  directories:
+    - node_modules
+    - test/tasks/tmp/elm-stuff/build-artifacts
+    - sysconfcpus
 
 before_install:
   - if [ ${TRAVIS_OS_NAME} == "osx" ];
