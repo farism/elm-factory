@@ -7,7 +7,6 @@ import path from 'path'
 import portscanner from 'portscanner'
 import request from 'request-promise-native'
 import sinon from 'sinon'
-import tinylr from 'tiny-lr'
 import tmp from 'tmp'
 
 import {
@@ -29,7 +28,6 @@ import { dev as defaults } from '../../src/defaults'
 
 chai.use(chaiAsPromised)
 tmp.setGracefulCleanup()
-tinylr.changed = sinon.spy()
 
 const dir = path.join(__dirname, 'tmp')
 
@@ -58,18 +56,6 @@ const includes = (str = '', response = '') =>
     true,
     `response is missing string '${str}'`
   )
-
-const tinylrSpy = () => {
-  const old = tinylr.changed
-
-  const restore = () => {
-    tinylr.changed = old
-  }
-
-  tinylr.changed = sinon.spy()
-
-  return { restore }
-}
 
 describe('dev', function() {
   before(done => {
@@ -260,14 +246,8 @@ describe('dev', function() {
     })
     describe('return', () => {
       it('is a stream that livereloads', () => {
-        const spy = tinylrSpy()
         const compile = compileHtml(defaults.html)
         expect(compile).to.have.property('pipe')
-        compile.on('end', () => {
-          expect(tinylr.changed.callCount).to.eql(1)
-          tinylr.changed.reset()
-          done()
-        })
       })
     })
   })
@@ -283,16 +263,12 @@ describe('dev', function() {
       expect(() => compileCss(dir, null, 'foo/bar/xyz')).to.throw()
     })
     describe('return', () => {
-      it('is a stream that livereloads', function(done) {
+      it('is a stream that compiles elm css', function(done) {
         this.timeout(60000)
-        const spy = tinylrSpy()
         const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
         const compile = compileCss(tmpDir.name, defaults.stylesheets)
         expect(compile).to.have.property('pipe')
-        compile.on('end', () => {
-          expect(tinylr.changed.callCount).to.eql(1)
-          tmpDir.removeCallback()
-          tinylr.changed.reset()
+        compile.on('finish', () => {
           done()
         })
       })
