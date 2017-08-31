@@ -81,8 +81,11 @@ const startReactor = (
   host,
   port,
   /* istanbul ignore next */ exitParent = true
-) =>
-  new Promise((resolve, reject) => {
+) => {
+  checkParam('string', 'host', host)
+  checkParam('number', 'port', port)
+
+  return new Promise((resolve, reject) => {
     const reactor = execa(
       'elm-reactor',
       [`--address=${host}`, `--port=${port}`],
@@ -122,6 +125,7 @@ const startReactor = (
       }
     })
   })
+}
 
 const startBrowserSync = (
   host,

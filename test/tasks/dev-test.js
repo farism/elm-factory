@@ -30,6 +30,10 @@ tmp.setGracefulCleanup()
 
 const dir = path.join(__dirname, 'tmp')
 
+const required = name => `parameter \`${name}\` is required`
+
+const type = (type, name) => `parameter \`${name}\` must be a \`${type}\``
+
 const findFreePort = (host, port) =>
   portscanner.findAPortNotInUse(port, port + 1000, host).then(port => {
     return {
@@ -97,6 +101,29 @@ describe('dev', function() {
   })
 
   describe('startReactor', () => {
+    describe.only('arguments', () => {
+      describe('host', () => {
+        it('is required', () => {
+          expect(() => startReactor()).to.throw(required('host'))
+        })
+        it('must be a string', () => {
+          expect(() => startReactor(127001)).to.throw(
+            type('string', 'host')
+          )
+        })
+      })
+      describe('port', () => {
+        it('is required', () => {
+          expect(() => startReactor('stub')).to.throw(required('port'))
+        })
+        it('must be a number', () => {
+          expect(() => startReactor('stub', '8000')).to.throw(
+            type('number', 'port')
+          )
+        })
+      })
+    })
+
     it('fails to start when port is in use', () => {
       return expect(
         findFreePort(defaults.reactorHost, defaults.reactorPort)
@@ -126,9 +153,6 @@ describe('dev', function() {
 
   describe('startBrowserSync', () => {
     describe('arguments', () => {
-      const required = name => `parameter \`${name}\` is required`
-      const type = (type, name) => `parameter \`${name}\` must be a \`${type}\``
-
       describe('host', () => {
         it('is required', () => {
           expect(() => startBrowserSync()).to.throw(required('host'))
@@ -244,7 +268,7 @@ describe('dev', function() {
       )
     })
 
-    it.only('proxies elm-reactor', function(done) {
+    it('proxies elm-reactor', function(done) {
       this.timeout(60000)
 
       findFreePort(defaults.reactorHost, defaults.reactorPort)
