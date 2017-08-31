@@ -4,8 +4,12 @@ const gulp = require('gulp')
 const path = require('path')
 const rename = require('gulp-rename')
 
-const init = dir => {
-  if (!dir) {
+const init = options => {
+  if (!options) {
+    throw new Error('must an options object')
+  }
+
+  if (!options.dir) {
     throw new Error('must provide a path')
   }
 
@@ -18,14 +22,14 @@ const init = dir => {
         path.resolve(__dirname, '../tmpl/boilerplate/**/.*'),
       ])
       .pipe(packageJson)
-      .pipe(anyTemplate({ name: dir.split('/').pop() }))
+      .pipe(anyTemplate({ name: options.dir.split('/').pop() }))
       .pipe(
         rename(path => {
           path.extname = ''
         })
       )
       .pipe(packageJson.restore)
-      .pipe(gulp.dest(dir))
+      .pipe(gulp.dest(options.dir))
       .on('finish', resolve)
       .on('error', reject)
   })

@@ -13,7 +13,7 @@ describe('INIT TASK', () => {
 
   before(done => {
     dir = tmp.dirSync({ unsafeCleanup: true })
-    promise = init(dir.name).then(done)
+    promise = init({ dir: dir.name }).then(done)
   })
 
   after(() => {
@@ -29,8 +29,8 @@ describe('INIT TASK', () => {
   })
 
   it('directory has the correct files', () => {
-    expect(dir.name).to.be.a
-      .directory()
+    expect(dir.name)
+      .to.be.a.directory()
       .with.deep.files([
         '.elmfactoryrc',
         '.gitignore',
@@ -48,12 +48,12 @@ describe('INIT TASK', () => {
   it('compiles template files with absolute dir slug', () => {
     const slug = dir.name.split('/').pop()
 
-    expect(path.join(dir.name, 'elm-package.json')).to.be.a
-      .file()
+    expect(path.join(dir.name, 'elm-package.json'))
+      .to.be.a.file()
       .with.contents.that.match(new RegExp(`"summary": "${slug}"`))
 
-    expect(path.join(dir.name, 'package.json')).to.be.a
-      .file()
+    expect(path.join(dir.name, 'package.json'))
+      .to.be.a.file()
       .with.contents.that.match(new RegExp(`"name": "${slug}"`))
   })
 
