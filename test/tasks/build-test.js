@@ -22,7 +22,7 @@ describe('BUILD TASK', () => {
   let tmpCleanup = () => {}
 
   before(done => {
-    init(dir).then(() => {
+    init({ dir }).then(() => {
       process.chdir(dir)
       done()
     })
@@ -94,8 +94,8 @@ describe('BUILD TASK', () => {
         false,
         dir
       ).then(() => {
-        expect(outputPath).to.be.a
-          .directory()
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files([
             '8855f72a.css',
             'css-manifest.json',
@@ -112,8 +112,8 @@ describe('BUILD TASK', () => {
         'http://somecdn.com/',
         false
       ).then(() => {
-        expect(outputPath).to.be.a
-          .directory()
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files([
             'a9c81025.css',
             'css-manifest.json',
@@ -130,8 +130,8 @@ describe('BUILD TASK', () => {
         defaults.publicPath,
         true
       ).then(() => {
-        expect(outputPath).to.be.a
-          .directory()
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files([
             'css-manifest.json',
             'eaa60ed2.css',
@@ -148,8 +148,8 @@ describe('BUILD TASK', () => {
         defaults.publicPath,
         false
       ).then(() => {
-        expect(`${outputPath}/css-manifest.json`).to.be.a
-          .file()
+        expect(`${outputPath}/css-manifest.json`)
+          .to.be.a.file()
           .with.contents('{\n  "index.css": "8855f72a.css"\n}')
 
         done()
@@ -166,10 +166,10 @@ describe('BUILD TASK', () => {
         outputPath,
         defaults.publicPath,
         false,
-        dir,
+        dir
       ).then(() => {
-        expect(outputPath).to.be.a
-          .directory()
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files(['d50146ff.js', 'f083965f.png', 'js-manifest.json'])
 
         done()
@@ -182,8 +182,8 @@ describe('BUILD TASK', () => {
         'http://somecdn.com/',
         false
       ).then(() => {
-        expect(outputPath).to.be.a
-          .directory()
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files(['d50146ff.js', 'f083965f.png', 'js-manifest.json'])
 
         done()
@@ -196,8 +196,8 @@ describe('BUILD TASK', () => {
         defaults.publicPath,
         true
       ).then(() => {
-        expect(outputPath).to.be.a
-          .directory()
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files(['js-manifest.json', 'd50146ff.js', 'f083965f.png'])
 
         done()
@@ -210,8 +210,8 @@ describe('BUILD TASK', () => {
         defaults.publicPath,
         false
       ).then(() => {
-        expect(`${outputPath}/js-manifest.json`).to.be.a
-          .file()
+        expect(`${outputPath}/js-manifest.json`)
+          .to.be.a.file()
           .with.contents('{\n  "Main.js": "d50146ff.js"\n}')
 
         done()

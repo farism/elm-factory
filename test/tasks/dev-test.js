@@ -81,7 +81,7 @@ const assertIncludes = (str = '', response = '') =>
 
 describe('DEV TASK', function() {
   before(done => {
-    init(dir).then(() => {
+    init({ dir }).then(() => {
       process.chdir(dir)
       done()
     })
@@ -194,7 +194,7 @@ describe('DEV TASK', function() {
     it('installs elm deps into /elm-stuff', done => {
       const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
 
-      init(tmpDir.name).then(() => {
+      init({ dir: tmpDir.name }).then(() => {
         installPackages(tmpDir.name)
           .then(() => {
             expect(path.join(dir, 'elm-stuff')).to.be.a.directory()
@@ -380,17 +380,13 @@ describe('DEV TASK', function() {
           .rejected
       })
       it('resolves on valid entry', () => {
-        return expect(
-          createWatcher(fn, fn, fn, bs, defaults.main)
-        ).to.eventually.be
-          .an('object')
+        return expect(createWatcher(fn, fn, fn, bs, defaults.main))
+          .to.eventually.be.an('object')
           .with.property('close')
       })
       it('resolves on valid entry', () => {
-        return expect(
-          createWatcher(fn, fn, fn, bs, defaults.stylesheets)
-        ).to.eventually.be
-          .an('object')
+        return expect(createWatcher(fn, fn, fn, bs, defaults.stylesheets))
+          .to.eventually.be.an('object')
           .with.property('close')
       })
       it('bs.watch is called', done => {

@@ -20,8 +20,12 @@ describe('INIT TASK', () => {
     dir.removeCallback()
   })
 
-  it('throws an error if a directory is not provided', () => {
+  it('throws an error if options are not provided', () => {
     expect(() => init()).to.throw()
+  })
+
+  it('throws an error if a directory is not provided', () => {
+    expect(() => init({})).to.throw()
   })
 
   it('creates a directory', () => {
