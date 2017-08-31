@@ -39,6 +39,13 @@ const writeResponse = response => content => {
   response.end()
 }
 
+const installPackages = () =>
+  new Promise((resolve, reject) =>
+    execa('elm-package', ['install', '--yes'], { stdio: 'inherit' })
+      .then(() => resolve())
+      .catch(e => reject(e))
+  )
+
 const startReactor = (
   host,
   port,
@@ -91,6 +98,7 @@ const startBrowserSync = (host, port, reactor, html, dir) =>
       files: [html, `${dir}/*.css`],
       host,
       localOnly: true,
+      logLevel: 'silent',
       notify: false,
       online: false,
       open: false,
@@ -99,7 +107,7 @@ const startBrowserSync = (host, port, reactor, html, dir) =>
         baseDir: dir,
         middleware: [
           nocache(),
-          proxy('/_compile', { target: reactor }),
+          proxy('/_compile', { target: reactor, logLevel: 'silent' }),
           (request, response, next) => {
             if (path.extname(request.url) === '.elm') {
               loadHtmlCompiler(html)
@@ -115,7 +123,7 @@ const startBrowserSync = (host, port, reactor, html, dir) =>
               next()
             }
           },
-          proxy('/', { target: reactor }),
+          proxy('/', { target: reactor, logLevel: 'silent' }),
         ],
       },
       serveStatic: [
@@ -126,65 +134,14 @@ const startBrowserSync = (host, port, reactor, html, dir) =>
       ],
     }
 
-    const server = browserSync.create()
+    const bs = browserSync.create()
 
-    server.init(config, () => resolve(server))
+    // bs.emitter.on('init', function() {
+    //   console.log('Browsersync is running!')
+    // })
+
+    bs.init(config, () => resolve(bs))
   })
-
-const compileCss = (out, stylesheets, cwd = process.cwd()) => {
-  if (!out) {
-    throw new Error('param `out` required')
-  }
-
-  if (!stylesheets) {
-    throw new Error('param `stylesheets` required')
-  }
-
-  return gulp
-    .src(stylesheets)
-    .pipe(plumber())
-    .pipe(elmCss({ cwd, out }))
-    .pipe(plumber.stop())
-    .on('error', () => {})
-}
-
-const watch = filter => {
-  if (typeof filter !== 'undefined' && typeof filter !== 'function') {
-    throw new Error('param `filter` must be a function')
-  }
-
-  return (watcher, src) =>
-    new Promise((resolve, reject) => {
-      if (!watcher) {
-        reject(new Error('param `watcher` required'))
-        return
-      }
-
-      if (!src) {
-        reject(new Error('param `src` required'))
-        return
-      }
-
-      gulp
-        .src(src)
-        .pipe(elmFindDependencies())
-        .pipe(
-          through.obj(function(file, encode, callback) {
-            const watch = filter ? filter(file) : true
-
-            if (watch) {
-              watcher._watcher.add(file.path)
-            }
-
-            callback()
-          })
-        )
-        .pipe(gulp.dest(''))
-        .on('finish', () => {
-          resolve(getWatchedPaths(watcher))
-        })
-    })
-}
 
 const task = options => {
   const opts = Object.assign({}, defaults, options)
@@ -192,54 +149,93 @@ const task = options => {
   // tmp dir for serving static css files
   const tmpDir = tmp.dirSync({ unsafeCleanup: true })
 
-  gulp.task('_css', () => compileCss(tmpDir.name, opts.stylesheets, opts.cwd))
-
-  gulp.task('_main', () => {
-    // browsersync && browsersync.refresh()
-    mainWatcher && mainWatcher.end()
-    mainWatcher = gulp.watch(opts.main, ['_main'])
-
-    const filter = file => !getWatchedPaths(cssWatcher).includes(file.path)
-
-    return watch(filter)(mainWatcher, opts.main)
-  })
-
-  gulp.task('dev', () => {
-    return startReactor(opts.reactorHost, opts.reactorPort)
-      .then(() => {
-        return startBrowserSync(
+  // the cli task
+  return (
+    // first install packages using elm-package
+    installPackages()
+      // then start reactor
+      .then(() => startReactor(opts.reactorHost, opts.reactorPort))
+      // then start browser-sync
+      .then(() =>
+        startBrowserSync(
           opts.host,
           opts.port,
           `http://${opts.reactorHost}:${opts.reactorPort}`,
           opts.html,
           tmpDir.name
-        ).then(bs => {
-          let stylesheetsDeps
+        )
+      )
+      .then(bs =>
+        // then we want to build the css (before we start watching)
+        elmCss(process.cwd(), opts.stylesheets, tmpDir.name)
+          // finally we start watching
+          .then(() => {
+            let stylesheetsWatcher
+            let stylesheetsDeps
+            let mainWatcher
+            let mainDeps
 
-          getDepTree(opts.stylesheets)
-            .then(_stylesheetDeps => {
-              stylesheetsDeps = _stylesheetDeps
+            const watchCss = () =>
+              getDepTree(opts.stylesheets).then(deps => {
+                stylesheetsDeps = deps
 
-              return getDepTree(opts.main).then(_mainDeps => {
-                console.log(_mainDeps)
+                return bs.watch(['!elm-stuff', ...deps]).on('change', file => {
+                  // stop watching temporarily
+                  stylesheetsWatcher && stylesheetsWatcher.close()
+
+                  /// rebuild css
+                  elmCss(process.cwd(), opts.stylesheets, tmpDir.name)
+                    .then(() =>
+                      // start watching files again
+                      watchCss().then(watcher => (stylesheetsWatcher = watcher))
+                    )
+                    .catch(e =>
+                      // start watching files again
+                      watchCss().then(watcher => (stylesheetsWatcher = watcher))
+                    )
+                })
               })
-            })
-            .then()
-        })
-      })
-      .catch(e => {
-        console.error(e)
-      })
-  })
 
-  return gulp
+            const watchMain = () =>
+              getDepTree(opts.main).then(deps => {
+                mainDeps = deps
+
+                return bs.watch(['!elm-stuff', ...deps]).on('change', file => {
+                  if (!stylesheetsDeps.includes(file)) {
+                    // stop watching temporarily
+                    mainWatcher && mainWatcher.close()
+
+                    // reload the browser
+                    bs.reload()
+
+                    // start watching again
+                    watchMain().then(watcher => (mainWatcher = watcher))
+                  }
+                })
+              })
+
+            return watchCss()
+              .then(watcher => {
+                stylesheetsWatcher = watcher
+
+                return watchMain()
+              })
+              .then(watcher => {
+                mainWatcher = watcher
+              })
+          })
+          .catch(e => {
+            console.error(e)
+          })
+      )
+  )
 }
 
 module.exports = {
   defaultHtmlCompiler,
+  getDepTree,
+  writeResponse,
   startReactor,
   startBrowserSync,
-  compileCss,
-  watch,
   task,
 }

@@ -893,8 +893,8 @@ caniuse-api@^1.5.2:
     lodash.uniq "^4.5.0"
 
 caniuse-db@^1.0.30000529, caniuse-db@^1.0.30000634, caniuse-db@^1.0.30000639:
-  version "1.0.30000718"
-  resolved "https://registry.yarnpkg.com/caniuse-db/-/caniuse-db-1.0.30000718.tgz#86cdd97987302554934c61e106f4e470f16f993c"
+  version "1.0.30000721"
+  resolved "https://registry.yarnpkg.com/caniuse-db/-/caniuse-db-1.0.30000721.tgz#cdc52efe8f82dd13916615b78e86f704ece61802"
 
 caseless@~0.11.0:
   version "0.11.0"
@@ -1334,6 +1334,13 @@ cross-spawn@2.1.0:
   dependencies:
     cross-spawn-async "^2.0.0"
     spawn-sync "1.0.13"
+
+cross-spawn@4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-4.0.0.tgz#8254774ab4786b8c5b3cf4dfba66ce563932c252"
+  dependencies:
+    lru-cache "^4.0.1"
+    which "^1.2.9"
 
 cross-spawn@^3.0.1:
   version "3.0.1"
@@ -1924,7 +1931,7 @@ find-cache-dir@^0.1.1:
     mkdirp "^0.5.1"
     pkg-dir "^1.0.0"
 
-find-elm-dependencies@^1.0.1:
+find-elm-dependencies@1.0.1, find-elm-dependencies@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/find-elm-dependencies/-/find-elm-dependencies-1.0.1.tgz#d78c89ff39f23dc64e175871c8e856e635d48860"
   dependencies:
@@ -2332,6 +2339,14 @@ gulp-debug@^3.1.0:
     stringify-object "^3.0.0"
     through2 "^2.0.0"
     tildify "^1.1.2"
+
+gulp-elm-basic@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/gulp-elm-basic/-/gulp-elm-basic-0.1.0.tgz#2cd27f99669bb912233c43a2e6d915e0eab4ea63"
+  dependencies:
+    node-elm-compiler "^4.3.2"
+    through2 "^2.0.3"
+    vinyl "^2.1.0"
 
 gulp-elm-css@^0.1.0:
   version "0.1.0"
@@ -3846,8 +3861,8 @@ mustache@^2.3.0:
   resolved "https://registry.yarnpkg.com/mustache/-/mustache-2.3.0.tgz#4028f7778b17708a489930a6e52ac3bca0da41d0"
 
 nan@^2.3.0:
-  version "2.6.2"
-  resolved "https://registry.yarnpkg.com/nan/-/nan-2.6.2.tgz#e4ff34e6c95fdfb5aecc08de6596f43605a7db45"
+  version "2.7.0"
+  resolved "https://registry.yarnpkg.com/nan/-/nan-2.7.0.tgz#d95bf721ec877e08db276ed3fc6eb78f9083ad46"
 
 native-promise-only@^0.8.1:
   version "0.8.1"
@@ -3880,6 +3895,15 @@ node-elm-compiler@2.3.2:
   dependencies:
     cross-spawn "2.1.0"
     lodash "3.10.1"
+    temp "^0.8.3"
+
+node-elm-compiler@^4.3.2:
+  version "4.3.2"
+  resolved "https://registry.yarnpkg.com/node-elm-compiler/-/node-elm-compiler-4.3.2.tgz#ff8deccb19c29c037af964f37e7c49b6efce1c5e"
+  dependencies:
+    cross-spawn "4.0.0"
+    find-elm-dependencies "1.0.1"
+    lodash "4.14.2"
     temp "^0.8.3"
 
 node-pre-gyp@^0.6.36:

@@ -40,6 +40,7 @@
     "gulp-any-template": "^0.3.1",
     "gulp-debug": "^3.1.0",
     "gulp-elm": "^0.7.2",
+    "gulp-elm-basic": "^0.1.0",
     "gulp-elm-css": "^0.1.0",
     "gulp-elm-extract-assets": "^0.1.0",
     "gulp-elm-find-dependencies": "^0.1.0",

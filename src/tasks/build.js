@@ -1,6 +1,6 @@
 const cssnano = require('cssnano')
 const del = require('del')
-const elm = require('gulp-elm')
+const elm = require('gulp-elm-basic')
 const elmCss = require('gulp-elm-css')
 const elmExtractAssets = require('gulp-elm-extract-assets')
 const flatten = require('gulp-flatten')
@@ -79,11 +79,11 @@ const buildMain = (
 ) =>
   gulp
     .src(main)
-    .pipe(elm({ cwd }))
+    .pipe(elm())
     .pipe(elmExtractAssets({ cwd, tag: 'AssetUrl' }))
     .pipe(
       rev.revision({
-        dontUpdateReference: ['Main.js'],
+        dontUpdateReference: [path.basename(main).replace('.elm', '.js')],
         fileNameManifest: 'js-manifest.json',
         replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
           const filename = newReference.split('/').pop()
@@ -121,6 +121,8 @@ const task = options => {
 
   /* istanbul ignore next  */
   gulp.task('build', () => runSequence('_clean', '_css', '_main'))
+
+  // gulp.task('build', () => runSequence('_clean', '_css', '_main'))
 
   return gulp
 }
