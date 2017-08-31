@@ -62,7 +62,7 @@ const assertIncludes = (str = '', response = '') =>
     `response is missing string '${str}'`
   )
 
-describe('dev', function() {
+describe.only('dev', function() {
   before(done => {
     init(dir).on('end', () => {
       process.chdir(dir)
@@ -70,7 +70,7 @@ describe('dev', function() {
     })
   })
 
-  describe.only('helpers', () => {
+  describe('helpers', () => {
     describe('param', () => {
       it('throws type errors', () => {
         expect(() => param('string', 'a')).to.throw(TypeError)
@@ -178,7 +178,7 @@ describe('dev', function() {
       })
     })
 
-    describe.only('getSpinner', () => {
+    describe('getSpinner', () => {
       describe('params', () => {
         describe('steps', () => {
           it('is required', () => {
@@ -205,6 +205,7 @@ describe('dev', function() {
         let stop = sinon.spy()
         let succeed = sinon.spy()
         let fail = sinon.spy()
+
         beforeEach(() => {
           spinner = getSpinner(['step1', 'step2', 'step3'], {
             start,
@@ -235,12 +236,10 @@ describe('dev', function() {
             expect(spinner.current()).to.eql('step1')
           })
         })
-        describe('#next()', () => {
+        describe.only('#next()', () => {
           it('increments the step', () => {
             spinner.next()
             expect(spinner.current()).to.eql('step2')
-            spinner.next()
-            expect(spinner.current()).to.eql('step3')
             spinner.next()
             expect(spinner.current()).to.eql('step3')
           })
@@ -249,10 +248,27 @@ describe('dev', function() {
             expect(spinner.current()).to.eql('step3')
           })
           it('calls fn with new step', () => {
-            const fn = sinon.spy()
+            let current
+            const fn = sinon.spy(cur => (current = cur))
             spinner.next(fn)
             spinner.next(fn)
             expect(fn.callCount).to.eql(2)
+            expect(current).to.eql('step3')
+          })
+          it('calls succeed with current text', () => {
+            const fn = sinon.spy()
+            spinner.next()
+            expect(spinner.succeed.callCount).to.eql(1)
+          })
+          it('does not error if passed no fn', () => {
+            const fn = sinon.spy()
+            spinner.next(null)
+            expect(fn.callCount).to.eql(0)
+          })
+          it('does not call succeed if succeedCurrent is false', () => {
+            const fn = sinon.spy()
+            spinner.next(null, false)
+            expect(spinner.succeed.callCount).to.eql(0)
           })
         })
       })
@@ -488,57 +504,4 @@ describe('dev', function() {
         .catch(done)
     })
   })
-
-  // describe('watch', () => {
-  //   it('should throw if param `filter` exists and is not a function', () => {
-  //     expect(() => watch(0)).to.throw()
-  //     expect(() => watch(false)).to.throw()
-  //     expect(() => watch('')).to.throw()
-  //   })
-  //   it('returns a function', () => {
-  //     expect(watch()).to.be.a('function')
-  //   })
-  //   describe('returned function', () => {
-  //     it('should throw if param `watcher` is missing', () => {
-  //       return expect(watch()(null, 'src')).to.be.eventually.be.rejected
-  //     })
-  //     it('should throw if param `src` is missing', () => {
-  //       return expect(watch()({}, null)).to.eventually.be.rejected
-  //     })
-  //     it('should watch the correct files', () => {
-  //       return expect(
-  //         watch()(gulp.watch(defaults.main), defaults.main)
-  //       ).to.eventually.eql([
-  //         path.join(dir, 'src/Assets.elm'),
-  //         path.join(dir, 'src/Main.elm'),
-  //         path.join(dir, 'src/MainCss.elm'),
-  //         path.join(dir, 'src/assets/'),
-  //       ])
-  //     })
-  //     it('should watch the correct files', () => {
-  //       return expect(
-  //         watch()(gulp.watch(defaults.stylesheets), defaults.stylesheets)
-  //       ).to.eventually.eql([
-  //         path.join(dir, 'src/Assets.elm'),
-  //         path.join(dir, 'src/MainCss.elm'),
-  //         path.join(dir, 'src/Stylesheets.elm'),
-  //         path.join(dir, 'src/assets/'),
-  //       ])
-  //     })
-  //     it('should watch and filter out the correct files', () => {
-  //       const watcher = gulp.watch(defaults.stylesheets)
-  //       const filter = file =>
-  //         !getWatchedPaths(watcher).assertIncludes(file.path)
-  //
-  //       return expect(
-  //         watch()(watcher, defaults.stylesheets).then(() =>
-  //           watch(filter)(gulp.watch(defaults.main), defaults.main)
-  //         )
-  //       ).to.eventually.eql([
-  //         path.join(dir, 'src/Main.elm'),
-  //         path.join(dir, 'src/assets/'),
-  //       ])
-  //     })
-  //   })
-  // })
 })

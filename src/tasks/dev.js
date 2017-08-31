@@ -78,10 +78,10 @@ const getSpinner = (steps, spinner) => {
     }
     if (current + 1 >= steps.length) {
       spinner.stop()
-      fn(steps[current])
+      fn && fn(steps[current])
     } else {
       current = current + 1
-      fn(steps[current])
+      fn && fn(steps[current])
       spinner.start()
     }
 
