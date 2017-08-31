@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>~<%= request.path %></title>
+    <title>~<%= request.url %></title>
     <style type="text/css">
       @import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro);
       html, head, body {
@@ -19,7 +19,7 @@
       <div style="font-size: 1em">With new projects, I need a bunch of extra time to download packages.</div>
     </div>
   </body>
-  <script src="/_compile<%= request.path %>"></script>
+  <script src="/_compile<%= request.url %>"></script>
   <script>
     while (document.body.firstChild) {
       document.body.removeChild(document.body.firstChild)

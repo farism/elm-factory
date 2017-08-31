@@ -1,4 +1,5 @@
 import chai, { assert, expect } from 'chai'
+import chaifs from 'chai-fs'
 import chaiAsPromised from 'chai-as-promised'
 import fs from 'fs'
 import http from 'http'
@@ -10,26 +11,47 @@ import sinon from 'sinon'
 import tmp from 'tmp'
 
 import {
-  compileCss,
-  compileMain,
-  compileHtml,
+  param,
   defaultHtmlCompiler,
-  getWatchedPaths,
-  resetWatcher,
+  getDepTree,
+  loadHtmlCompiler,
+  writeResponse,
+  installPackages,
   startReactor,
-  startExpress,
-  task,
+  startBrowserSync,
+  createWatcher,
   watch,
-  watchCss,
-  watchMain,
+  dev,
 } from '../../src/tasks/dev'
 import { init } from '../../src/tasks/init'
 import { dev as defaults } from '../../src/defaults'
 
+chai.should()
+chai.use(chaifs)
 chai.use(chaiAsPromised)
 tmp.setGracefulCleanup()
 
 const dir = path.join(__dirname, 'tmp')
+
+const fn = () => {}
+const obj = {}
+const arr = []
+const str = 'stub'
+const num = 123
+const bool = true
+
+const required = name => `parameter \`${name}\` is required`
+
+const ntype = (type, name) => `parameter \`${name}\` must be a \`${type}\``
+
+const checkParam = (type, name, fn) => args => {
+  it(`${name} is required`, () => {
+    expect(() => fn.apply(null, args.slice(0, -1))).to.throw(required(name))
+  })
+  it(`${name} must be a ${type}`, () => {
+    expect(() => fn.apply(null, args)).to.throw(ntype(type, name))
+  })
+}
 
 const findFreePort = (host, port) =>
   portscanner.findAPortNotInUse(port, port + 1000, host).then(port => {
@@ -50,62 +72,154 @@ const occupyPort = (host, port) =>
       .on('error', reject)
   })
 
-const includes = (str = '', response = '') =>
+const assertIncludes = (str = '', response = '') =>
   assert.equal(
     response.includes(str),
     true,
     `response is missing string '${str}'`
   )
 
-describe('dev', function() {
+describe('DEV TASK', function() {
   before(done => {
-    init(dir).on('end', () => {
+    init({ dir }).then(() => {
       process.chdir(dir)
       done()
     })
   })
 
-  describe('task', () => {
-    it('adds the tasks to gulp', () => {
-      const gulp = task({})
-      expect(gulp.tasks).to.have.a.property('_html')
-      expect(gulp.tasks).to.have.a.property('_css')
-      expect(gulp.tasks).to.have.a.property('_main')
-      expect(gulp.tasks).to.have.a.property('dev')
-    })
-  })
-
   describe('helpers', () => {
-    describe('defaultHtmlCompiler', () => {
-      it('defaultHtmlCompiler', () => {
-        return expect(defaultHtmlCompiler()).to.eventually.equal(
-          'html is compiling...'
+    describe('param', () => {
+      it('throws type errors', () => {
+        expect(() => param('string', 'a')).to.throw(TypeError)
+        expect(() => param('string', 'a', 123)).to.throw(TypeError)
+      })
+      it('validates existence', () => {
+        expect(() => param('string', 'a')).to.throw(required('a'))
+        expect(() => param('number', 'a', undefined)).to.throw(required('a'))
+        expect(() => param('function', 'a', null)).to.throw(required('a'))
+      })
+      it('works with booleans', () => {
+        expect(() => param('boolean', 'a', bool)).to.not.throw()
+        expect(() => param('boolean', 'a', arr)).to.throw(ntype('boolean', 'a'))
+        expect(() => param('boolean', 'a', obj)).to.throw(ntype('boolean', 'a'))
+        expect(() => param('boolean', 'a', num)).to.throw(ntype('boolean', 'a'))
+        expect(() => param('boolean', 'a', str)).to.throw(ntype('boolean', 'a'))
+      })
+      it('works with objects', () => {
+        expect(() => param('object', 'a', obj)).to.not.throw()
+        expect(() => param('object', 'a', arr)).to.throw(ntype('object', 'a'))
+        expect(() => param('object', 'a', bool)).to.throw(ntype('object', 'a'))
+        expect(() => param('object', 'a', num)).to.throw(ntype('object', 'a'))
+        expect(() => param('object', 'a', str)).to.throw(ntype('object', 'a'))
+      })
+      it('works with arrays', () => {
+        expect(() => param('array', 'a', arr)).to.not.throw()
+        expect(() => param('array', 'a', obj)).to.throw(ntype('array', 'a'))
+        expect(() => param('array', 'a', bool)).to.throw(ntype('array', 'a'))
+        expect(() => param('array', 'a', num)).to.throw(ntype('array', 'a'))
+        expect(() => param('array', 'a', str)).to.throw(ntype('array', 'a'))
+      })
+      it('works with numbers', () => {
+        expect(() => param('number', 'a', num)).to.not.throw()
+        expect(() => param('number', 'a', arr)).to.throw(ntype('number', 'a'))
+        expect(() => param('number', 'a', obj)).to.throw(ntype('number', 'a'))
+        expect(() => param('number', 'a', bool)).to.throw(ntype('number', 'a'))
+        expect(() => param('number', 'a', str)).to.throw(ntype('number', 'a'))
+      })
+      it('works with strings', () => {
+        expect(() => param('string', 'a', str)).to.not.throw()
+        expect(() => param('string', 'a', arr)).to.throw(ntype('string', 'a'))
+        expect(() => param('string', 'a', obj)).to.throw(ntype('string', 'a'))
+        expect(() => param('string', 'a', bool)).to.throw(ntype('string', 'a'))
+        expect(() => param('string', 'a', num)).to.throw(ntype('string', 'a'))
+      })
+    })
+    describe('getDepTree', () => {
+      describe('params', () => {
+        checkParam('string', 'entry', getDepTree)([num])
+      })
+      it('fails if entry file does not exist', () => {
+        return expect(getDepTree('some/fake/path.elm')).to.eventually.rejected
+      })
+      it('returns an elm dependency tree with the entry point prepended', () => {
+        return expect(getDepTree('src/Main.elm')).to.eventually.deep.equal([
+          'src/Main.elm',
+          path.join(dir, 'src/MainCss.elm'),
+          path.join(dir, 'src/Assets.elm'),
+        ])
+      })
+    })
+
+    describe('loadHtmlCompiler', () => {
+      describe('params', () => {
+        checkParam('string', 'file', loadHtmlCompiler)([num])
+      })
+      it('fails if html file does not exist', () => {
+        return expect(loadHtmlCompiler('some/fake/path.ejs')).to.eventually.be
+          .rejected
+      })
+      it('fails if html file exists but is not supported', () => {
+        const tmpFile = tmp.fileSync({ dir, postfix: '.unsupported' })
+
+        return expect(
+          loadHtmlCompiler(tmpFile.name)
+        ).to.eventually.be.rejectedWith(
+          Error,
+          'html template format unsupported'
+        )
+      })
+      it('resolves with an existing and supported html file', () => {
+        return expect(loadHtmlCompiler(defaults.html)).to.eventually.be
+          .fulfilled
+      })
+      it('resolves a function', () => {
+        return expect(loadHtmlCompiler(defaults.html)).to.eventually.be.a(
+          'function'
         )
       })
     })
 
-    describe('getWatchedPaths', () => {
-      it('given a watcher, returns an array of all watched paths', () => {
-        expect(
-          getWatchedPaths(gulp.watch(path.join(dir, 'src', '**')))
-        ).to.eql([
-          path.join(dir, 'src/'),
-          path.join(dir, 'src/Assets.elm'),
-          path.join(dir, 'src/Main.elm'),
-          path.join(dir, 'src/MainCss.elm'),
-          path.join(dir, 'src/Stylesheets.elm'),
-          path.join(dir, 'src/assets/'),
-          path.join(dir, 'src/assets/css3.png'),
-        ])
+    describe('defaultHtmlCompiler', () => {
+      it('defaultHtmlCompiler', () => {
+        return expect(defaultHtmlCompiler()).to.eventually.equal(
+          'incompatible html template...'
+        )
+      })
+    })
+  })
 
-        expect(
-          getWatchedPaths(gulp.watch(path.join(dir, 'src', 'fakedir')))
-        ).to.eql([])
+  describe('installPackages', function() {
+    this.timeout(60000)
+
+    it('installs elm deps into /elm-stuff', done => {
+      const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
+
+      init({ dir: tmpDir.name }).then(() => {
+        installPackages(tmpDir.name)
+          .then(() => {
+            expect(path.join(dir, 'elm-stuff')).to.be.a.directory()
+            tmpDir.removeCallback()
+            done()
+          })
+          .catch(() => {
+            tmpDir.removeCallback()
+            done()
+          })
+
+        installPackages().catch(() => {
+          tmpDir.removeCallback()
+          done()
+        })
       })
     })
   })
 
   describe('startReactor', () => {
+    describe('params', () => {
+      checkParam('string', 'host', startReactor)([num])
+      checkParam('number', 'port', startReactor)([str, str])
+    })
+
     it('fails to start when port is in use', () => {
       return expect(
         findFreePort(defaults.reactorHost, defaults.reactorPort)
@@ -133,79 +247,70 @@ describe('dev', function() {
     })
   })
 
-  describe('startExpress', () => {
-    it('fails to start when port is in use', () => {
-      return expect(
-        findFreePort(defaults.host, defaults.port)
-          .then(({ host, port }) => occupyPort(host, port))
-          .then(({ host, port, server }) =>
-            startExpress(host, port, '').catch(() => {
-              server.close()
-              throw new Error()
-            })
-          )
-      ).to.eventually.be.rejected
+  describe('startBrowserSync', () => {
+    describe('params', () => {
+      checkParam('string', 'host', startBrowserSync)([num])
+      checkParam('number', 'port', startBrowserSync)([str, str])
+      checkParam('string', 'reactor', startBrowserSync)([str, num, num])
+      checkParam('string', 'html', startBrowserSync)([str, num, str, num])
+      checkParam('string', 'dir', startBrowserSync)([str, num, str, str, num])
     })
 
-    it('starts an express server when port is free', () => {
+    it('starts a browsersync server', () => {
       return expect(
-        findFreePort(defaults.host, defaults.port).then(({ host, port }) =>
-          startExpress(host, port).then(server => {
-            server.close()
-          })
-        )
+        startBrowserSync(
+          defaults.host,
+          defaults.port,
+          str,
+          str,
+          str,
+          'silent'
+        ).then(({ bs }) => {
+          bs.exit()
+        })
       ).to.eventually.be.fulfilled
     })
 
-    it('starts the livereload server', function() {
-      const lrPort = defaults.lrPort + 1
-      return expect(
-        findFreePort(defaults.host, defaults.port).then(({ host, port, url }) =>
-          startExpress(host, port, null, lrPort).then(server =>
-            occupyPort(null, lrPort).catch(() => {
-              // server.close()
-              throw new Error()
-            })
-          )
-        )
-      ).to.eventually.be.rejected
-    })
-
-    it('creates a virtual static /public dir', done => {
+    it('serves static from the /public dir', done => {
       const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
       const tmpFile = tmp.fileSync({ dir: tmpDir.name, postfix: '.css' })
+      const basename = path.basename(tmpFile.name)
       fs.writeSync(tmpFile.fd, Buffer('.elm-reactor{color:#FFFFFF}'))
 
-      findFreePort(defaults.host, defaults.port)
-        .then(({ host, port, url }) =>
-          startExpress(host, port, null, null, null, tmpDir.name).then(server =>
-            request(
-              `${url}/public/${path.basename(tmpFile.name)}`
-            ).then(res => {
-              expect(res).to.eql('.elm-reactor{color:#FFFFFF}')
-              tmpFile.removeCallback()
-              tmpDir.removeCallback()
-              server.close()
-              done()
-            })
-          )
-        )
-        .catch(done)
+      startBrowserSync(
+        defaults.host,
+        defaults.port,
+        str,
+        str,
+        tmpDir.name
+      ).then(({ bs }) =>
+        request(
+          `http://${defaults.host}:${defaults.port}/public/${basename}`
+        ).then(res => {
+          expect(res).to.eql('.elm-reactor{color:#FFFFFF}')
+          tmpFile.removeCallback()
+          tmpDir.removeCallback()
+          bs.exit()
+          done()
+        })
+      )
     })
 
     it('*.elm files render a custom html template', done => {
-      findFreePort(defaults.host, defaults.port).then(({ host, port, url }) =>
-        startExpress(host, port, null, null, (req, res) => {
-          res.send('<title>elm-factory</elm>')
-        }).then(server =>
-          request(`${url}/src/Main.elm`)
-            .then(res => {
-              includes('<title>elm-factory</elm>', res)
-              server.close()
-              done()
-            })
-            .catch(done)
-        )
+      startBrowserSync(
+        defaults.host,
+        defaults.port,
+        str,
+        './index.ejs',
+        str
+      ).then(({ bs }) =>
+        request(`http://${defaults.host}:${defaults.port}/src/Main.elm`)
+          .then(res => {
+            assertIncludes('<title>~/src/Main.elm</title>', res)
+            bs.exit()
+            done()
+          })
+          .catch(done)
       )
     })
 
@@ -215,24 +320,27 @@ describe('dev', function() {
       findFreePort(defaults.reactorHost, defaults.reactorPort)
         .then(({ host: reactorHost, port: reactorPort, url: reactorUrl }) =>
           startReactor(reactorHost, reactorPort, false).then(reactor =>
-            findFreePort(
+            startBrowserSync(
               defaults.host,
-              defaults.port
-            ).then(({ host, port, url }) =>
-              startExpress(host, port, reactorUrl).then(server =>
-                request(url)
-                  .then(res => {
-                    includes('<script src="/_reactor/index.js">', res)
+              defaults.port,
+              reactorUrl,
+              str,
+              str
+            ).then(({ bs }) =>
+              request(`http://${defaults.host}:${defaults.port}`)
+                .then(res => {
+                  assertIncludes('<script src="/_reactor/index.js">', res)
 
-                    return request(`${url}/_compile/src/Main.elm`)
-                  })
-                  .then(res => {
-                    includes('var runElmProgram = ', res)
-                    reactor.close()
-                    server.close()
-                    done()
-                  })
-              )
+                  return request(
+                    `http://${defaults.host}:${defaults.port}/_compile/src/Main.elm`
+                  )
+                })
+                .then(res => {
+                  assertIncludes('var runElmProgram = ', res)
+                  reactor.close()
+                  bs.exit()
+                  done()
+                })
             )
           )
         )
@@ -240,90 +348,100 @@ describe('dev', function() {
     })
   })
 
-  describe('compileHtml', () => {
-    it('should throw if param `html` is missing', () => {
-      expect(() => compileHtml()).to.throw()
-    })
-    describe('return', () => {
-      it('is a stream that livereloads', () => {
-        const compile = compileHtml(defaults.html)
-        expect(compile).to.have.property('pipe')
-      })
-    })
-  })
+  describe('watching', () => {
+    let bs
+    let spyWatch
+    let spyOn
+    let spyClose
 
-  describe('compileCss', () => {
-    it('should throw if param `out` is missing', () => {
-      expect(() => compileCss(null, defaults.stylesheets)).to.throw()
+    beforeEach(() => {
+      spyOn = sinon.spy()
+      spyClose = sinon.spy()
+      spyWatch = sinon.spy(() => ({ on: spyOn, close: spyClose }))
+      bs = { watch: spyWatch }
     })
-    it('should throw if param `stylesheets` is missing', () => {
-      expect(() => compileCss(dir, null)).to.throw()
-    })
-    it('should throw if param `cwd` is invalid', () => {
-      expect(() => compileCss(dir, null, 'foo/bar/xyz')).to.throw()
-    })
-    describe('return', () => {
-      it('is a stream that compiles elm css', function(done) {
-        this.timeout(60000)
-        const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
-        const compile = compileCss(tmpDir.name, defaults.stylesheets)
-        expect(compile).to.have.property('pipe')
-        compile.on('finish', () => {
+
+    describe('createWatcher', () => {
+      describe('params', () => {
+        checkParam('function', 'onChange', createWatcher)([str])
+        checkParam('function', 'onDeps', createWatcher)([fn, str])
+        checkParam('function', 'filter', createWatcher)([fn, fn, str])
+        checkParam('object', 'bs', createWatcher)([fn, fn, fn, str])
+        checkParam('string', 'entry', createWatcher)([fn, fn, fn, obj, num])
+      })
+
+      it('returns a promise', () => {
+        expect(createWatcher(fn, fn, fn, bs, str).catch(() => {})).to.be.a(
+          'promise'
+        )
+      })
+      it('fails on bad entry', () => {
+        return expect(createWatcher(fn, fn, fn, bs, str)).to.eventually.be
+          .rejected
+      })
+      it('resolves on valid entry', () => {
+        return expect(createWatcher(fn, fn, fn, bs, defaults.main))
+          .to.eventually.be.an('object')
+          .with.property('close')
+      })
+      it('resolves on valid entry', () => {
+        return expect(createWatcher(fn, fn, fn, bs, defaults.stylesheets))
+          .to.eventually.be.an('object')
+          .with.property('close')
+      })
+      it('bs.watch is called', done => {
+        createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
+          expect(spyWatch.called).to.eql(true)
+          done()
+        })
+      })
+      it('watcher.on is called', done => {
+        createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
+          expect(spyOn.called).to.eql(true)
           done()
         })
       })
     })
+
+    describe('watch', () => {
+      describe('params', () => {
+        checkParam('object', 'bs', watch)([str])
+        checkParam('string', 'main', watch)([obj, num])
+        checkParam('string', 'stylesheets', watch)([obj, str, num])
+        checkParam('string', 'dir', watch)([obj, str, str, num])
+      })
+
+      it('returns a promise', () => {
+        expect(watch({}, str, str, str).catch(() => {})).to.be.a('promise')
+      })
+      it('rejects invalid entry paths', () => {
+        return expect(watch({}, str, str, str)).to.eventually.be.rejected
+      })
+      it('resolves valid entry paths with two watchers', () => {
+        const promise = watch(bs, defaults.main, defaults.stylesheets, str)
+
+        return Promise.all([
+          promise.should.eventually.be.fulfilled,
+          promise.should.eventually.have.a.nested.property('[0].close'),
+          promise.should.eventually.have.a.nested.property('[1].close'),
+        ])
+      })
+    })
   })
 
-  describe('watch', () => {
-    it('should throw if param `filter` exists and is not a function', () => {
-      expect(() => watch(0)).to.throw()
-      expect(() => watch(false)).to.throw()
-      expect(() => watch('')).to.throw()
-    })
-    it('returns a function', () => {
-      expect(watch()).to.be.a('function')
-    })
-    describe('returned function', () => {
-      it('should throw if param `watcher` is missing', () => {
-        return expect(watch()(null, 'src')).to.be.eventually.be.rejected
-      })
-      it('should throw if param `src` is missing', () => {
-        return expect(watch()({}, null)).to.eventually.be.rejected
-      })
-      it('should watch the correct files', () => {
-        return expect(
-          watch()(gulp.watch(defaults.main), defaults.main)
-        ).to.eventually.eql([
-          path.join(dir, 'src/Assets.elm'),
-          path.join(dir, 'src/Main.elm'),
-          path.join(dir, 'src/MainCss.elm'),
-          path.join(dir, 'src/assets/'),
-        ])
-      })
-      it('should watch the correct files', () => {
-        return expect(
-          watch()(gulp.watch(defaults.stylesheets), defaults.stylesheets)
-        ).to.eventually.eql([
-          path.join(dir, 'src/Assets.elm'),
-          path.join(dir, 'src/MainCss.elm'),
-          path.join(dir, 'src/Stylesheets.elm'),
-          path.join(dir, 'src/assets/'),
-        ])
-      })
-      it('should watch and filter out the correct files', () => {
-        const watcher = gulp.watch(defaults.stylesheets)
-        const filter = file => !getWatchedPaths(watcher).includes(file.path)
+  describe('dev', () => {
+    let promise
 
-        return expect(
-          watch()(watcher, defaults.stylesheets).then(() =>
-            watch(filter)(gulp.watch(defaults.main), defaults.main)
-          )
-        ).to.eventually.eql([
-          path.join(dir, 'src/Main.elm'),
-          path.join(dir, 'src/assets/'),
-        ])
-      })
+    before(() => {
+      promise = dev(defaults)
+    })
+
+    it('fails', () => {
+      return expect(dev({ reactorPort: 'string' })).to.eventually.be.rejected
+    })
+    it('resolves', () => {
+      expect(promise).to.be.a('promise')
+      expect(promise).to.eventually.be.fulfilled
     })
   })
 })

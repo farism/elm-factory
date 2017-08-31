@@ -9,20 +9,20 @@ import {
   getHash,
   getPublicPath,
   getTransformedFilename,
-  task,
+  build,
 } from '../../src/tasks/build'
 import { init } from '../../src/tasks/init'
 import { build as defaults } from '../../src/defaults'
 
 chai.use(chaifs)
 
-describe('build', () => {
+describe('BUILD TASK', () => {
   const dir = path.join(__dirname, 'tmp')
   let outputPath = ''
   let tmpCleanup = () => {}
 
   before(done => {
-    init(dir).on('end', () => {
+    init({ dir }).then(() => {
       process.chdir(dir)
       done()
     })
@@ -37,16 +37,6 @@ describe('build', () => {
 
   afterEach(() => {
     tmpCleanup()
-  })
-
-  describe('task', () => {
-    it('adds the tasks to gulp', () => {
-      const gulp = task({})
-      expect(gulp.tasks).to.have.a.property('_clean')
-      expect(gulp.tasks).to.have.a.property('_css')
-      expect(gulp.tasks).to.have.a.property('_main')
-      expect(gulp.tasks).to.have.a.property('build')
-    })
   })
 
   describe('helpers', () => {
@@ -103,9 +93,9 @@ describe('build', () => {
         defaults.publicPath,
         false,
         dir
-      ).on('end', () => {
-        expect(outputPath).to.be.a
-          .directory()
+      ).then(() => {
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files([
             '8855f72a.css',
             'css-manifest.json',
@@ -121,9 +111,9 @@ describe('build', () => {
         outputPath,
         'http://somecdn.com/',
         false
-      ).on('end', () => {
-        expect(outputPath).to.be.a
-          .directory()
+      ).then(() => {
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files([
             'a9c81025.css',
             'css-manifest.json',
@@ -139,9 +129,9 @@ describe('build', () => {
         outputPath,
         defaults.publicPath,
         true
-      ).on('end', () => {
-        expect(outputPath).to.be.a
-          .directory()
+      ).then(() => {
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files([
             'css-manifest.json',
             'eaa60ed2.css',
@@ -157,9 +147,9 @@ describe('build', () => {
         outputPath,
         defaults.publicPath,
         false
-      ).on('end', () => {
-        expect(`${outputPath}/css-manifest.json`).to.be.a
-          .file()
+      ).then(() => {
+        expect(`${outputPath}/css-manifest.json`)
+          .to.be.a.file()
           .with.contents('{\n  "index.css": "8855f72a.css"\n}')
 
         done()
@@ -175,10 +165,11 @@ describe('build', () => {
         defaults.main,
         outputPath,
         defaults.publicPath,
-        false
-      ).on('end', () => {
-        expect(outputPath).to.be.a
-          .directory()
+        false,
+        dir
+      ).then(() => {
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files(['d50146ff.js', 'f083965f.png', 'js-manifest.json'])
 
         done()
@@ -190,9 +181,9 @@ describe('build', () => {
         outputPath,
         'http://somecdn.com/',
         false
-      ).on('end', () => {
-        expect(outputPath).to.be.a
-          .directory()
+      ).then(() => {
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files(['d50146ff.js', 'f083965f.png', 'js-manifest.json'])
 
         done()
@@ -204,9 +195,9 @@ describe('build', () => {
         outputPath,
         defaults.publicPath,
         true
-      ).on('end', () => {
-        expect(outputPath).to.be.a
-          .directory()
+      ).then(() => {
+        expect(outputPath)
+          .to.be.a.directory()
           .with.deep.files(['js-manifest.json', 'd50146ff.js', 'f083965f.png'])
 
         done()
@@ -218,13 +209,31 @@ describe('build', () => {
         outputPath,
         defaults.publicPath,
         false
-      ).on('end', () => {
-        expect(`${outputPath}/js-manifest.json`).to.be.a
-          .file()
+      ).then(() => {
+        expect(`${outputPath}/js-manifest.json`)
+          .to.be.a.file()
           .with.contents('{\n  "Main.js": "d50146ff.js"\n}')
 
         done()
       })
+    })
+  })
+
+  describe('build', () => {
+    let promise
+
+    before(() => {
+      promise = build(defaults)
+    })
+
+    it('returns a promise', () => {
+      expect(promise).to.be.a('promise')
+    })
+
+    it('should resolve', function() {
+      this.timeout(60000)
+
+      return expect(promise).to.eventually.be.fulfilled
     })
   })
 })

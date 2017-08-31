@@ -1,6 +1,6 @@
 const cssnano = require('cssnano')
 const del = require('del')
-const elm = require('gulp-elm')
+const elm = require('gulp-elm-basic')
 const elmCss = require('gulp-elm-css')
 const elmExtractAssets = require('gulp-elm-extract-assets')
 const flatten = require('gulp-flatten')
@@ -10,7 +10,6 @@ const path = require('path')
 const postcss = require('gulp-postcss')
 const postcssUrl = require('postcss-url')
 const rev = require('gulp-rev-all')
-const runSequence = require('run-sequence')
 const uglify = require('gulp-uglify')
 const urljoin = require('url-join')
 const xxh = require('xxhashjs')
@@ -40,35 +39,39 @@ const buildCss = (
   minify = true,
   cwd = process.cwd()
 ) =>
-  gulp
-    .src(stylesheets, { base: cwd })
-    .pipe(elmCss({ cwd }))
-    .pipe(
-      postcss([
-        postcssUrl({
-          url: 'copy',
-          basePath: process.cwd(),
-          assetsPath: outputPath,
-          useHash: true,
-          hashOptions: {
-            method: getHash,
-          },
-        }),
-        postcssUrl({
-          url: asset => getPublicPath(publicPath, asset.url),
-        }),
-        minify ? cssnano() : contents => contents,
-      ])
-    )
-    .pipe(
-      rev.revision({
-        fileNameManifest: 'css-manifest.json',
-        transformFilename: getTransformedFilename,
-      })
-    )
-    .pipe(gulp.dest(outputPath))
-    .pipe(rev.manifestFile())
-    .pipe(gulp.dest(outputPath))
+  new Promise((resolve, reject) => {
+    gulp
+      .src(stylesheets, { base: cwd })
+      .pipe(elmCss({ cwd }))
+      .pipe(
+        postcss([
+          postcssUrl({
+            url: 'copy',
+            basePath: process.cwd(),
+            assetsPath: outputPath,
+            useHash: true,
+            hashOptions: {
+              method: getHash,
+            },
+          }),
+          postcssUrl({
+            url: asset => getPublicPath(publicPath, asset.url),
+          }),
+          minify ? cssnano() : contents => contents,
+        ])
+      )
+      .pipe(
+        rev.revision({
+          fileNameManifest: 'css-manifest.json',
+          transformFilename: getTransformedFilename,
+        })
+      )
+      .pipe(gulp.dest(outputPath))
+      .pipe(rev.manifestFile())
+      .pipe(gulp.dest(outputPath))
+      .on('error', reject)
+      .on('finish', resolve)
+  })
 
 const buildMain = (
   main,
@@ -77,52 +80,49 @@ const buildMain = (
   minify = true,
   cwd = process.cwd()
 ) =>
-  gulp
-    .src(main)
-    .pipe(elm({ cwd }))
-    .pipe(elmExtractAssets({ cwd, tag: 'AssetUrl' }))
-    .pipe(
-      rev.revision({
-        dontUpdateReference: ['Main.js'],
-        fileNameManifest: 'js-manifest.json',
-        replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
-          const filename = newReference.split('/').pop()
-          const newPath = getPublicPath(publicPath, filename)
+  new Promise((resolve, reject) => {
+    gulp
+      .src(main)
+      .pipe(elm({ cwd }))
+      .pipe(elmExtractAssets({ cwd, tag: 'AssetUrl' }))
+      .pipe(
+        rev.revision({
+          dontUpdateReference: [path.basename(main).replace('.elm', '.js')],
+          fileNameManifest: 'js-manifest.json',
+          replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
+            const filename = newReference.split('/').pop()
+            const newPath = getPublicPath(publicPath, filename)
 
-          fragment.contents = fragment.contents.replace(
-            replaceRegExp,
-            `$1${newPath}$3$4`
-          )
-        },
-        transformFilename: getTransformedFilename,
-      })
-    )
-    .pipe(flatten())
-    .pipe(gulpif(file => minify && path.extname(file.path) === '.js', uglify()))
-    .pipe(gulp.dest(outputPath))
-    .pipe(rev.manifestFile())
-    .pipe(gulp.dest(outputPath))
+            fragment.contents = fragment.contents.replace(
+              replaceRegExp,
+              `$1${newPath}$3$4`
+            )
+          },
+          transformFilename: getTransformedFilename,
+        })
+      )
+      .pipe(flatten())
+      .pipe(
+        gulpif(file => minify && path.extname(file.path) === '.js', uglify())
+      )
+      .pipe(gulp.dest(outputPath))
+      .pipe(rev.manifestFile())
+      .pipe(gulp.dest(outputPath))
+      .on('error', reject)
+      .on('finish', resolve)
+  })
 
-const task = options => {
+const build = options => {
   const opts = Object.assign({}, defaults, options)
 
-  /* istanbul ignore next  */
-  gulp.task('_clean', () => del(opts.outputPath))
-
-  /* istanbul ignore next  */
-  gulp.task('_css', () =>
-    buildCss(opts.stylesheets, opts.outputPath, opts.publicPath, opts.cwd)
-  )
-
-  /* istanbul ignore next  */
-  gulp.task('_main', () =>
-    buildMain(opts.main, opts.outputPath, opts.publicPath, opts.cwd)
-  )
-
-  /* istanbul ignore next  */
-  gulp.task('build', () => runSequence('_clean', '_css', '_main'))
-
-  return gulp
+  return del(opts.outputPath)
+    .then(() =>
+      buildCss(opts.stylesheets, opts.outputPath, opts.publicPath, opts.cwd)
+    )
+    .then(() =>
+      buildMain(opts.main, opts.outputPath, opts.publicPath, opts.cwd)
+    )
+    .catch(console.error)
 }
 
 module.exports = {
@@ -131,5 +131,5 @@ module.exports = {
   getTransformedFilename,
   buildCss,
   buildMain,
-  task,
+  build,
 }

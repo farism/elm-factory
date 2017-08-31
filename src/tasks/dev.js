@@ -1,38 +1,91 @@
 const anyTemplate = require('gulp-any-template')
-const elmCss = require('gulp-elm-css')
-const elmFindDependencies = require('gulp-elm-find-dependencies')
+const browserSync = require('browser-sync')
+const chalk = require('chalk')
+const elmCss = require('elm-css')
 const execa = require('execa')
-const express = require('express')
+const findAllDependencies = require('find-elm-dependencies').findAllDependencies
 const fkill = require('fkill')
-const gulp = require('gulp')
-const lrConnect = require('connect-livereload')
+const fs = require('fs')
 const nocache = require('nocache')
+const ora = require('ora')
 const path = require('path')
-const plumber = require('gulp-plumber')
 const proxy = require('http-proxy-middleware')
-const runSequence = require('run-sequence')
-const tinylr = require('tiny-lr')
-const through = require('through2')
 const tmp = require('tmp')
 
 const defaults = require('../defaults').dev
 const addTask = require('./').addTask
 
-let htmlCompiler
+const spacer = () => console.info(`${chalk.grey('-'.repeat(50))}`)
 
-const defaultHtmlCompiler = () => Promise.resolve('html is compiling...')
+const param = (type, name, value) => {
+  const typeErr = `parameter \`${name}\` must be a \`${type}\``
 
-const getWatchedPaths = ({ _watcher }) =>
-  Object.keys(_watcher.watched())
-    .reduce((acc, key) => [...acc, ..._watcher.watched()[key]], [])
-    .sort()
+  if (typeof value === 'undefined' || value === null) {
+    throw new TypeError(`parameter \`${name}\` is required`)
+  }
+
+  if (type === 'object') {
+    if (typeof value !== type || Array.isArray(value)) {
+      throw new TypeError(typeErr)
+    }
+  } else if (type === 'array') {
+    if (!Array.isArray(value)) {
+      throw new TypeError(typeErr)
+    }
+  } else if (typeof value !== type) {
+    throw new TypeError(typeErr)
+  }
+}
+
+const getDepTree = entry => {
+  param('string', 'entry', entry)
+
+  return findAllDependencies(entry).then(deps => [entry, ...deps])
+}
+
+const defaultHtmlCompiler = () =>
+  Promise.resolve('incompatible html template...')
+
+const loadHtmlCompiler = file => {
+  param('string', 'file', file)
+
+  return new Promise((resolve, reject) => {
+    fs.readFile(file, (err, contents) => {
+      if (err) {
+        reject(err)
+      }
+
+      const compiler = anyTemplate.compiler({ path: file, contents })
+
+      if (compiler) {
+        resolve(compiler)
+      } else {
+        reject(new Error('html template format unsupported'))
+      }
+    })
+  })
+}
+
+const installPackages = (cwd = process.cwd()) => {
+  param('string', 'cwd', cwd)
+
+  return new Promise((resolve, reject) => {
+    execa('elm-package', ['install', '--yes'], { cwd, stdio: 'inherit' })
+      .then(() => resolve())
+      .catch(e => reject(e))
+  })
+}
 
 const startReactor = (
   host,
   port,
-  /* istanbul ignore next */ exitParent = true
-) =>
-  new Promise((resolve, reject) => {
+  /* istanbul ignore next */
+  exitParent = true
+) => {
+  param('string', 'host', host)
+  param('number', 'port', port)
+
+  return new Promise((resolve, reject) => {
     const reactor = execa(
       'elm-reactor',
       [`--address=${host}`, `--port=${port}`],
@@ -59,7 +112,7 @@ const startReactor = (
     process.on('SIGTERM', () => exit(0))
     process.on('SIGINT', () => exit(0))
     process.on('uncaughtException', e => {
-      console.log(e)
+      console.error(e)
       exit(1)
     })
 
@@ -72,208 +125,224 @@ const startReactor = (
       }
     })
   })
+}
 
-const startExpress = (host, port, reactor, lrPort, handler, dir) =>
-  new Promise((resolve, reject) => {
-    const app = new express()
+const startBrowserSync = (
+  host,
+  port,
+  reactor,
+  html,
+  dir,
+  logLevel = 'silent'
+) => {
+  param('string', 'host', host)
+  param('number', 'port', port)
+  param('string', 'reactor', reactor)
+  param('string', 'html', html)
+  param('string', 'dir', dir)
 
-    const server = app
-      .listen(port, host, () => {
-        // use no cache headers
-        app.use(nocache())
+  return new Promise((resolve, reject) => {
+    const config = {
+      files: [html, `${dir}/*.css`],
+      host,
+      localOnly: true,
+      logLevel,
+      notify: false,
+      online: false,
+      open: false,
+      port,
+      server: {
+        baseDir: dir,
+        middleware: [
+          nocache(),
+          proxy('/_compile', { target: reactor, logLevel }),
+          (request, response, next) => {
+            if (path.extname(request.url) === '.elm') {
+              loadHtmlCompiler(html)
+                .then(compiler =>
+                  compiler({
+                    environment: 'development',
+                    request,
+                  })
+                )
+                .then(compiledHtml => {
+                  response.write(compiledHtml)
+                  response.end()
+                })
+                .catch(e => {
+                  response.write(e)
+                  response.end()
+                })
+            } else {
+              next()
+            }
+          },
+          proxy('/', { target: reactor, logLevel }),
+        ],
+      },
+      serveStatic: [
+        {
+          route: '/public',
+          dir,
+        },
+      ],
+    }
 
-        // use tinylr and start listening
-        if (lrPort) {
-          tinylr().listen({ port: lrPort })
-        }
+    const bs = browserSync.create('server')
 
-        if (reactor) {
-          // proxy _compile to {reactor}/_compile and do livereload
-          app.use('/_compile', [
-            lrConnect({ port: lrPort }),
-            proxy({ target: reactor }),
-          ])
-        }
-
-        // serve up elm file with custom html middleware and do livereload
-        if (handler) {
-          app.get('*.elm', [
-            lrConnect({ port: lrPort, include: [/.*\.elm/] }),
-            handler,
-          ])
-        }
-
-        // serve /public static assets from the tmp dir
-        if (dir) {
-          app.use('/public', express.static(dir))
-        }
-
-        if (reactor) {
-          // proxy all other requests to elm-reactor
-          app.use(proxy({ target: reactor }))
-        }
-
-        resolve(server)
-      })
-      .on('error', e => {
-        reject(e)
-        return
-      })
-  })
-
-const compileHtml = html => {
-  if (!html) {
-    throw new Error('html required')
-  }
-
-  return gulp.src(html).pipe(
-    through.obj(function(file, encode, callback) {
-      this.push(file)
-      htmlCompiler = anyTemplate.compiler(file)
-      tinylr.changed(file.path)
-      callback()
+    bs.init(config, (err, inited) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve({ bs, port: inited.options.get('port') })
+      }
     })
+  })
+}
+
+const createWatcher = (onChange, onDeps, filter, bs, entry) => {
+  param('function', 'onChange', onChange)
+  param('function', 'onDeps', onDeps)
+  param('function', 'filter', filter)
+  param('object', 'bs', bs)
+  param('string', 'entry', entry)
+
+  return new Promise((resolve, reject) =>
+    getDepTree(entry)
+      .then(deps => {
+        onDeps(deps)
+
+        const watcher = bs.watch(['!elm-stuff', ...deps])
+
+        watcher.on('change', file => {
+          if (filter(file)) {
+            // stop watching temporarily
+            watcher && watcher.close()
+
+            // trigger on change
+            onChange(file)
+
+            // start watching again
+            createWatcher(onChange, onDeps, filter, bs, entry)
+          }
+        })
+
+        resolve(watcher)
+      })
+      .catch(reject)
   )
 }
 
-const compileCss = (out, stylesheets, cwd = process.cwd()) => {
-  if (!out) {
-    throw new Error('param `out` required')
-  }
+const watch = (bs, main, stylesheets, dir) => {
+  param('object', 'bs', bs)
+  param('string', 'main', main)
+  param('string', 'stylesheets', stylesheets)
+  param('string', 'dir', dir)
 
-  if (!stylesheets) {
-    throw new Error('param `stylesheets` required')
-  }
+  let stylesheetsDeps
 
-  return gulp
-    .src(stylesheets)
-    .pipe(plumber())
-    .pipe(elmCss({ cwd, out }))
-    .pipe(
-      through.obj(function(file, encode, callback) {
-        tinylr.changed(file.path)
-        callback()
-      })
-    )
-    .pipe(plumber.stop())
-    .pipe(gulp.dest(''))
-    .on('error', () => {})
+  return Promise.all([
+    // main watcher
+    createWatcher(
+      () => bs.reload(),
+      () => {},
+      dep => !stylesheetsDeps.includes(dep),
+      bs,
+      main
+    ),
+    // stylesheets watcher
+    createWatcher(
+      file => elmCss(process.cwd(), stylesheets, dir),
+      deps => (stylesheetsDeps = deps),
+      () => true,
+      bs,
+      stylesheets
+    ),
+  ])
 }
 
-const watch = filter => {
-  if (typeof filter !== 'undefined' && typeof filter !== 'function') {
-    throw new Error('param `filter` must be a function')
-  }
-
-  return (watcher, src) =>
-    new Promise((resolve, reject) => {
-      if (!watcher) {
-        reject(new Error('param `watcher` required'))
-        return
-      }
-
-      if (!src) {
-        reject(new Error('param `src` required'))
-        return
-      }
-
-      gulp
-        .src(src)
-        .pipe(elmFindDependencies())
-        .pipe(
-          through.obj(function(file, encode, callback) {
-            const watch = filter ? filter(file) : true
-
-            if (watch) {
-              watcher._watcher.add(file.path)
-            }
-
-            callback()
-          })
-        )
-        .pipe(gulp.dest(''))
-        .on('finish', () => {
-          resolve(getWatchedPaths(watcher))
-        })
-    })
-}
-
-const task = options => {
+const dev = options => {
   const opts = Object.assign({}, defaults, options)
 
-  // tmp dir for serving static css files
-  const { name: tmpDir } = tmp.dirSync({ unsafeCleanup: true })
+  // tmpDir for css output
+  const tmpDir = tmp.dirSync({ unsafeCleanup: true })
 
-  // custom html handler
-  const handler = (request, response) =>
-    (htmlCompiler || defaultHtmlCompiler)({
-      environment: 'development',
-      options,
-      request,
-    })
-      .then(res => response.send(res))
-      .catch(e => console.error(e.message))
+  // CLI spinner
+  const steps = [
+    'installing elm dependencies into /elm-stuff',
+    'starting elm-reactor',
+    'starting elm-factory',
+    'compiling css',
+  ]
 
-  // is there a better way to use gulp.watch and find-elm-dependencies...?
-  let htmlWatcher
-  let mainWatcher
-  let cssWatcher
+  const spinner = ora({ spinner: 'bouncingBar' })
+  spinner.text = steps[0]
 
-  gulp.task('_html', () => {
-    htmlWatcher && htmlWatcher.end()
-    htmlWatcher = gulp.watch(opts.html, ['_html'])
+  // the cli task
+  return (
+    // first install packages using elm-package
+    installPackages()
+      // then start elm-reactor
+      .then(() => {
+        spinner.succeed(steps[0])
+        spacer()
+        spinner.text = steps[1]
+        spinner.start()
 
-    return compileHtml(opts.html)
-  })
+        return startReactor(opts.reactorHost, opts.reactorPort)
+      })
+      // then start browser-sync
+      .then(() => {
+        spinner.succeed(steps[1])
+        spacer()
+        spinner.text = steps[2]
+        spinner.start()
 
-  gulp.task('_css', () => {
-    cssWatcher && cssWatcher.end()
-    cssWatcher = gulp.watch(opts.stylesheets, ['_css'])
-
-    watch()(cssWatcher, opts.stylesheets)
-
-    return compileCss(tmpDir, opts.stylesheets, opts.cwd)
-  })
-
-  gulp.task('_main', () => {
-    tinylr.changed('')
-
-    mainWatcher && mainWatcher.end()
-    mainWatcher = gulp.watch(opts.main, ['_main'])
-
-    const filter = file => !getWatchedPaths(cssWatcher).includes(file.path)
-
-    watch(filter)(mainWatcher, opts.main)
-  })
-
-  gulp.task('dev', () => {
-    return startReactor(opts.reactorHost, opts.reactorPort)
-      .then(reactor =>
-        startExpress(
+        return startBrowserSync(
           opts.host,
           opts.port,
           `http://${opts.reactorHost}:${opts.reactorPort}`,
-          opts.lrPort,
-          handler,
-          tmpDir
+          opts.html,
+          tmpDir.name
         )
-      )
-      .then(app => runSequence('_html', '_css', '_main'))
-      .catch(e => {
-        console.error(e)
       })
-  })
+      .then(({ bs, port }) => {
+        spinner.succeed(steps[2])
+        spacer()
+        spinner.text = steps[3]
+        spinner.start()
 
-  return gulp
+        return (
+          elmCss(process.cwd(), opts.stylesheets, tmpDir.name)
+            // then we want to build the css (before we start watching)
+            // finally we start watching
+            .then(() => {
+              spinner.succeed(steps[3])
+              spacer()
+              spinner.succeed(`ready to go! http://${opts.host}:${port}`)
+
+              return watch(bs, opts.main, opts.stylesheets, tmpDir.name)
+            })
+        )
+      })
+      .catch(e => {
+        spinner.fail()
+        // console.error(e)
+        throw new Error(e)
+      })
+  )
 }
 
 module.exports = {
+  spacer,
+  param,
+  getDepTree,
   defaultHtmlCompiler,
-  getWatchedPaths,
+  loadHtmlCompiler,
+  installPackages,
   startReactor,
-  startExpress,
-  compileHtml,
-  compileCss,
+  startBrowserSync,
+  createWatcher,
   watch,
-  task,
+  dev,
 }
