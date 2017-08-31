@@ -407,7 +407,7 @@ describe('DEV TASK', function() {
       })
     })
 
-    describe.only('watch', () => {
+    describe('watch', () => {
       describe('params', () => {
         checkParam('object', 'bs', watch)([str])
         checkParam('string', 'main', watch)([obj, num])
