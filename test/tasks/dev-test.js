@@ -15,26 +15,43 @@ import {
   defaultHtmlCompiler,
   getDepTree,
   loadHtmlCompiler,
-  getSpinner,
   writeResponse,
   installPackages,
   startReactor,
   startBrowserSync,
+  createWatcher,
   watch,
-  task,
+  dev,
 } from '../../src/tasks/dev'
 import { init } from '../../src/tasks/init'
 import { dev as defaults } from '../../src/defaults'
 
+chai.should()
 chai.use(chaifs)
 chai.use(chaiAsPromised)
 tmp.setGracefulCleanup()
 
 const dir = path.join(__dirname, 'tmp')
 
+const fn = () => {}
+const obj = {}
+const arr = []
+const str = 'stub'
+const num = 123
+const bool = true
+
 const required = name => `parameter \`${name}\` is required`
 
-const type = (type, name) => `parameter \`${name}\` must be a \`${type}\``
+const ntype = (type, name) => `parameter \`${name}\` must be a \`${type}\``
+
+const checkParam = (type, name, fn) => args => {
+  it(`${name} is required`, () => {
+    expect(() => fn.apply(null, args.slice(0, -1))).to.throw(required(name))
+  })
+  it(`${name} must be a ${type}`, () => {
+    expect(() => fn.apply(null, args)).to.throw(ntype(type, name))
+  })
+}
 
 const findFreePort = (host, port) =>
   portscanner.findAPortNotInUse(port, port + 1000, host).then(port => {
@@ -62,9 +79,9 @@ const assertIncludes = (str = '', response = '') =>
     `response is missing string '${str}'`
   )
 
-describe.only('dev', function() {
+describe('DEV TASK', function() {
   before(done => {
-    init(dir).on('end', () => {
+    init(dir).then(() => {
       process.chdir(dir)
       done()
     })
@@ -82,53 +99,44 @@ describe.only('dev', function() {
         expect(() => param('function', 'a', null)).to.throw(required('a'))
       })
       it('works with booleans', () => {
-        expect(() => param('boolean', 'a', true)).to.not.throw()
-        expect(() => param('boolean', 'a', [])).to.throw(type('boolean', 'a'))
-        expect(() => param('boolean', 'a', {})).to.throw(type('boolean', 'a'))
-        expect(() => param('boolean', 'a', 123)).to.throw(type('boolean', 'a'))
-        expect(() => param('boolean', 'a', '123')).to.throw(
-          type('boolean', 'a')
-        )
+        expect(() => param('boolean', 'a', bool)).to.not.throw()
+        expect(() => param('boolean', 'a', arr)).to.throw(ntype('boolean', 'a'))
+        expect(() => param('boolean', 'a', obj)).to.throw(ntype('boolean', 'a'))
+        expect(() => param('boolean', 'a', num)).to.throw(ntype('boolean', 'a'))
+        expect(() => param('boolean', 'a', str)).to.throw(ntype('boolean', 'a'))
       })
       it('works with objects', () => {
-        expect(() => param('object', 'a', {})).to.not.throw()
-        expect(() => param('object', 'a', [])).to.throw(type('object', 'a'))
-        expect(() => param('object', 'a', true)).to.throw(type('object', 'a'))
-        expect(() => param('object', 'a', 123)).to.throw(type('object', 'a'))
-        expect(() => param('object', 'a', '123')).to.throw(type('object', 'a'))
+        expect(() => param('object', 'a', obj)).to.not.throw()
+        expect(() => param('object', 'a', arr)).to.throw(ntype('object', 'a'))
+        expect(() => param('object', 'a', bool)).to.throw(ntype('object', 'a'))
+        expect(() => param('object', 'a', num)).to.throw(ntype('object', 'a'))
+        expect(() => param('object', 'a', str)).to.throw(ntype('object', 'a'))
       })
       it('works with arrays', () => {
-        expect(() => param('array', 'a', [])).to.not.throw()
-        expect(() => param('array', 'a', {})).to.throw(type('array', 'a'))
-        expect(() => param('array', 'a', true)).to.throw(type('array', 'a'))
-        expect(() => param('array', 'a', 123)).to.throw(type('array', 'a'))
-        expect(() => param('array', 'a', '123')).to.throw(type('array', 'a'))
+        expect(() => param('array', 'a', arr)).to.not.throw()
+        expect(() => param('array', 'a', obj)).to.throw(ntype('array', 'a'))
+        expect(() => param('array', 'a', bool)).to.throw(ntype('array', 'a'))
+        expect(() => param('array', 'a', num)).to.throw(ntype('array', 'a'))
+        expect(() => param('array', 'a', str)).to.throw(ntype('array', 'a'))
       })
       it('works with numbers', () => {
-        expect(() => param('number', 'a', 123)).to.not.throw()
-        expect(() => param('number', 'a', [])).to.throw(type('number', 'a'))
-        expect(() => param('number', 'a', {})).to.throw(type('number', 'a'))
-        expect(() => param('number', 'a', true)).to.throw(type('number', 'a'))
-        expect(() => param('number', 'a', '123')).to.throw(type('number', 'a'))
+        expect(() => param('number', 'a', num)).to.not.throw()
+        expect(() => param('number', 'a', arr)).to.throw(ntype('number', 'a'))
+        expect(() => param('number', 'a', obj)).to.throw(ntype('number', 'a'))
+        expect(() => param('number', 'a', bool)).to.throw(ntype('number', 'a'))
+        expect(() => param('number', 'a', str)).to.throw(ntype('number', 'a'))
       })
       it('works with strings', () => {
-        expect(() => param('string', 'a', '123')).to.not.throw()
-        expect(() => param('string', 'a', [])).to.throw(type('string', 'a'))
-        expect(() => param('string', 'a', {})).to.throw(type('string', 'a'))
-        expect(() => param('string', 'a', true)).to.throw(type('string', 'a'))
-        expect(() => param('string', 'a', 123)).to.throw(type('string', 'a'))
+        expect(() => param('string', 'a', str)).to.not.throw()
+        expect(() => param('string', 'a', arr)).to.throw(ntype('string', 'a'))
+        expect(() => param('string', 'a', obj)).to.throw(ntype('string', 'a'))
+        expect(() => param('string', 'a', bool)).to.throw(ntype('string', 'a'))
+        expect(() => param('string', 'a', num)).to.throw(ntype('string', 'a'))
       })
     })
     describe('getDepTree', () => {
       describe('params', () => {
-        describe('entry', () => {
-          it('is required', () => {
-            expect(() => getDepTree()).to.throw(required('entry'))
-          })
-          it('must be a string', () => {
-            expect(() => getDepTree(1223)).to.throw(type('string', 'entry'))
-          })
-        })
+        checkParam('string', 'entry', getDepTree)([num])
       })
       it('fails if entry file does not exist', () => {
         return expect(getDepTree('some/fake/path.elm')).to.eventually.rejected
@@ -144,14 +152,7 @@ describe.only('dev', function() {
 
     describe('loadHtmlCompiler', () => {
       describe('params', () => {
-        describe('file', () => {
-          it('is required', () => {
-            expect(() => loadHtmlCompiler()).to.throw(required('file'))
-          })
-          it('must be a string', () => {
-            expect(() => loadHtmlCompiler(123)).to.throw(type('string', 'file'))
-          })
-        })
+        checkParam('string', 'file', loadHtmlCompiler)([num])
       })
       it('fails if html file does not exist', () => {
         return expect(loadHtmlCompiler('some/fake/path.ejs')).to.eventually.be
@@ -178,102 +179,6 @@ describe.only('dev', function() {
       })
     })
 
-    describe('getSpinner', () => {
-      describe('params', () => {
-        describe('steps', () => {
-          it('is required', () => {
-            expect(() => getSpinner()).to.throw(required('steps'))
-          })
-          it('must be an array', () => {
-            expect(() => getSpinner(123)).to.throw(type('array', 'steps'))
-          })
-        })
-        describe('spinner', () => {
-          it('is required', () => {
-            expect(() => getSpinner([])).to.throw(required('spinner'))
-          })
-          it('must be an object', () => {
-            expect(() => getSpinner([], 'stub')).to.throw(
-              type('object', 'spinner')
-            )
-          })
-        })
-      })
-      describe('returns', () => {
-        let spinner
-        let start = sinon.spy()
-        let stop = sinon.spy()
-        let succeed = sinon.spy()
-        let fail = sinon.spy()
-
-        beforeEach(() => {
-          spinner = getSpinner(['step1', 'step2', 'step3'], {
-            start,
-            stop,
-            succeed,
-            fail,
-          })
-        })
-
-        afterEach(() => {
-          start.reset()
-          stop.reset()
-          succeed.reset()
-          fail.reset()
-        })
-
-        it('a spinner instance', () => {
-          expect(spinner).to.have.a.property('succeed').that.is.a('function')
-        })
-        it('adds a #current() method', () => {
-          expect(spinner).to.have.a.property('current').that.is.a('function')
-        })
-        it('adds a #next() method', () => {
-          expect(spinner).to.have.a.property('next').that.is.a('function')
-        })
-        describe('#current()', () => {
-          it('returns the value of the current step index', () => {
-            expect(spinner.current()).to.eql('step1')
-          })
-        })
-        describe.only('#next()', () => {
-          it('increments the step', () => {
-            spinner.next()
-            expect(spinner.current()).to.eql('step2')
-            spinner.next()
-            expect(spinner.current()).to.eql('step3')
-          })
-          it('does not go past the last step', () => {
-            spinner.next().next().next().next().next().next()
-            expect(spinner.current()).to.eql('step3')
-          })
-          it('calls fn with new step', () => {
-            let current
-            const fn = sinon.spy(cur => (current = cur))
-            spinner.next(fn)
-            spinner.next(fn)
-            expect(fn.callCount).to.eql(2)
-            expect(current).to.eql('step3')
-          })
-          it('calls succeed with current text', () => {
-            const fn = sinon.spy()
-            spinner.next()
-            expect(spinner.succeed.callCount).to.eql(1)
-          })
-          it('does not error if passed no fn', () => {
-            const fn = sinon.spy()
-            spinner.next(null)
-            expect(fn.callCount).to.eql(0)
-          })
-          it('does not call succeed if succeedCurrent is false', () => {
-            const fn = sinon.spy()
-            spinner.next(null, false)
-            expect(spinner.succeed.callCount).to.eql(0)
-          })
-        })
-      })
-    })
-
     describe('defaultHtmlCompiler', () => {
       it('defaultHtmlCompiler', () => {
         return expect(defaultHtmlCompiler()).to.eventually.equal(
@@ -286,12 +191,11 @@ describe.only('dev', function() {
   describe('installPackages', function() {
     this.timeout(60000)
 
-    it('should install elm deps into /elm-stuff', done => {
+    it('installs elm deps into /elm-stuff', done => {
       const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
 
-      let install
-      init(tmpDir.name).on('end', () => {
-        install = installPackages(tmpDir.name)
+      init(tmpDir.name).then(() => {
+        installPackages(tmpDir.name)
           .then(() => {
             expect(path.join(dir, 'elm-stuff')).to.be.a.directory()
             tmpDir.removeCallback()
@@ -301,30 +205,19 @@ describe.only('dev', function() {
             tmpDir.removeCallback()
             done()
           })
+
+        installPackages().catch(() => {
+          tmpDir.removeCallback()
+          done()
+        })
       })
     })
   })
 
   describe('startReactor', () => {
     describe('params', () => {
-      describe('host', () => {
-        it('is required', () => {
-          expect(() => startReactor()).to.throw(required('host'))
-        })
-        it('must be a string', () => {
-          expect(() => startReactor(127001)).to.throw(type('string', 'host'))
-        })
-      })
-      describe('port', () => {
-        it('is required', () => {
-          expect(() => startReactor('stub')).to.throw(required('port'))
-        })
-        it('must be a number', () => {
-          expect(() => startReactor('stub', '8000')).to.throw(
-            type('number', 'port')
-          )
-        })
-      })
+      checkParam('string', 'host', startReactor)([num])
+      checkParam('number', 'port', startReactor)([str, str])
     })
 
     it('fails to start when port is in use', () => {
@@ -356,62 +249,11 @@ describe.only('dev', function() {
 
   describe('startBrowserSync', () => {
     describe('params', () => {
-      describe('host', () => {
-        it('is required', () => {
-          expect(() => startBrowserSync()).to.throw(required('host'))
-        })
-        it('must be a string', () => {
-          expect(() => startBrowserSync(127001)).to.throw(
-            type('string', 'host')
-          )
-        })
-      })
-      describe('port', () => {
-        it('is required', () => {
-          expect(() => startBrowserSync('stub')).to.throw(required('port'))
-        })
-        it('must be a number', () => {
-          expect(() => startBrowserSync('stub', '8000')).to.throw(
-            type('number', 'port')
-          )
-        })
-      })
-      describe('reactor', () => {
-        it('is required', () => {
-          expect(() => startBrowserSync('stub', 123)).to.throw(
-            required('reactor')
-          )
-        })
-        it('must be a string', () => {
-          expect(() => startBrowserSync('stub', 123, 321)).to.throw(
-            type('string', 'reactor')
-          )
-        })
-      })
-      describe('index', () => {
-        it('is required', () => {
-          expect(() => startBrowserSync('stub', 123, 'stub')).to.throw(
-            required('html')
-          )
-        })
-        it('must be a string', () => {
-          expect(() => startBrowserSync('stub', 123, 'stub', 321)).to.throw(
-            type('string', 'html')
-          )
-        })
-      })
-      describe('dir', () => {
-        it('is required', () => {
-          expect(() => startBrowserSync('stub', 123, 'stub', 'stub')).to.throw(
-            required('dir')
-          )
-        })
-        it('must be a string', () => {
-          expect(() =>
-            startBrowserSync('stub', 123, 'stub', 'stub', 321)
-          ).to.throw(type('string', 'dir'))
-        })
-      })
+      checkParam('string', 'host', startBrowserSync)([num])
+      checkParam('number', 'port', startBrowserSync)([str, str])
+      checkParam('string', 'reactor', startBrowserSync)([str, num, num])
+      checkParam('string', 'html', startBrowserSync)([str, num, str, num])
+      checkParam('string', 'dir', startBrowserSync)([str, num, str, str, num])
     })
 
     it('starts a browsersync server', () => {
@@ -419,9 +261,10 @@ describe.only('dev', function() {
         startBrowserSync(
           defaults.host,
           defaults.port,
-          'stub',
-          'stub',
-          'stub'
+          str,
+          str,
+          str,
+          'silent'
         ).then(({ bs }) => {
           bs.exit()
         })
@@ -437,8 +280,8 @@ describe.only('dev', function() {
       startBrowserSync(
         defaults.host,
         defaults.port,
-        'stub',
-        'stub',
+        str,
+        str,
         tmpDir.name
       ).then(({ bs }) =>
         request(
@@ -457,9 +300,9 @@ describe.only('dev', function() {
       startBrowserSync(
         defaults.host,
         defaults.port,
-        'stub',
+        str,
         './index.ejs',
-        'stub'
+        str
       ).then(({ bs }) =>
         request(`http://${defaults.host}:${defaults.port}/src/Main.elm`)
           .then(res => {
@@ -481,8 +324,8 @@ describe.only('dev', function() {
               defaults.host,
               defaults.port,
               reactorUrl,
-              'stub',
-              'stub'
+              str,
+              str
             ).then(({ bs }) =>
               request(`http://${defaults.host}:${defaults.port}`)
                 .then(res => {
@@ -502,6 +345,107 @@ describe.only('dev', function() {
           )
         )
         .catch(done)
+    })
+  })
+
+  describe('watching', () => {
+    let bs
+    let spyWatch
+    let spyOn
+    let spyClose
+
+    beforeEach(() => {
+      spyOn = sinon.spy()
+      spyClose = sinon.spy()
+      spyWatch = sinon.spy(() => ({ on: spyOn, close: spyClose }))
+      bs = { watch: spyWatch }
+    })
+
+    describe('createWatcher', () => {
+      describe('params', () => {
+        checkParam('function', 'onChange', createWatcher)([str])
+        checkParam('function', 'onDeps', createWatcher)([fn, str])
+        checkParam('function', 'filter', createWatcher)([fn, fn, str])
+        checkParam('object', 'bs', createWatcher)([fn, fn, fn, str])
+        checkParam('string', 'entry', createWatcher)([fn, fn, fn, obj, num])
+      })
+
+      it('returns a promise', () => {
+        expect(createWatcher(fn, fn, fn, bs, str).catch(() => {})).to.be.a(
+          'promise'
+        )
+      })
+      it('fails on bad entry', () => {
+        return expect(createWatcher(fn, fn, fn, bs, str)).to.eventually.be
+          .rejected
+      })
+      it('resolves on valid entry', () => {
+        return expect(
+          createWatcher(fn, fn, fn, bs, defaults.main)
+        ).to.eventually.be
+          .an('object')
+          .with.property('close')
+      })
+      it('resolves on valid entry', () => {
+        return expect(
+          createWatcher(fn, fn, fn, bs, defaults.stylesheets)
+        ).to.eventually.be
+          .an('object')
+          .with.property('close')
+      })
+      it('bs.watch is called', done => {
+        createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
+          expect(spyWatch.called).to.eql(true)
+          done()
+        })
+      })
+      it('watcher.on is called', done => {
+        createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
+          expect(spyOn.called).to.eql(true)
+          done()
+        })
+      })
+    })
+
+    describe.only('watch', () => {
+      describe('params', () => {
+        checkParam('object', 'bs', watch)([str])
+        checkParam('string', 'main', watch)([obj, num])
+        checkParam('string', 'stylesheets', watch)([obj, str, num])
+        checkParam('string', 'dir', watch)([obj, str, str, num])
+      })
+
+      it('returns a promise', () => {
+        expect(watch({}, str, str, str).catch(() => {})).to.be.a('promise')
+      })
+      it('rejects invalid entry paths', () => {
+        return expect(watch({}, str, str, str)).to.eventually.be.rejected
+      })
+      it('resolves valid entry paths with two watchers', () => {
+        const promise = watch(bs, defaults.main, defaults.stylesheets, str)
+
+        return Promise.all([
+          promise.should.eventually.be.fulfilled,
+          promise.should.eventually.have.a.nested.property('[0].close'),
+          promise.should.eventually.have.a.nested.property('[1].close'),
+        ])
+      })
+    })
+  })
+
+  describe('dev', () => {
+    let promise
+
+    before(() => {
+      promise = dev(defaults)
+    })
+
+    it('fails', () => {
+      return expect(dev({ reactorPort: 'string' })).to.eventually.be.rejected
+    })
+    it('resolves', () => {
+      expect(promise).to.be.a('promise')
+      expect(promise).to.eventually.be.fulfilled
     })
   })
 })

@@ -66,42 +66,21 @@ const loadHtmlCompiler = file => {
   })
 }
 
-const getSpinner = (steps, spinner) => {
-  param('array', 'steps', steps)
-  param('object', 'spinner', spinner)
+const installPackages = (cwd = process.cwd()) => {
+  param('string', 'cwd', cwd)
 
-  let current = 0
-  spinner.current = () => steps[current]
-  spinner.next = (fn = () => {}, succeedCurrent = true) => {
-    if (succeedCurrent) {
-      spinner.succeed(steps[current])
-    }
-    if (current + 1 >= steps.length) {
-      spinner.stop()
-      fn && fn(steps[current])
-    } else {
-      current = current + 1
-      fn && fn(steps[current])
-      spinner.start()
-    }
-
-    return spinner
-  }
-
-  return spinner
-}
-
-const installPackages = (cwd = process.cwd()) =>
-  new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     execa('elm-package', ['install', '--yes'], { cwd, stdio: 'inherit' })
       .then(() => resolve())
       .catch(e => reject(e))
   })
+}
 
 const startReactor = (
   host,
   port,
-  /* istanbul ignore next */ exitParent = true
+  /* istanbul ignore next */
+  exitParent = true
 ) => {
   param('string', 'host', host)
   param('number', 'port', port)
@@ -154,7 +133,7 @@ const startBrowserSync = (
   reactor,
   html,
   dir,
-  /* istanbul ignore next */ logLevel = 'silent'
+  logLevel = 'silent'
 ) => {
   param('string', 'host', host)
   param('number', 'port', port)
@@ -191,7 +170,6 @@ const startBrowserSync = (
                   response.end()
                 })
                 .catch(e => {
-                  console.log('=============', e)
                   response.write(e)
                   response.end()
                 })
@@ -222,77 +200,83 @@ const startBrowserSync = (
   })
 }
 
-const watch = (bs, opts, dir) => {
-  let stylesheetsWatcher
-  let stylesheetsDeps
-  let mainWatcher
-  let mainDeps
+const createWatcher = (onChange, onDeps, filter, bs, entry) => {
+  param('function', 'onChange', onChange)
+  param('function', 'onDeps', onDeps)
+  param('function', 'filter', filter)
+  param('object', 'bs', bs)
+  param('string', 'entry', entry)
 
-  const watchCss = () =>
-    getDepTree(opts.stylesheets).then(deps => {
-      stylesheetsDeps = deps
+  return new Promise((resolve, reject) =>
+    getDepTree(entry)
+      .then(deps => {
+        onDeps(deps)
 
-      return bs.watch(['!elm-stuff', ...deps]).on('change', file => {
-        // stop watching temporarily
-        stylesheetsWatcher && stylesheetsWatcher.close()
+        const watcher = bs.watch(['!elm-stuff', ...deps])
 
-        /// rebuild css
-        elmCss(process.cwd(), opts.stylesheets, dir)
-          .then(() =>
-            // start watching files again
-            watchCss().then(watcher => (stylesheetsWatcher = watcher))
-          )
-          .catch(e =>
-            // start watching files again
-            watchCss().then(watcher => (stylesheetsWatcher = watcher))
-          )
+        watcher.on('change', file => {
+          if (filter(file)) {
+            // stop watching temporarily
+            watcher && watcher.close()
+
+            // trigger on change
+            onChange(file)
+
+            // start watching again
+            createWatcher(onChange, onDeps, filter, bs, entry)
+          }
+        })
+
+        resolve(watcher)
       })
-    })
-
-  const watchMain = () =>
-    getDepTree(opts.main).then(deps => {
-      mainDeps = deps
-
-      return bs.watch(['!elm-stuff', ...deps]).on('change', file => {
-        if (!stylesheetsDeps.includes(file)) {
-          // stop watching temporarily
-          mainWatcher && mainWatcher.close()
-
-          // reload the browser
-          bs.reload()
-
-          // start watching again
-          watchMain().then(watcher => (mainWatcher = watcher))
-        }
-      })
-    })
-
-  return watchCss()
-    .then(watcher => {
-      stylesheetsWatcher = watcher
-
-      return watchMain()
-    })
-    .then(watcher => {
-      mainWatcher = watcher
-
-      return watcher
-    })
+      .catch(reject)
+  )
 }
 
-const task = options => {
+const watch = (bs, main, stylesheets, dir) => {
+  param('object', 'bs', bs)
+  param('string', 'main', main)
+  param('string', 'stylesheets', stylesheets)
+  param('string', 'dir', dir)
+
+  let stylesheetsDeps
+
+  return Promise.all([
+    // main watcher
+    createWatcher(
+      () => bs.reload(),
+      () => {},
+      dep => !stylesheetsDeps.includes(dep),
+      bs,
+      main
+    ),
+    // stylesheets watcher
+    createWatcher(
+      file => elmCss(process.cwd(), stylesheets, dir),
+      deps => (stylesheetsDeps = deps),
+      () => true,
+      bs,
+      stylesheets
+    ),
+  ])
+}
+
+const dev = options => {
   const opts = Object.assign({}, defaults, options)
 
   // tmpDir for css output
   const tmpDir = tmp.dirSync({ unsafeCleanup: true })
 
   // CLI spinner
-  const step1 = 'installing elm dependencies into /elm-stuff'
-  const step2 = 'starting elm-reactor'
-  const step3 = 'starting elm-factory'
-  const step4 = 'compiling css'
-  const step5 = `ready to go! http://${opts.host}:${opts.port}`
-  const spinner = getSpinner(step1, ora({ spinner: 'bouncingBar' }))
+  const steps = [
+    'installing elm dependencies into /elm-stuff',
+    'starting elm-reactor',
+    'starting elm-factory',
+    'compiling css',
+  ]
+
+  const spinner = ora({ spinner: 'bouncingBar' })
+  spinner.text = steps[0]
 
   // the cli task
   return (
@@ -300,14 +284,19 @@ const task = options => {
     installPackages()
       // then start elm-reactor
       .then(() => {
-        console.log('')
-        spinner.advance(step2)
+        spinner.succeed(steps[0])
+        spacer()
+        spinner.text = steps[1]
+        spinner.start()
 
         return startReactor(opts.reactorHost, opts.reactorPort)
       })
       // then start browser-sync
       .then(() => {
-        spinner.advance(step3)
+        spinner.succeed(steps[1])
+        spacer()
+        spinner.text = steps[2]
+        spinner.start()
 
         return startBrowserSync(
           opts.host,
@@ -318,24 +307,28 @@ const task = options => {
         )
       })
       .then(({ bs, port }) => {
-        spinner.spinner().stop()
+        spinner.succeed(steps[2])
+        spacer()
+        spinner.text = steps[3]
+        spinner.start()
 
         return (
           elmCss(process.cwd(), opts.stylesheets, tmpDir.name)
             // then we want to build the css (before we start watching)
             // finally we start watching
             .then(() => {
-              spinner.succeed(step4)
-              spinner.succeed(
-                `elm-factory server started on http://${opts.host}:${port}`
-              )
-              watch(bs, opts, tmpDir.name)
+              spinner.succeed(steps[3])
+              spacer()
+              spinner.succeed(`ready to go! http://${opts.host}:${port}`)
+
+              return watch(bs, opts.main, opts.stylesheets, tmpDir.name)
             })
         )
       })
       .catch(e => {
-        // spinner.fail()
-        console.error(e)
+        spinner.fail()
+        // console.error(e)
+        throw new Error(e)
       })
   )
 }
@@ -345,11 +338,11 @@ module.exports = {
   param,
   getDepTree,
   defaultHtmlCompiler,
-  getSpinner,
   loadHtmlCompiler,
   installPackages,
   startReactor,
   startBrowserSync,
+  createWatcher,
   watch,
-  task,
+  dev,
 }

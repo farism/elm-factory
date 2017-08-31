@@ -7,18 +7,13 @@ import { init, task } from '../../src/tasks/init'
 
 chai.use(chaifs)
 
-describe('init task', () => {
-  it('adds the tasks to gulp', () => {
-    const gulp = task({})
-    expect(gulp).to.have.a.nested.property('tasks.init')
-  })
-})
-
-describe('init', () => {
+describe('INIT TASK', () => {
   let dir
+  let promise
+
   before(done => {
     dir = tmp.dirSync({ unsafeCleanup: true })
-    init(dir.name).on('end', done)
+    promise = init(dir.name).then(done)
   })
 
   after(() => {
@@ -60,5 +55,17 @@ describe('init', () => {
     expect(path.join(dir.name, 'package.json')).to.be.a
       .file()
       .with.contents.that.match(new RegExp(`"name": "${slug}"`))
+  })
+
+  describe('init', () => {
+    it('returns a promise', () => {
+      expect(promise).to.be.a('promise')
+    })
+
+    it('should resolve', function() {
+      this.timeout(60000)
+
+      return expect(promise).to.eventually.be.fulfilled
+    })
   })
 })

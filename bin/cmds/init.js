@@ -12,6 +12,5 @@ module.exports = {
   },
   handler: function(argv) {
     require('../../src/tasks').init(argv)
-    gulp.start('init')
   },
 }
