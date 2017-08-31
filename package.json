@@ -78,6 +78,7 @@
     "mocha": "^3.5.0",
     "nyc": "^11.1.0",
     "portscanner": "^2.1.1",
+    "request-promise-native": "^1.0.4",
     "sinon": "^3.2.1"
   }
 }

@@ -14,32 +14,48 @@ describe('init task', () => {
   })
 })
 
-describe('init', () => {
+describe.only('init', () => {
+  let dir
+  let regex
+  before(done => {
+    dir = tmp.dirSync({ unsafeCleanup: true })
+    init(dir.name).on('end', done)
+  })
+
   it('throws an error if a directory is not provided', () => {
     expect(() => init()).to.throw()
   })
 
-  it('inits a project', done => {
-    const dir = tmp.dirSync({ unsafeCleanup: true })
+  it('creates a directory', () => {
+    expect(dir.name).to.be.a.directory()
+  })
 
-    init(dir.name).on('end', () => {
-      expect(dir.name).to.be.a
-        .directory()
-        .with.deep.files([
-          '.elmfactoryrc',
-          '.gitignore',
-          'elm-package.json',
-          'index.ejs',
-          'package.json',
-          'src/Assets.elm',
-          'src/Main.elm',
-          'src/MainCss.elm',
-          'src/Stylesheets.elm',
-          'src/assets/css3.png',
-        ])
+  it('directory has the correct files', () => {
+    expect(dir.name).to.be.a
+      .directory()
+      .with.deep.files([
+        '.elmfactoryrc',
+        '.gitignore',
+        'elm-package.json',
+        'index.ejs',
+        'package.json',
+        'src/Assets.elm',
+        'src/Main.elm',
+        'src/MainCss.elm',
+        'src/Stylesheets.elm',
+        'src/assets/css3.png',
+      ])
+  })
 
-      dir.removeCallback()
-      done()
-    })
+  it('compiles template files with absolute dir slug', () => {
+    const slug = dir.name.split('/').pop()
+
+    expect(path.join(dir.name, 'elm-package.json')).to.be.a
+      .file()
+      .with.contents.that.match(new RegExp(`"summary": "${slug}"`))
+
+    expect(path.join(dir.name, 'package.json')).to.be.a
+      .file()
+      .with.contents.that.match(new RegExp(`"name": "${slug}"`))
   })
 })

@@ -44,9 +44,33 @@ const writeResponse = response => content => {
   response.end()
 }
 
-const installPackages = () =>
+const getSpinner = (initialStep, spinner) => {
+  let currentStep = (spinner.text = initialStep)
+
+  return {
+    spinner: () => spinner,
+    advance: nextStep => {
+      spinner.succeed(currentStep)
+      spinner.stop()
+      spacer()
+      currentStep = spinner.text = nextStep
+      spinner.start()
+    },
+    succeed: text => {
+      currentStep = text
+      spacer()
+      spinner.succeed(text)
+    },
+    fail: () => {
+      spacer()
+      spinner.fail(currentStep)
+    },
+  }
+}
+
+const installPackages = (cwd = process.cwd()) =>
   new Promise((resolve, reject) => {
-    execa('elm-package', ['install', '--yes'], { stdio: 'inherit' })
+    execa('elm-package', ['install', '--yes'], { cwd, stdio: 'inherit' })
       .then(() => resolve())
       .catch(e => reject(e))
   })
@@ -206,30 +230,6 @@ const watch = (bs, opts, dir) => {
     })
 }
 
-const getSpinner = (initialStep, spinner) => {
-  let currentStep = (spinner.text = initialStep)
-
-  return {
-    spinner: () => spinner,
-    advance: nextStep => {
-      spinner.succeed(currentStep)
-      spinner.stop()
-      spacer()
-      currentStep = spinner.text = nextStep
-      spinner.start()
-    },
-    succeed: text => {
-      currentStep = text
-      spacer()
-      spinner.succeed(text)
-    },
-    fail: () => {
-      spacer()
-      spinner.fail(currentStep)
-    },
-  }
-}
-
 const task = options => {
   const opts = Object.assign({}, defaults, options)
 
@@ -291,8 +291,11 @@ const task = options => {
 module.exports = {
   defaultHtmlCompiler,
   getDepTree,
+  loadHtmlCompiler,
   writeResponse,
+  installPackages,
   startReactor,
   startBrowserSync,
+  watch,
   task,
 }

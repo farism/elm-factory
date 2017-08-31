@@ -17,7 +17,7 @@ const init = dir => {
       path.resolve(__dirname, '../tmpl/boilerplate/**/.*'),
     ])
     .pipe(packageJson)
-    .pipe(anyTemplate({ name: dir }))
+    .pipe(anyTemplate({ name: dir.split('/').pop() }))
     .pipe(
       rename(path => {
         path.extname = ''

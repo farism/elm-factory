@@ -1,4 +1,5 @@
 import chai, { assert, expect } from 'chai'
+import chaifs from 'chai-fs'
 import chaiAsPromised from 'chai-as-promised'
 import fs from 'fs'
 import http from 'http'
@@ -10,22 +11,20 @@ import sinon from 'sinon'
 import tmp from 'tmp'
 
 import {
-  compileCss,
-  compileMain,
-  compileHtml,
   defaultHtmlCompiler,
-  getWatchedPaths,
-  resetWatcher,
+  getDepTree,
+  loadHtmlCompiler,
+  writeResponse,
+  installPackages,
   startReactor,
-  startExpress,
-  task,
+  startBrowserSync,
   watch,
-  watchCss,
-  watchMain,
+  task,
 } from '../../src/tasks/dev'
 import { init } from '../../src/tasks/init'
 import { dev as defaults } from '../../src/defaults'
 
+chai.use(chaifs)
 chai.use(chaiAsPromised)
 tmp.setGracefulCleanup()
 
@@ -65,16 +64,6 @@ describe('dev', function() {
     })
   })
 
-  describe('task', () => {
-    it('adds the tasks to gulp', () => {
-      const gulp = task({})
-      expect(gulp.tasks).to.have.a.property('_html')
-      expect(gulp.tasks).to.have.a.property('_css')
-      expect(gulp.tasks).to.have.a.property('_main')
-      expect(gulp.tasks).to.have.a.property('dev')
-    })
-  })
-
   describe('helpers', () => {
     describe('defaultHtmlCompiler', () => {
       it('defaultHtmlCompiler', () => {
@@ -101,6 +90,24 @@ describe('dev', function() {
         expect(
           getWatchedPaths(gulp.watch(path.join(dir, 'src', 'fakedir')))
         ).to.eql([])
+      })
+    })
+  })
+
+  describe('installPackages', function() {
+    this.timeout(60000)
+
+    it('should install elm deps into /elm-stuff', done => {
+      const tmpDir = tmp.dirSync({ dir, unsafeCleanup: true, keep: true })
+
+      let install
+      init(tmpDir.name).on('end', () => {
+        install = installPackages(tmpDir.name)
+          .then(() => {
+            expect(path.join(dir, 'elm-stuff2')).to.be.a.directory()
+            done()
+          })
+          .catch(done)
       })
     })
   })

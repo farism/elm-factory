@@ -122,8 +122,6 @@ const task = options => {
   /* istanbul ignore next  */
   gulp.task('build', () => runSequence('_clean', '_css', '_main'))
 
-  // gulp.task('build', () => runSequence('_clean', '_css', '_main'))
-
   return gulp
 }
 
