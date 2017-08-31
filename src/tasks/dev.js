@@ -17,57 +17,78 @@ const addTask = require('./').addTask
 
 const spacer = () => console.info(`${chalk.grey('-'.repeat(50))}`)
 
-const checkParam = (type, name, value) => {
-  if (!value) {
-    throw new Error(`parameter \`${name}\` is required`)
+const param = (type, name, value) => {
+  const typeErr = `parameter \`${name}\` must be a \`${type}\``
+
+  if (typeof value === 'undefined' || value === null) {
+    throw new TypeError(`parameter \`${name}\` is required`)
   }
 
-  if (typeof value !== type) {
-    throw new Error(`parameter \`${name}\` must be a \`${type}\``)
+  if (type === 'object') {
+    if (typeof value !== type || Array.isArray(value)) {
+      throw new TypeError(typeErr)
+    }
+  } else if (type === 'array') {
+    if (!Array.isArray(value)) {
+      throw new TypeError(typeErr)
+    }
+  } else if (typeof value !== type) {
+    throw new TypeError(typeErr)
   }
 }
 
-const getDepTree = entry =>
-  findAllDependencies(entry).then(deps => [entry, ...deps])
+const getDepTree = entry => {
+  param('string', 'entry', entry)
+
+  return findAllDependencies(entry).then(deps => [entry, ...deps])
+}
 
 const defaultHtmlCompiler = () =>
   Promise.resolve('incompatible html template...')
 
-const loadHtmlCompiler = file =>
-  new Promise((resolve, reject) => {
+const loadHtmlCompiler = file => {
+  param('string', 'file', file)
+
+  return new Promise((resolve, reject) => {
     fs.readFile(file, (err, contents) => {
       if (err) {
         reject(err)
+      }
+
+      const compiler = anyTemplate.compiler({ path: file, contents })
+
+      if (compiler) {
+        resolve(compiler)
       } else {
-        resolve(
-          anyTemplate.compiler({ path: file, contents }) || defaultHtmlCompiler
-        )
+        reject(new Error('html template format unsupported'))
       }
     })
   })
+}
 
-const getSpinner = (initialStep, spinner) => {
-  let currentStep = (spinner.text = initialStep)
+const getSpinner = (steps, spinner) => {
+  param('array', 'steps', steps)
+  param('object', 'spinner', spinner)
 
-  return {
-    spinner: () => spinner,
-    advance: nextStep => {
-      spinner.succeed(currentStep)
+  let current = 0
+  spinner.current = () => steps[current]
+  spinner.next = (fn = () => {}, succeedCurrent = true) => {
+    if (succeedCurrent) {
+      spinner.succeed(steps[current])
+    }
+    if (current + 1 >= steps.length) {
       spinner.stop()
-      spacer()
-      currentStep = spinner.text = nextStep
+      fn(steps[current])
+    } else {
+      current = current + 1
+      fn(steps[current])
       spinner.start()
-    },
-    succeed: text => {
-      currentStep = text
-      spacer()
-      spinner.succeed(text)
-    },
-    fail: () => {
-      spacer()
-      spinner.fail(currentStep)
-    },
+    }
+
+    return spinner
   }
+
+  return spinner
 }
 
 const installPackages = (cwd = process.cwd()) =>
@@ -82,8 +103,8 @@ const startReactor = (
   port,
   /* istanbul ignore next */ exitParent = true
 ) => {
-  checkParam('string', 'host', host)
-  checkParam('number', 'port', port)
+  param('string', 'host', host)
+  param('number', 'port', port)
 
   return new Promise((resolve, reject) => {
     const reactor = execa(
@@ -135,11 +156,11 @@ const startBrowserSync = (
   dir,
   /* istanbul ignore next */ logLevel = 'silent'
 ) => {
-  checkParam('string', 'host', host)
-  checkParam('number', 'port', port)
-  checkParam('string', 'reactor', reactor)
-  checkParam('string', 'html', html)
-  checkParam('string', 'dir', dir)
+  param('string', 'host', host)
+  param('number', 'port', port)
+  param('string', 'reactor', reactor)
+  param('string', 'html', html)
+  param('string', 'dir', dir)
 
   return new Promise((resolve, reject) => {
     const config = {
@@ -321,8 +342,10 @@ const task = options => {
 
 module.exports = {
   spacer,
+  param,
   getDepTree,
   defaultHtmlCompiler,
+  getSpinner,
   loadHtmlCompiler,
   installPackages,
   startReactor,
