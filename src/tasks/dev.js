@@ -2,27 +2,30 @@ const anyTemplate = require('gulp-any-template')
 const browserSync = require('browser-sync')
 const chalk = require('chalk')
 const elmCss = require('elm-css')
-const elmFindDependencies = require('gulp-elm-find-dependencies')
 const execa = require('execa')
 const findAllDependencies = require('find-elm-dependencies').findAllDependencies
 const fkill = require('fkill')
 const fs = require('fs')
-const gulp = require('gulp')
-const hookStd = require('hook-std')
 const nocache = require('nocache')
 const ora = require('ora')
 const path = require('path')
-const plumber = require('gulp-plumber')
 const proxy = require('http-proxy-middleware')
-const runSequence = require('run-sequence')
-const through = require('through2')
 const tmp = require('tmp')
-const url = require('url')
 
 const defaults = require('../defaults').dev
 const addTask = require('./').addTask
 
 const spacer = () => console.info(`${chalk.grey('-'.repeat(50))}`)
+
+const checkParam = (type, name, value) => {
+  if (!value) {
+    throw new Error(`parameter \`${name}\` is required`)
+  }
+
+  if (typeof value !== type) {
+    throw new Error(`parameter \`${name}\` must be a \`${type}\``)
+  }
+}
 
 const getDepTree = entry =>
   findAllDependencies(entry).then(deps => [entry, ...deps])
@@ -33,16 +36,15 @@ const defaultHtmlCompiler = () =>
 const loadHtmlCompiler = file =>
   new Promise((resolve, reject) => {
     fs.readFile(file, (err, contents) => {
-      resolve(
-        anyTemplate.compiler({ path: file, contents }) || defaultHtmlCompiler
-      )
+      if (err) {
+        reject(err)
+      } else {
+        resolve(
+          anyTemplate.compiler({ path: file, contents }) || defaultHtmlCompiler
+        )
+      }
     })
   })
-
-const writeResponse = response => content => {
-  response.write(content)
-  response.end()
-}
 
 const getSpinner = (initialStep, spinner) => {
   let currentStep = (spinner.text = initialStep)
@@ -121,13 +123,26 @@ const startReactor = (
     })
   })
 
-const startBrowserSync = (host, port, reactor, html, dir) =>
-  new Promise((resolve, reject) => {
+const startBrowserSync = (
+  host,
+  port,
+  reactor,
+  html,
+  dir,
+  /* istanbul ignore next */ logLevel = 'silent'
+) => {
+  checkParam('string', 'host', host)
+  checkParam('number', 'port', port)
+  checkParam('string', 'reactor', reactor)
+  checkParam('string', 'html', html)
+  checkParam('string', 'dir', dir)
+
+  return new Promise((resolve, reject) => {
     const config = {
       files: [html, `${dir}/*.css`],
       host,
       localOnly: true,
-      logLevel: 'silent',
+      logLevel,
       notify: false,
       online: false,
       open: false,
@@ -136,7 +151,7 @@ const startBrowserSync = (host, port, reactor, html, dir) =>
         baseDir: dir,
         middleware: [
           nocache(),
-          proxy('/_compile', { target: reactor, logLevel: 'silent' }),
+          proxy('/_compile', { target: reactor, logLevel }),
           (request, response, next) => {
             if (path.extname(request.url) === '.elm') {
               loadHtmlCompiler(html)
@@ -146,13 +161,20 @@ const startBrowserSync = (host, port, reactor, html, dir) =>
                     request,
                   })
                 )
-                .then(writeResponse(response))
-                .catch(writeResponse(response))
+                .then(compiledHtml => {
+                  response.write(compiledHtml)
+                  response.end()
+                })
+                .catch(e => {
+                  console.log('=============', e)
+                  response.write(e)
+                  response.end()
+                })
             } else {
               next()
             }
           },
-          proxy('/', { target: reactor, logLevel: 'silent' }),
+          proxy('/', { target: reactor, logLevel }),
         ],
       },
       serveStatic: [
@@ -163,14 +185,17 @@ const startBrowserSync = (host, port, reactor, html, dir) =>
       ],
     }
 
-    const bs = browserSync.create()
+    const bs = browserSync.create('server')
 
-    // bs.emitter.on('init', function() {
-    //   console.log('Browsersync is running!')
-    // })
-
-    bs.init(config, () => resolve(bs))
+    bs.init(config, (err, inited) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve({ bs, port: inited.options.get('port') })
+      }
+    })
   })
+}
 
 const watch = (bs, opts, dir) => {
   let stylesheetsWatcher
@@ -267,7 +292,7 @@ const task = options => {
           tmpDir.name
         )
       })
-      .then(bs => {
+      .then(({ bs, port }) => {
         spinner.spinner().stop()
 
         return (
@@ -276,7 +301,9 @@ const task = options => {
             // finally we start watching
             .then(() => {
               spinner.succeed(step4)
-              spinner.succeed(step5)
+              spinner.succeed(
+                `elm-factory server started on http://${opts.host}:${port}`
+              )
               watch(bs, opts, tmpDir.name)
             })
         )
@@ -289,10 +316,10 @@ const task = options => {
 }
 
 module.exports = {
-  defaultHtmlCompiler,
+  spacer,
   getDepTree,
+  defaultHtmlCompiler,
   loadHtmlCompiler,
-  writeResponse,
   installPackages,
   startReactor,
   startBrowserSync,

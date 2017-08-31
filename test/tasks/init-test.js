@@ -14,12 +14,15 @@ describe('init task', () => {
   })
 })
 
-describe.only('init', () => {
+describe('init', () => {
   let dir
-  let regex
   before(done => {
     dir = tmp.dirSync({ unsafeCleanup: true })
     init(dir.name).on('end', done)
+  })
+
+  after(() => {
+    dir.removeCallback()
   })
 
   it('throws an error if a directory is not provided', () => {

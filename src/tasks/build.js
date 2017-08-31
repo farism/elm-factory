@@ -79,7 +79,7 @@ const buildMain = (
 ) =>
   gulp
     .src(main)
-    .pipe(elm())
+    .pipe(elm({ cwd }))
     .pipe(elmExtractAssets({ cwd, tag: 'AssetUrl' }))
     .pipe(
       rev.revision({
