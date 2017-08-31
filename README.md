@@ -1,4 +1,4 @@
-# Elm Factory [![npm version](https://badge.fury.io/js/elm-factory.svg)](https://badge.fury.io/js/elm-factory) [![Coverage Status](https://coveralls.io/repos/github/farism/elm-factory/badge.svg?branch=specs)](https://coveralls.io/github/farism/elm-factory?branch=specs) [![Circle CI](https://circleci.com/gh/farism/elm-factory/tree/specs.svg?style=svg)](https://circleci.com/gh/farism/elm-factory/tree/specs)
+# Elm Factory [![npm version](https://badge.fury.io/js/elm-factory.svg)](https://badge.fury.io/js/elm-factory) [![Coverage Status](https://coveralls.io/repos/github/farism/elm-factory/badge.svg?branch=specs)](https://coveralls.io/github/farism/elm-factory?branch=specs) [![Travis CI](https://api.travis-ci.org/farism/elm-factory.svg?branch=master)](https://travis-ci.org/farism/elm-factory)
 
 An all-in-one, zero-configuration CLI tool for developing, building, and deploying Elm applications. Don't worry about tooling and just code!
 

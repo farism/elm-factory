@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/farism/gulp-elm-find-dependencies.git"
+    "url": "git+https://github.com/farism/elm-factory.git"
   },
   "keywords": [
     "elm",
