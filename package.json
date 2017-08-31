@@ -21,7 +21,7 @@
   "scripts": {
     "build": "babel src -d lib",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "prepublishOnly": "in-publish && npm run build",
+    "prepublishOnly": "npm run build",
     "test": "nyc --reporter=html --reporter=text mocha"
   },
   "dependencies": {
