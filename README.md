@@ -1,6 +1,6 @@
-# elmfactory.io
+# elm-factory.io
 
-This is the React App that powers https://elmfactory.io
+This is the React App that powers https://elm-factory.io
 
 ### To run
 
