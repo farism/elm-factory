@@ -22,7 +22,7 @@ rules.push({
 module.exports = {
   entry: ['./src/index.jsx'],
   output: {
-    publicPath: '/elm-factory/build/',
+    publicPath: '/build/',
     path: path.join(__dirname, 'build'),
     filename: '[chunkhash].js',
   },

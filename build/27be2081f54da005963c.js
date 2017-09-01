@@ -20,7 +20,7 @@
     return t.d(n, 'a', n), n
   }), (t.o = function(e, t) {
     return Object.prototype.hasOwnProperty.call(e, t)
-  }), (t.p = '/elm-factory/build/'), t((t.s = 143))
+  }), (t.p = '/build/'), t((t.s = 143))
 })([
   function(e, t, n) {
     'use strict'
