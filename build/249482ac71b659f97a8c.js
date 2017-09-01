@@ -4219,7 +4219,7 @@ object-assign
             value: function() {
               return h.a.createElement(
                 m.a,
-                { basename: '/elm-factory' },
+                null,
                 h.a.createElement(
                   E.a,
                   null,
@@ -4256,11 +4256,6 @@ object-assign
     !(function() {
       'undefined' != typeof __REACT_HOT_LOADER__ &&
         (
-          __REACT_HOT_LOADER__.register(
-            '/elm-factory',
-            'basename',
-            '/Users/farismustafa/Documents/Projects/elm-factory-io/src/App.jsx'
-          ),
           __REACT_HOT_LOADER__.register(
             C,
             'App',
