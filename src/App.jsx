@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 import CLIWrapper from './components/CLIWrapper'
 import ConfigWrapper from './components/ConfigWrapper'
+import GuideWrapper from './components/GuideWrapper'
 import HomePage from './components/HomePage'
 import NotFoundPage from './components/NotFoundPage'
 import PageWrapper from './components/PageWrapper'
@@ -18,6 +19,7 @@ export default class App extends React.Component {
               <Route exact path="/" component={HomePage} />
               <Route path="/cli/:command?" component={CLIWrapper} />
               <Route path="/config/:type?" component={ConfigWrapper} />
+              <Route path="/guide/:title?" component={GuideWrapper} />
               <Route path="*" component={NotFoundPage} />
             </Switch>
           </PageWrapper>

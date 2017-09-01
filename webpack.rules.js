@@ -5,6 +5,11 @@ module.exports = [
     loader: 'babel-loader',
   },
   {
+    test: /\.txt$/,
+    exclude: /(node_modules)/,
+    loader: 'raw-loader',
+  },
+  {
     test: /\.eot(\?v=\d+\.\d+\.\d+)?$/,
     exclude: /(node_modules)/,
     loader: 'file-loader',

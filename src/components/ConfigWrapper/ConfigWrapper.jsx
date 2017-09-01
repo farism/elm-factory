@@ -1,13 +1,14 @@
 import React, { PropTypes } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 
 import ConfigDoc from '../ConfigDoc'
 import { PrimarySection, SubtronSection } from '../PageSections'
 import BashBlock, { Comment, Gap, Line } from '../BashBlock'
 
-import styles from './ConfigWrapper.scss'
+import { isActive } from '../PageWrapper/PageWrapper'
+import styles from '../PageWrapper/PageWrapper.scss'
 
-const extras = [{ label: 'Overview', href: '/config' }]
+const docs = [{ label: 'Overview', href: '/config' }]
 
 const example = {
   main: './src/Main.elm',
@@ -26,49 +27,35 @@ const example = {
   },
 }
 
-function getDefaultDoc(type) {
-  switch (type) {
-    default:
-      return (
-        <div>
-          <h1>Overview</h1>
-          <p>
-            The Elm Factory CLI tool is built on{' '}
-            <a href="https://github.com/yargs/yargs" target="_blank">
-              yargs
-            </a>{' '}
-            , so it supports configuration through an ".elmfactoryrc" in your
-            project root folder by default. View the{' '}
-            <Link to="/cli">CLI Usage</Link> for more information about what
-            each setting does.
-          </p>
-          <code>
-            <pre>
-              // .elmfactoryrc or .elmfactoryrc.json
-              <br />
-              <br />
-              {JSON.stringify(example, null, 2)}
-            </pre>
-          </code>
-          <p />
-        </div>
-      )
-  }
-}
-
-function sideMenuView(items) {
-  return items.map(item =>
-    <div key={item.label} className={styles.commandLink}>
-      <Link to={item.href}>
-        {item.label}
-      </Link>
+function defaultDocView() {
+  return (
+    <div>
+      <h1>Overview</h1>
+      <p>
+        The Elm Factory CLI tool is built on{' '}
+        <a href="https://github.com/yargs/yargs" target="_blank">
+          yargs
+        </a>{' '}
+        , so it supports configuration through an ".elmfactoryrc" in your
+        project root folder by default. View the{' '}
+        <Link to="/cli">CLI Usage</Link> for more information about what each
+        setting does.
+      </p>
+      <code>
+        <pre>
+          // .elmfactoryrc or .elmfactoryrc.json
+          <br />
+          <br />
+          {JSON.stringify(example, null, 2)}
+        </pre>
+      </code>
+      <p />
     </div>
   )
 }
 
 export default function ConfigWrapper({ match }) {
-  // console.log(match)
-  // const targetProp = config.find(prop => prop.name === property)
+  const slug = match.params.config
 
   return (
     <div>
@@ -76,28 +63,21 @@ export default function ConfigWrapper({ match }) {
         Documention for Elm Factory's configuration object
       </SubtronSection>
       <PrimarySection>
-        <div className={styles.container}>
-          <div className={styles.commandList}>
+        <div className={styles.sidenavContainer}>
+          <div className={styles.side}>
             <h3>General</h3>
-            {sideMenuView(extras)}
-            {/* <h3>Make Properties</h3>
-            {sideMenuView(
-              makeProps.map(prop => ({
-                label: prop.name,
-                href: `/config/${prop.name}`,
-              }))
-            )}
-            <h3>Publish Properties</h3>
-            {sideMenuView(
-              publishProps.map(prop => ({
-                label: prop.name,
-                href: `/config/${prop.name}`,
-              }))
-            )} */}
+            <ul className={styles.links}>
+              {docs.map((doc, i) =>
+                <li key={doc.label} className={styles.link}>
+                  <NavLink to={doc.href} isActive={isActive(slug, i)}>
+                    {doc.label}
+                  </NavLink>
+                </li>
+              )}
+            </ul>
           </div>
-          <div className={styles.commandDocs}>
-            {getDefaultDoc(match.params.type)}
-            {/* {targetProp ? <ConfigDoc prop={targetProp} /> : } */}
+          <div className={styles.doc}>
+            {defaultDocView()}
           </div>
         </div>
       </PrimarySection>

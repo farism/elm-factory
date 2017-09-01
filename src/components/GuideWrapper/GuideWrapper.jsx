@@ -2,30 +2,30 @@ import React, { PropTypes } from 'react'
 import { NavLink, matchShape } from 'react-router-dom'
 
 import docs from '../../docs'
-import CLIDoc from '../CLIDoc'
+import GuideDoc from '../GuideDoc'
 import { PrimarySection, SubtronSection } from '../PageSections'
 
 import { isActive } from '../PageWrapper/PageWrapper'
 import styles from '../PageWrapper/PageWrapper.scss'
 
-export default function CLIWrapper({ match }) {
-  const slug = match.params.command
-  const doc = docs.find(d => d.command === match.params.command) || docs[0]
+export default function GuideWrapper({ match }) {
+  const slug = match.params.guide
+  const doc = docs.find(d => d.slug === match.params.guide) || docs[0]
 
   return (
     <div>
-      <SubtronSection title="CLI Docs">
-        Documention for Elm Factory&apos;s CLI interface
+      <SubtronSection title="Guides">
+        Elm Factory examples and recipes
       </SubtronSection>
       <PrimarySection>
         <div className={styles.sidenavContainer}>
           <div className={styles.side}>
-            <h3>Commands</h3>
+            <h3>Guides</h3>
             <ul className={styles.links}>
               {docs.map((doc, i) =>
                 <li key={doc.command} className={styles.link}>
                   <NavLink
-                    to={`/cli/${doc.command}`}
+                    to={`/guide/${doc.slug}`}
                     isActive={isActive(slug, i)}
                   >
                     {doc.command}
@@ -35,7 +35,7 @@ export default function CLIWrapper({ match }) {
             </ul>
           </div>
           <div className={styles.doc}>
-            {doc && <CLIDoc doc={doc} />}
+            {doc && <GuideDoc doc={doc} />}
           </div>
         </div>
       </PrimarySection>
@@ -43,7 +43,7 @@ export default function CLIWrapper({ match }) {
   )
 }
 
-CLIWrapper.propTypes = {
+GuideWrapper.propTypes = {
   match: PropTypes.shape({
     params: PropTypes.shape().isRequired,
   }).isRequired,

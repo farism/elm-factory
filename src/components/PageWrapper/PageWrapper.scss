@@ -7,7 +7,7 @@
 .header {
   -webkit-font-smoothing: antialiased;
   background-color: #60b5cc;
-  border-bottom: 1px solid #cccccc;
+  border-bottom: 1px solid #999;
   padding-bottom: 25px;
   padding-left: 12px;
   padding-right: 12px;
@@ -82,6 +82,56 @@
 
 .pageContainer {
   flex: 1;
+  border-top: 1px solid #bbb;
+}
+
+.sidenavContainer {
+  display: flex;
+  margin: 0 auto;
+  max-width: 1200px;
+
+  .side {
+    border-right: 1px solid #e0e5e6;
+    width: 200px;
+
+    h3 {
+      margin-bottom: 4px;
+    }
+
+    .links {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+
+      .link {
+        padding: 4px;
+        position: relative;
+
+        a {
+          display: block;
+        }
+
+        :global {
+          .active {
+            &:before {
+              content: '>';
+              position: absolute;
+              right: 100%
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .doc {
+    flex: 1;
+    padding: 0 20px;
+
+    .no-doc {
+      text-align: center;
+    }
+  }
 }
 
 .footer {

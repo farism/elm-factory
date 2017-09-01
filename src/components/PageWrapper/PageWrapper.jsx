@@ -7,6 +7,9 @@ import NavLink from './NavLink'
 
 import styles from './PageWrapper.scss'
 
+export const isActive = (slug, i) => m =>
+  (m && m.url === m.path) || (!slug && i === 0)
+
 export default function PageWrapper({ children }) {
   return (
     <div className={styles.mainWrapper}>
@@ -21,6 +24,7 @@ export default function PageWrapper({ children }) {
             <NavLink href="/" text="Getting Started" />
             <NavLink href="/cli" text="CLI Usage" />
             <NavLink href="/config" text="Configuration" />
+            <NavLink href="/guide" text="Guides" />
             <NavLink
               href="https://github.com/farism/elm-factory"
               text={<MarkGithubIcon />}
