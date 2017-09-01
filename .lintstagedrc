@@ -1,6 +1,6 @@
 
 {
-  "**/*.js": [
+  "src/**/*.js": [
     "npm run pretty",
     "git add"
   ]
