@@ -4,12 +4,6 @@ import configuration from 'elm-factory/guides/configuration.md'
 
 export default [
   {
-    file: 'advanced.md',
-    slug: 'advanced',
-    title: 'Advanced',
-    text: advanced,
-  },
-  {
     file: 'cli-usage.md',
     slug: 'cli-usage',
     title: 'CLI Usage',
@@ -20,5 +14,11 @@ export default [
     slug: 'configuration',
     title: 'Configuration',
     text: configuration,
+  },
+  {
+    file: 'advanced.md',
+    slug: 'advanced',
+    title: 'Advanced',
+    text: advanced,
   },
 ]

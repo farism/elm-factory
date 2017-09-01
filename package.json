@@ -8,6 +8,7 @@
     "build": "webpack --config webpack.production.config.js --progress --profile --colors",
     "precommit": "lint-staged",
     "pretty": "prettier --write --no-semi --single-quote --trailing-comma es5",
+    "publish": "npm run build && git add --all && git commit -m build && git push",
     "start": "webpack-dev-server --progress --profile --colors"
   },
   "repository": {
