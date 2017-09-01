@@ -26,6 +26,10 @@ export default function HomePage() {
       </SubtronSection>
       <PrimarySection>
         <BashBlock>
+          <Comment value="Global elm installation is required" />
+          <Line value="npm install -g elm" />
+          <Gap />
+          <Comment value="Recommended to install elm-factory globally" />
           <Line value="npm install -g elm-factory" />
           <Gap />
           <Comment value="Initialize a new project" />

@@ -2808,14 +2808,14 @@ object-assign
       o = {
         main: r,
         stylesheets: './src/Stylesheets.elm',
-        template: void 0,
+        html: void 0,
         outputPath: 'build',
         publicPath: '/public/',
       },
       a = {
         main: r,
         stylesheets: './src/Stylesheets.elm',
-        template: './index.ejs',
+        html: './index.ejs',
         host: '127.0.0.1',
         port: 8e3,
         reactorHost: '127.0.0.1',
@@ -12357,7 +12357,7 @@ object-assign
           default: r.stylesheets,
         },
         t: {
-          alias: 'template',
+          alias: 'html',
           description: 'optional html template file',
           default: '',
         },
@@ -12389,9 +12389,9 @@ object-assign
           default: r.stylesheets,
         },
         t: {
-          alias: 'template',
+          alias: 'html',
           description: 'html template file',
-          default: r.template,
+          default: r.html,
         },
         h: {
           alias: 'host',
@@ -13086,6 +13086,14 @@ object-assign
           a.a.createElement(
             d.d,
             null,
+            a.a.createElement(d.a, {
+              value: 'Global elm installation is required',
+            }),
+            a.a.createElement(d.c, { value: 'npm install -g elm' }),
+            a.a.createElement(d.b, null),
+            a.a.createElement(d.a, {
+              value: 'Recommended to install elm-factory globally',
+            }),
             a.a.createElement(d.c, { value: 'npm install -g elm-factory' }),
             a.a.createElement(d.b, null),
             a.a.createElement(d.a, { value: 'Initialize a new project' }),
