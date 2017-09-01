@@ -283,9 +283,9 @@ describe('DEV TASK', function() {
         str,
         str,
         tmpDir.name
-      ).then(({ bs }) =>
+      ).then(({ bs, port }) =>
         request(
-          `http://${defaults.host}:${defaults.port}/public/${basename}`
+          `http://${defaults.host}:${port}/public/${basename}`
         ).then(res => {
           expect(res).to.eql('.elm-reactor{color:#FFFFFF}')
           tmpFile.removeCallback()
@@ -303,8 +303,8 @@ describe('DEV TASK', function() {
         str,
         './index.ejs',
         str
-      ).then(({ bs }) =>
-        request(`http://${defaults.host}:${defaults.port}/src/Main.elm`)
+      ).then(({ bs, port }) =>
+        request(`http://${defaults.host}:${port}/src/Main.elm`)
           .then(res => {
             assertIncludes('<title>~/src/Main.elm</title>', res)
             bs.exit()
@@ -326,21 +326,45 @@ describe('DEV TASK', function() {
               reactorUrl,
               str,
               str
-            ).then(({ bs }) =>
-              request(`http://${defaults.host}:${defaults.port}`)
-                .then(res => {
-                  assertIncludes('<script src="/_reactor/index.js">', res)
+            ).then(({ bs, port }) =>
+              Promise.all([
+                request(`http://${defaults.host}:${port}`),
+                request(
+                  `http://${defaults.host}:${port}/_compile/src/Main.elm`
+                ),
+              ]).then(([res1, res2]) => {
+                assertIncludes('<script src="/_reactor/index.js">', res1)
+                assertIncludes('var runElmProgram = ', res2)
+                reactor.close()
+                bs.exit()
+                done()
+              })
+            )
+          )
+        )
+        .catch(done)
+    })
 
-                  return request(
-                    `http://${defaults.host}:${defaults.port}/_compile/src/Main.elm`
-                  )
-                })
-                .then(res => {
-                  assertIncludes('var runElmProgram = ', res)
-                  reactor.close()
-                  bs.exit()
-                  done()
-                })
+    it.only('creates additional custom proxies', function(done) {
+      this.timeout(60000)
+
+      findFreePort(defaults.reactorHost, defaults.reactorPort)
+        .then(({ host: reactorHost, port: reactorPort, url: reactorUrl }) =>
+          startReactor(reactorHost, reactorPort, false).then(reactor =>
+            startBrowserSync(defaults.host, defaults.port, str, str, str, [
+              `/p1=${reactorUrl}/`,
+              `/p2=${reactorUrl}/src`,
+            ]).then(({ bs, port }) =>
+              Promise.all([
+                request(`http://${defaults.host}:${port}/p1/`),
+                request(`http://${defaults.host}:${port}/p2/Main.elm`),
+              ]).then(([res1, res2]) => {
+                assertIncludes('<script src="/_reactor/index.js">', res1)
+                assertIncludes('runElmProgram()', res2)
+                reactor.close()
+                bs.exit()
+                done()
+              })
             )
           )
         )

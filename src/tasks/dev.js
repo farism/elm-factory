@@ -133,6 +133,7 @@ const startBrowserSync = (
   reactor,
   html,
   dir,
+  proxies = [],
   logLevel = 'silent'
 ) => {
   param('string', 'host', host)
@@ -142,6 +143,14 @@ const startBrowserSync = (
   param('string', 'dir', dir)
 
   return new Promise((resolve, reject) => {
+    const customProxies = proxies.map(prxy => prxy.split('=')).map(prxy =>
+      proxy(prxy[0], {
+        target: prxy[1],
+        pathRewrite: (path, req) => path.replace(prxy[0], ''),
+        logLevel,
+      })
+    )
+
     const config = {
       files: [html, `${dir}/*.css`],
       host,
@@ -154,6 +163,7 @@ const startBrowserSync = (
       server: {
         baseDir: dir,
         middleware: [
+          ...customProxies,
           nocache(),
           proxy('/_compile', { target: reactor, logLevel }),
           (request, response, next) => {
@@ -303,7 +313,8 @@ const dev = options => {
           opts.port,
           `http://${opts.reactorHost}:${opts.reactorPort}`,
           opts.html,
-          tmpDir.name
+          tmpDir.name,
+          opts.proxies
         )
       })
       .then(({ bs, port }) => {

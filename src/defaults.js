@@ -21,6 +21,7 @@ const dev = {
   reactorHost: host,
   reactorPort: port + 1,
   lrPort: 35729,
+  proxy: undefined,
 }
 
 const init = {}

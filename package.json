@@ -22,7 +22,8 @@
     "build": "babel src -d lib",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "prepublishOnly": "npm run build",
-    "test": "nyc --reporter=html --reporter=text mocha"
+    "test": "nyc --reporter=html --reporter=text mocha",
+    "test:mocha": "mocha"
   },
   "dependencies": {
     "browser-sync": "^2.18.13",

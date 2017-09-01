@@ -45,5 +45,10 @@ module.exports = {
       description: 'livereload port',
       default: defaults.lrPort,
     },
+    x: {
+      alias: 'proxy',
+      description: 'additional proxies',
+      default: defaults.proxy,
+    },
   },
 }
