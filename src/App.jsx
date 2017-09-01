@@ -19,7 +19,7 @@ export default class App extends React.Component {
               <Route exact path="/" component={HomePage} />
               <Route path="/cli/:command?" component={CLIWrapper} />
               <Route path="/config/:type?" component={ConfigWrapper} />
-              <Route path="/guide/:title?" component={GuideWrapper} />
+              <Route path="/guide/:guide?" component={GuideWrapper} />
               <Route path="*" component={NotFoundPage} />
             </Switch>
           </PageWrapper>

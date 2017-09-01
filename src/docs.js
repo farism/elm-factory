@@ -1,4 +1,4 @@
-const cmds = require('elm-factory/src/cmds')
+import cmds from 'elm-factory/src/cmds'
 
 export default Object.keys(cmds).map(function(key) {
   const cmd = cmds[key]

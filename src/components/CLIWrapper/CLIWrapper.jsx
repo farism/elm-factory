@@ -10,7 +10,7 @@ import styles from '../PageWrapper/PageWrapper.scss'
 
 export default function CLIWrapper({ match }) {
   const slug = match.params.command
-  const doc = docs.find(d => d.command === match.params.command) || docs[0]
+  const doc = docs.find(d => d.command === slug) || docs[0]
 
   return (
     <div>

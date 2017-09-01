@@ -1,7 +1,7 @@
 import React, { PropTypes } from 'react'
 import { NavLink, matchShape } from 'react-router-dom'
 
-import docs from '../../docs'
+import guides from '../../guides'
 import GuideDoc from '../GuideDoc'
 import { PrimarySection, SubtronSection } from '../PageSections'
 
@@ -10,7 +10,7 @@ import styles from '../PageWrapper/PageWrapper.scss'
 
 export default function GuideWrapper({ match }) {
   const slug = match.params.guide
-  const doc = docs.find(d => d.slug === match.params.guide) || docs[0]
+  const doc = guides.find(d => d.slug === slug) || guides[0]
 
   return (
     <div>
@@ -22,13 +22,13 @@ export default function GuideWrapper({ match }) {
           <div className={styles.side}>
             <h3>Guides</h3>
             <ul className={styles.links}>
-              {docs.map((doc, i) =>
-                <li key={doc.command} className={styles.link}>
+              {guides.map((doc, i) =>
+                <li key={doc.file} className={styles.link}>
                   <NavLink
                     to={`/guide/${doc.slug}`}
                     isActive={isActive(slug, i)}
                   >
-                    {doc.command}
+                    {doc.title}
                   </NavLink>
                 </li>
               )}

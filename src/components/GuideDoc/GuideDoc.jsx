@@ -1,7 +1,12 @@
 import React, { PropTypes } from 'react'
+import Markdown from 'react-markdown'
 
 export default function GuideDoc({ doc }) {
-  return <div />
+  return (
+    <article className="markdown-body">
+      <Markdown source={doc.text} />
+    </article>
+  )
 }
 
 GuideDoc.propTypes = {
