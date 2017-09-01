@@ -1,6 +1,7 @@
 const anyTemplate = require('gulp-any-template')
 const browserSync = require('browser-sync')
 const chalk = require('chalk')
+const check = require('check-types')
 const elmCss = require('elm-css')
 const execa = require('execa')
 const findAllDependencies = require('find-elm-dependencies').findAllDependencies
@@ -17,28 +18,44 @@ const addTask = require('./').addTask
 
 const spacer = () => console.info(`${chalk.grey('-'.repeat(50))}`)
 
-const param = (type, name, value) => {
-  const typeErr = `parameter \`${name}\` must be a \`${type}\``
+const invalidParam = (type, name) =>
+  `parameter \`${name}\` expected \`${type}\``
 
-  if (typeof value === 'undefined' || value === null) {
-    throw new TypeError(`parameter \`${name}\` is required`)
-  }
+const validateParam = (type, name, value, required = true) => {
+  const checker = required ? check.assert : check.assert.maybe
 
-  if (type === 'object') {
-    if (typeof value !== type || Array.isArray(value)) {
-      throw new TypeError(typeErr)
+  return checker[type](value, invalidParam(type, name))
+}
+
+const parseProxies = (delimiter, proxies) => {
+  validateParam('array', 'proxies', proxies)
+  check.assert.array.of.string(proxies)
+
+  return proxies.reduce((acc, proxy) => {
+    if (proxy.includes(delimiter)) {
+      const arr = proxy.split(delimiter)
+      acc.push({ from: arr[0], target: arr[1] })
     }
-  } else if (type === 'array') {
-    if (!Array.isArray(value)) {
-      throw new TypeError(typeErr)
-    }
-  } else if (typeof value !== type) {
-    throw new TypeError(typeErr)
-  }
+
+    return acc
+  }, [])
+}
+
+const createProxies = (rewrite = true, proxies) => {
+  validateParam('array', 'proxies', proxies)
+  check.assert.array.of.object(proxies)
+
+  return proxies.map(({ from, target }) =>
+    proxy(from, {
+      target,
+      pathRewrite: (path, req) => (rewrite ? path.replace(from, '') : path),
+      logLevel: 'silent',
+    })
+  )
 }
 
 const getDepTree = entry => {
-  param('string', 'entry', entry)
+  validateParam('string', 'entry', entry)
 
   return findAllDependencies(entry).then(deps => [entry, ...deps])
 }
@@ -47,7 +64,7 @@ const defaultHtmlCompiler = () =>
   Promise.resolve('incompatible html template...')
 
 const loadHtmlCompiler = file => {
-  param('string', 'file', file)
+  validateParam('string', 'file', file)
 
   return new Promise((resolve, reject) => {
     fs.readFile(file, (err, contents) => {
@@ -67,7 +84,7 @@ const loadHtmlCompiler = file => {
 }
 
 const installPackages = (cwd = process.cwd()) => {
-  param('string', 'cwd', cwd)
+  validateParam('string', 'cwd', cwd)
 
   return new Promise((resolve, reject) => {
     execa('elm-package', ['install', '--yes'], { cwd, stdio: 'inherit' })
@@ -82,8 +99,8 @@ const startReactor = (
   /* istanbul ignore next */
   exitParent = true
 ) => {
-  param('string', 'host', host)
-  param('number', 'port', port)
+  validateParam('string', 'host', host)
+  validateParam('number', 'port', port)
 
   return new Promise((resolve, reject) => {
     const reactor = execa(
@@ -133,23 +150,22 @@ const startBrowserSync = (
   reactor,
   html,
   dir,
-  proxies = [],
+  proxies,
+  proxyRewrite = true,
   logLevel = 'silent'
 ) => {
-  param('string', 'host', host)
-  param('number', 'port', port)
-  param('string', 'reactor', reactor)
-  param('string', 'html', html)
-  param('string', 'dir', dir)
+  validateParam('string', 'host', host)
+  validateParam('number', 'port', port)
+  validateParam('string', 'reactor', reactor)
+  validateParam('string', 'html', html)
+  validateParam('string', 'dir', dir)
+  validateParam('array', 'proxies', proxies, false)
+  validateParam('boolean', 'proxyRewrite', proxyRewrite, false)
 
   return new Promise((resolve, reject) => {
-    const customProxies = proxies.map(prxy => prxy.split('=')).map(prxy =>
-      proxy(prxy[0], {
-        target: prxy[1],
-        pathRewrite: (path, req) => path.replace(prxy[0], ''),
-        logLevel,
-      })
-    )
+    const customProxies = proxies
+      ? createProxies(proxyRewrite, parseProxies('=', proxies))
+      : []
 
     const config = {
       files: [html, `${dir}/*.css`],
@@ -211,11 +227,11 @@ const startBrowserSync = (
 }
 
 const createWatcher = (onChange, onDeps, filter, bs, entry) => {
-  param('function', 'onChange', onChange)
-  param('function', 'onDeps', onDeps)
-  param('function', 'filter', filter)
-  param('object', 'bs', bs)
-  param('string', 'entry', entry)
+  validateParam('function', 'onChange', onChange)
+  validateParam('function', 'onDeps', onDeps)
+  validateParam('function', 'filter', filter)
+  validateParam('object', 'bs', bs)
+  validateParam('string', 'entry', entry)
 
   return new Promise((resolve, reject) =>
     getDepTree(entry)
@@ -244,10 +260,10 @@ const createWatcher = (onChange, onDeps, filter, bs, entry) => {
 }
 
 const watch = (bs, main, stylesheets, dir) => {
-  param('object', 'bs', bs)
-  param('string', 'main', main)
-  param('string', 'stylesheets', stylesheets)
-  param('string', 'dir', dir)
+  validateParam('object', 'bs', bs)
+  validateParam('string', 'main', main)
+  validateParam('string', 'stylesheets', stylesheets)
+  validateParam('string', 'dir', dir)
 
   let stylesheetsDeps
 
@@ -314,7 +330,8 @@ const dev = options => {
           `http://${opts.reactorHost}:${opts.reactorPort}`,
           opts.html,
           tmpDir.name,
-          opts.proxies
+          opts.proxy,
+          opts.proxyRewrite
         )
       })
       .then(({ bs, port }) => {
@@ -346,7 +363,10 @@ const dev = options => {
 
 module.exports = {
   spacer,
-  param,
+  invalidParam,
+  validateParam,
+  parseProxies,
+  createProxies,
   getDepTree,
   defaultHtmlCompiler,
   loadHtmlCompiler,

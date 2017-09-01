@@ -1,6 +1,7 @@
 import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
 import chaiAsPromised from 'chai-as-promised'
+import check from 'check-types'
 import fs from 'fs'
 import http from 'http'
 import gulp from 'gulp'
@@ -11,11 +12,13 @@ import sinon from 'sinon'
 import tmp from 'tmp'
 
 import {
-  param,
+  invalidParam,
+  validateParam,
+  parseProxies,
+  createProxies,
   defaultHtmlCompiler,
   getDepTree,
   loadHtmlCompiler,
-  writeResponse,
   installPackages,
   startReactor,
   startBrowserSync,
@@ -40,16 +43,14 @@ const str = 'stub'
 const num = 123
 const bool = true
 
-const required = name => `parameter \`${name}\` is required`
-
-const ntype = (type, name) => `parameter \`${name}\` must be a \`${type}\``
-
-const checkParam = (type, name, fn) => args => {
-  it(`${name} is required`, () => {
-    expect(() => fn.apply(null, args.slice(0, -1))).to.throw(required(name))
-  })
-  it(`${name} must be a ${type}`, () => {
-    expect(() => fn.apply(null, args)).to.throw(ntype(type, name))
+const checkParam = (type, name, testFn, required = true) => (params = []) => {
+  it(`\`${name}\` param is validated`, () => {
+    if (required) {
+      expect(() => testFn.apply(null, params.slice(0, -1))).to.throw(
+        invalidParam(type, name)
+      )
+    }
+    expect(() => testFn.apply(null, params)).to.throw(invalidParam(type, name))
   })
 }
 
@@ -88,55 +89,72 @@ describe('DEV TASK', function() {
   })
 
   describe('helpers', () => {
-    describe('param', () => {
-      it('throws type errors', () => {
-        expect(() => param('string', 'a')).to.throw(TypeError)
-        expect(() => param('string', 'a', 123)).to.throw(TypeError)
+    describe('invalidParam', () => {
+      it('returns the correct message', () => {
+        expect(invalidParam('foo', 'bar')).to.eql(
+          'parameter `bar` expected `foo`'
+        )
       })
-      it('validates existence', () => {
-        expect(() => param('string', 'a')).to.throw(required('a'))
-        expect(() => param('number', 'a', undefined)).to.throw(required('a'))
-        expect(() => param('function', 'a', null)).to.throw(required('a'))
+    })
+    describe('validateParam', () => {
+      it('throws when param is required and missing', () => {
+        expect(() => validateParam('string', str)).to.throw(
+          invalidParam('string', str)
+        )
       })
-      it('works with booleans', () => {
-        expect(() => param('boolean', 'a', bool)).to.not.throw()
-        expect(() => param('boolean', 'a', arr)).to.throw(ntype('boolean', 'a'))
-        expect(() => param('boolean', 'a', obj)).to.throw(ntype('boolean', 'a'))
-        expect(() => param('boolean', 'a', num)).to.throw(ntype('boolean', 'a'))
-        expect(() => param('boolean', 'a', str)).to.throw(ntype('boolean', 'a'))
+      it('throws when param is required and provided with invalid type', () => {
+        expect(() => validateParam('string', str, 123)).to.throw(
+          invalidParam('string', str)
+        )
       })
-      it('works with objects', () => {
-        expect(() => param('object', 'a', obj)).to.not.throw()
-        expect(() => param('object', 'a', arr)).to.throw(ntype('object', 'a'))
-        expect(() => param('object', 'a', bool)).to.throw(ntype('object', 'a'))
-        expect(() => param('object', 'a', num)).to.throw(ntype('object', 'a'))
-        expect(() => param('object', 'a', str)).to.throw(ntype('object', 'a'))
+      it('throws when param is not required and provided with invalid type', () => {
+        expect(() => validateParam('string', str, 123, false)).to.throw(
+          invalidParam('string', str)
+        )
       })
-      it('works with arrays', () => {
-        expect(() => param('array', 'a', arr)).to.not.throw()
-        expect(() => param('array', 'a', obj)).to.throw(ntype('array', 'a'))
-        expect(() => param('array', 'a', bool)).to.throw(ntype('array', 'a'))
-        expect(() => param('array', 'a', num)).to.throw(ntype('array', 'a'))
-        expect(() => param('array', 'a', str)).to.throw(ntype('array', 'a'))
+      it('does not throw when param is not required and provided with undefined or null', () => {
+        expect(() => validateParam('string', str, null, false)).to.not.throw()
       })
-      it('works with numbers', () => {
-        expect(() => param('number', 'a', num)).to.not.throw()
-        expect(() => param('number', 'a', arr)).to.throw(ntype('number', 'a'))
-        expect(() => param('number', 'a', obj)).to.throw(ntype('number', 'a'))
-        expect(() => param('number', 'a', bool)).to.throw(ntype('number', 'a'))
-        expect(() => param('number', 'a', str)).to.throw(ntype('number', 'a'))
+    })
+    describe('parseProxies', () => {
+      describe('params', () => {
+        checkParam('array', 'proxies', parseProxies)([str])
+        checkParam('array', 'proxies', parseProxies)([str, str])
+        it('throws when not passed array of strings', () => {
+          expect(() => parseProxies('=', [123])).to.throw()
+        })
       })
-      it('works with strings', () => {
-        expect(() => param('string', 'a', str)).to.not.throw()
-        expect(() => param('string', 'a', arr)).to.throw(ntype('string', 'a'))
-        expect(() => param('string', 'a', obj)).to.throw(ntype('string', 'a'))
-        expect(() => param('string', 'a', bool)).to.throw(ntype('string', 'a'))
-        expect(() => param('string', 'a', num)).to.throw(ntype('string', 'a'))
+      it('ignores invalid delimiter', () => {
+        expect(parseProxies('=', ['foo:bar', 'foo bar'])).to.have.length.of(0)
+      })
+      it('returns array of objects with from/target keys', () => {
+        const proxies = parseProxies('=', ['foo=bar', 'ping=pong'])
+
+        expect(proxies).to.have.length.of(2)
+        expect(proxies[0]).to.have.a.property('from', 'foo')
+        expect(proxies[0]).to.have.a.property('target', 'bar')
+        expect(proxies[1]).to.have.a.property('from', 'ping')
+        expect(proxies[1]).to.have.a.property('target', 'pong')
+      })
+    })
+    describe('createProxies', () => {
+      describe('params', () => {
+        checkParam('array', 'proxies', parseProxies)()
+        checkParam('array', 'proxies', parseProxies)([str])
+      })
+      it('returns an array of http-proxy-middlewares', () => {
+        const proxies = parseProxies('=', ['foo=bar', 'ping=pong'])
+        const middlewares = createProxies(bool, proxies)
+
+        expect(middlewares).to.have.length(2)
+        expect(middlewares)
+          .to.have.a.property('1')
+          .that.is.a('function')
       })
     })
     describe('getDepTree', () => {
       describe('params', () => {
-        checkParam('string', 'entry', getDepTree)([num])
+        checkParam('string', 'entry', getDepTree)()
       })
       it('fails if entry file does not exist', () => {
         return expect(getDepTree('some/fake/path.elm')).to.eventually.rejected
@@ -254,6 +272,14 @@ describe('DEV TASK', function() {
       checkParam('string', 'reactor', startBrowserSync)([str, num, num])
       checkParam('string', 'html', startBrowserSync)([str, num, str, num])
       checkParam('string', 'dir', startBrowserSync)([str, num, str, str, num])
+      checkParam('array', 'proxies', startBrowserSync, false)([
+        str,
+        num,
+        str,
+        str,
+        str,
+        str,
+      ])
     })
 
     it('starts a browsersync server', () => {
@@ -263,8 +289,7 @@ describe('DEV TASK', function() {
           defaults.port,
           str,
           str,
-          str,
-          'silent'
+          str
         ).then(({ bs }) => {
           bs.exit()
         })
@@ -345,34 +370,70 @@ describe('DEV TASK', function() {
         .catch(done)
     })
 
-    it.only('creates additional custom proxies', function(done) {
-      this.timeout(60000)
+    describe('custom proxies', () => {
+      let reactor
+      let reactorUrl
 
-      findFreePort(defaults.reactorHost, defaults.reactorPort)
-        .then(({ host: reactorHost, port: reactorPort, url: reactorUrl }) =>
-          startReactor(reactorHost, reactorPort, false).then(reactor =>
-            startBrowserSync(defaults.host, defaults.port, str, str, str, [
-              `/p1=${reactorUrl}/`,
-              `/p2=${reactorUrl}/src`,
-            ]).then(({ bs, port }) =>
-              Promise.all([
-                request(`http://${defaults.host}:${port}/p1/`),
-                request(`http://${defaults.host}:${port}/p2/Main.elm`),
-              ]).then(([res1, res2]) => {
-                assertIncludes('<script src="/_reactor/index.js">', res1)
-                assertIncludes('runElmProgram()', res2)
-                reactor.close()
-                bs.exit()
-                done()
-              })
-            )
-          )
+      before(done => {
+        findFreePort(
+          defaults.reactorHost,
+          defaults.reactorPort
+        ).then(({ host, port, url }) =>
+          startReactor(host, port, false).then(_reactor => {
+            reactorUrl = url
+            reactor = _reactor
+            done()
+          })
         )
-        .catch(done)
+      })
+
+      after(() => {
+        reactor.close()
+      })
+
+      it('creates custom proxies with path rewriting', done => {
+        startBrowserSync(
+          defaults.host,
+          defaults.port,
+          str,
+          str,
+          str,
+          [`/p1=${reactorUrl}/`, `/p2=${reactorUrl}/src`],
+          true
+        )
+          .then(({ bs, port }) =>
+            Promise.all([
+              request(`http://${defaults.host}:${port}/p1/`),
+              request(`http://${defaults.host}:${port}/p2/Main.elm`),
+            ]).then(([res1, res2]) => {
+              assertIncludes('<script src="/_reactor/index.js">', res1)
+              assertIncludes('runElmProgram()', res2)
+              bs.exit()
+              done()
+            })
+          )
+          .catch(done)
+      })
+
+      it('does not rewrite paths', () => {
+        return expect(
+          startBrowserSync(
+            defaults.host,
+            defaults.port,
+            str,
+            str,
+            str,
+            [`/p1=${reactorUrl}/src`],
+            false
+          ).then(({ bs, port }) =>
+            request(`http://${defaults.host}:${port}/p1/Main.elm`)
+          )
+        ).to.eventually.be.rejected
+      })
     })
   })
 
-  describe('watching', () => {
+  describe('watch mode', () => {
     let bs
     let spyWatch
     let spyOn
