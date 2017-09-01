@@ -40,7 +40,7 @@ export default function HomePage() {
           <Line value="elm-factory dev" />
           <Gap />
           <Comment value="Build your app" />
-          <Line value="elm-factory build --publicPath=http://cdn123.com/assets" />
+          <Line value="elm-factory build --public-path=http://cdn123.com/assets" />
         </BashBlock>
         <h3 style={{ textAlign: 'center' }}>
           Ready for a closer look?{' '}
