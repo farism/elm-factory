@@ -1,6 +1,6 @@
 {
   "name": "elm-factory",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "dev server and build system wrapping elm-reactor",
   "main": "lib/index.js",
   "repository": {
@@ -21,11 +21,13 @@
   "scripts": {
     "build": "babel src -d lib",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "prepublishOnly": "in-publish && npm run build",
-    "test": "nyc --reporter=html --reporter=text mocha"
+    "prepublishOnly": "npm run build",
+    "test": "nyc --reporter=html --reporter=text mocha",
+    "test:mocha": "mocha"
   },
   "dependencies": {
     "browser-sync": "^2.18.13",
+    "check-types": "^7.3.0",
     "cssnano": "^3.10.0",
     "del": "^3.0.0",
     "elm-css": "^0.6.1",

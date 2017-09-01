@@ -40,10 +40,14 @@ module.exports = {
       description: 'elm-reactor port',
       default: defaults.reactorPort,
     },
-    l: {
-      alias: 'lr-port',
-      description: 'livereload port',
-      default: defaults.lrPort,
+    x: {
+      alias: 'proxy',
+      description: 'additional proxies',
+      default: defaults.proxy,
+    },
+    'proxy-rewrite': {
+      description: 'rewrite proxy paths',
+      default: defaults.proxyRewrite,
     },
   },
 }

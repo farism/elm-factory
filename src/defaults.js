@@ -20,7 +20,8 @@ const dev = {
   port,
   reactorHost: host,
   reactorPort: port + 1,
-  lrPort: 35729,
+  proxy: [],
+  proxyRewrite: true,
 }
 
 const init = {}
