@@ -7,13 +7,24 @@ const findAllDependencies = require('find-elm-dependencies').findAllDependencies
 const fkill = require('fkill')
 const fs = require('fs')
 const nocache = require('nocache')
-const ora = require('ora')
 const path = require('path')
 const proxy = require('http-proxy-middleware')
 const tmp = require('tmp')
 
 const defaults = require('../defaults').dev
-const { installPackages, spacer, validateParam } = require('./utils')
+const {
+  exists,
+  initializeSpinner,
+  installPackages,
+  spacer,
+  validateParam,
+} = require('./utils')
+
+// global reference to CLI spinner
+const spinner = initializeSpinner()
+
+// global reference to current stylesheet deps
+let stylesheetsDeps
 
 const parseProxies = (delimiter, proxies) => {
   validateParam('array', 'proxies', proxies)
@@ -68,9 +79,12 @@ const loadHtmlCompiler = file => {
   })
 }
 
-const htmlCompiler = html => (request, response, next) => {
+const htmlCompiler = (bs, html) => (request, response, next) => {
   if (path.extname(request.url) === '.elm') {
-    loadHtmlCompiler(html)
+    return loadHtmlCompiler(html)
+      .catch(e => {
+        spinner(e)
+      })
       .then(compiler =>
         compiler({
           environment: 'development',
@@ -85,6 +99,18 @@ const htmlCompiler = html => (request, response, next) => {
         response.write(e)
         response.end()
       })
+      .then(() =>
+        createWatcher(
+          () => bs.reload(),
+          () => {},
+          dep => !stylesheetsDeps.includes(dep),
+          bs,
+          path.join(process.cwd(), request.url)
+        ).catch(e => {
+          console.error('=============')
+          console.error(e)
+        })
+      )
   } else {
     next()
   }
@@ -160,6 +186,8 @@ const startBrowserSync = (
   validateParam('boolean', 'proxyRewrite', proxyRewrite, false)
 
   return new Promise((resolve, reject) => {
+    const bs = browserSync.create('server')
+
     const customProxies = proxies
       ? createProxies(proxyRewrite, parseProxies('=', proxies))
       : []
@@ -179,7 +207,7 @@ const startBrowserSync = (
           ...customProxies,
           nocache(),
           proxy('/_compile', { target: reactor, logLevel }),
-          htmlCompiler(html),
+          htmlCompiler(bs, html),
           proxy('/', { target: reactor, logLevel }),
         ],
       },
@@ -190,8 +218,6 @@ const startBrowserSync = (
         },
       ],
     }
-
-    const bs = browserSync.create('server')
 
     bs.init(config, (err, inited) => {
       if (err) {
@@ -215,94 +241,56 @@ const createWatcher = (onChange, onDeps, filter, bs, entry) => {
       .then(deps => {
         onDeps(deps)
 
+        console.log(deps)
+
         const watcher = bs.watch(['!elm-stuff', ...deps])
 
-        watcher.on('change', file => {
-          if (filter(file)) {
-            // stop watching temporarily
-            watcher && watcher.close()
-
-            // trigger on change
-            onChange(file)
-
-            // start watching again
-            createWatcher(onChange, onDeps, filter, bs, entry)
-          }
-        })
+        // watcher.on('change', file => {
+        //   if (filter(file)) {
+        //     // stop watching temporarily
+        //     watcher && watcher.close()
+        //
+        //     // trigger on change
+        //     onChange(file)
+        //
+        //     // start watching again
+        //     createWatcher(onChange, onDeps, filter, bs, entry)
+        //   }
+        // })
 
         resolve(watcher)
       })
-      .catch(reject)
+      .catch(e => {
+        throw new Error(`could not find ${entry}`)
+      })
   )
-}
-
-const watch = (bs, main, stylesheets, dir) => {
-  validateParam('object', 'bs', bs)
-  validateParam('string', 'main', main)
-  validateParam('string', 'stylesheets', stylesheets)
-  validateParam('string', 'dir', dir)
-
-  let stylesheetsDeps
-
-  return Promise.all([
-    // main watcher
-    createWatcher(
-      () => bs.reload(),
-      () => {},
-      dep => !stylesheetsDeps.includes(dep),
-      bs,
-      main
-    ),
-    // stylesheets watcher
-    createWatcher(
-      file => elmCss(process.cwd(), stylesheets, dir),
-      deps => (stylesheetsDeps = deps),
-      () => true,
-      bs,
-      stylesheets
-    ),
-  ])
 }
 
 const dev = options => {
   const opts = Object.assign({}, defaults, options)
-
-  // tmp dir for generated files
   const tmpDir = tmp.dirSync({ unsafeCleanup: true })
 
-  // CLI spinner
-  const spinner = ora()
-  const spinnerSpacer = () =>
-    spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
-  spinner.text = 'elm-package install is starting`'
-  spinner.start()
+  spinner.next('elm-package install is starting')
 
-  // the cli task
   return (
     // first install packages using elm-package
     installPackages()
       .catch(e => {
-        spinnerSpacer()
-        spinner.fail('elm-package install has failed')
-        spinnerSpacer()
-        throw e
+        spinner.fail(e)
       })
       // then start elm-reactor
       .then(output => {
-        spinnerSpacer()
         spinner.succeed('elm-package install has completed')
-        spinnerSpacer()
-        spinner.text = 'elm-reactor is starting'
-        spinner.start()
+        spinner.next('elm-reactor is starting')
 
-        return startReactor(opts.reactorHost, opts.reactorPort)
+        return startReactor(opts.reactorHost, opts.reactorPort).catch(e => {
+          spinner.fail(e)
+        })
       })
       // then start browser-sync
       .then(() => {
         spinner.succeed('elm-reactor is now started')
-        spinnerSpacer()
-        spinner.text = 'browser-sync is starting'
-        spinner.start()
+        spinner.next('browser-sync is starting')
 
         return startBrowserSync(
           opts.host,
@@ -312,34 +300,52 @@ const dev = options => {
           tmpDir.name,
           opts.proxy,
           opts.proxyRewrite
-        )
+        ).catch(e => {
+          spinner.fail(e)
+        })
       })
-      .then(({ bs, port }) => {
+      .then(bs => {
         spinner.succeed('browser-sync is now started')
-        spinnerSpacer()
-        spinner.text = 'css is now compiling'
-        spinner.start()
 
-        return (
-          elmCss(process.cwd(), opts.stylesheets, tmpDir.name)
-            // then we want to build the css (before we start watching)
-            // finally we start watching
+        return Promise.all([
+          Promise.resolve(bs.port),
+          // check if our stylesheet exists
+          exists(opts.stylesheets)
             .then(() => {
-              spinnerSpacer()
-              spinner.succeed('css has been compiled')
-              spinnerSpacer()
-              spinner.succeed(
-                `elm-factory is ready on http://${opts.host}:${port}`
-              )
-              spinnerSpacer()
+              // compile stylesheet
+              spinner.next('css is now compiling')
 
-              return watch(bs, opts.main, opts.stylesheets, tmpDir.name)
+              return elmCss(
+                process.cwd(),
+                opts.stylesheets,
+                tmpDir.name
+              ).catch(() => {})
             })
-        )
+            .then(() => {
+              // create stylesheet watcher
+              spinner.succeed('css has been compiled')
+
+              return createWatcher(
+                file => elmCss(process.cwd(), opts.stylesheets, tmpDir.name),
+                deps => (stylesheetsDeps = deps),
+                () => true,
+                bs,
+                opts.stylesheets
+              ).catch(() => {})
+            })
+            .catch(e => {
+              spinner.space()
+              spinner.fail(e, false)
+            }),
+        ])
+      })
+      .then(port => {
+        spinner.space()
+        spinner.succeed(`ready! http://${opts.host}:${opts.port}`)
       })
       .catch(e => {
-        spnner.fail()
-        throw e
+        spinner.space()
+        spinner.fail(e)
       })
   )
 }
@@ -352,6 +358,5 @@ module.exports = {
   startReactor,
   startBrowserSync,
   createWatcher,
-  watch,
   dev,
 }

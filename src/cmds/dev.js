@@ -5,11 +5,6 @@ module.exports = {
   command: 'dev [options]',
   description: 'starts elm-factory in dev mode',
   options: {
-    m: {
-      alias: 'main',
-      description: 'main entry file',
-      default: defaults.main,
-    },
     s: {
       alias: 'stylesheets',
       description: 'stylesheets entry file',
