@@ -60,7 +60,7 @@ const assertIncludes = (str = '', response = '') =>
 
 describe('DEV TASK', function() {
   before(done => {
-    init({ dir }).then(() => {
+    init({ dir, force: true }).then(() => {
       process.chdir(dir)
       done()
     })

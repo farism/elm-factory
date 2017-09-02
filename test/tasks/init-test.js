@@ -32,7 +32,7 @@ describe('INIT TASK', () => {
     })
   })
 
-  describe.only('copy', () => {
+  describe('copy', () => {
     describe('params', () => {
       checkParam('string', 'dir', copy)([1])
     })

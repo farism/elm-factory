@@ -67,7 +67,7 @@ describe('UTILS', function() {
     let promise
 
     before(done => {
-      init({ dir }).then(() => {
+      init({ dir, force: true }).then(() => {
         process.chdir(dir)
         tmpDir = tmp.dirSync({ dir, unsafeCleanup: true })
         promise = installPackages(tmpDir.name)
