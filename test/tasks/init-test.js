@@ -3,29 +3,44 @@ import chaifs from 'chai-fs'
 import path from 'path'
 import tmp from 'tmp'
 
-import { init, task } from '../../src/tasks/init'
+import { init } from '../../src/tasks/init'
 
 chai.use(chaifs)
 
-describe('INIT TASK', () => {
+describe.only('INIT TASK', () => {
   let dir
   let promise
 
-  before(done => {
+  beforeEach(done => {
     dir = tmp.dirSync({ unsafeCleanup: true })
     promise = init({ dir: dir.name }).then(done)
   })
 
-  after(() => {
+  afterEach(() => {
     dir.removeCallback()
   })
 
-  it('throws an error if options are not provided', () => {
-    expect(() => init()).to.throw()
+  describe('params', () => {
+    it('throws if object is invalid', () => {
+      expect(() => init(' ')).to.throw('parameter `options` expected `object`')
+      expect(() => init({ dir: 1 })).to.throw(
+        'parameter `options.dir` expected `string`'
+      )
+    })
   })
 
-  it('throws an error if a directory is not provided', () => {
-    expect(() => init({})).to.throw()
+  it('returns a promise', () => {
+    expect(promise).to.be.a('promise')
+  })
+
+  it('should resolve', function() {
+    this.timeout(60000)
+
+    return expect(promise).to.eventually.be.fulfilled
+  })
+
+  it('rejects with non empty directory', () => {
+    return expect(init({ dir })).to.eventually.be.rejected
   })
 
   it('creates a directory', () => {
@@ -36,7 +51,6 @@ describe('INIT TASK', () => {
     expect(dir.name)
       .to.be.a.directory()
       .with.deep.files([
-        '.elmfactoryrc',
         '.gitignore',
         'elm-package.json',
         'index.ejs',
@@ -59,17 +73,5 @@ describe('INIT TASK', () => {
     expect(path.join(dir.name, 'package.json'))
       .to.be.a.file()
       .with.contents.that.match(new RegExp(`"name": "${slug}"`))
-  })
-
-  describe('init', () => {
-    it('returns a promise', () => {
-      expect(promise).to.be.a('promise')
-    })
-
-    it('should resolve', function() {
-      this.timeout(60000)
-
-      return expect(promise).to.eventually.be.fulfilled
-    })
   })
 })

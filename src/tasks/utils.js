@@ -11,7 +11,7 @@ const validateParam = (type, name, value, required = true) => {
   return checker[type](value, invalidParam(type, name))
 }
 
-const spacer = () => '-'.repeat(50)
+const spacer = (count = 50) => '-'.repeat(count)
 
 const installPackages = (cwd = process.cwd()) => {
   validateParam('string', 'cwd', cwd)

@@ -58,7 +58,7 @@ const assertIncludes = (str = '', response = '') =>
     `response is missing string '${str}'`
   )
 
-describe.only('DEV TASK', function() {
+describe('DEV TASK', function() {
   before(done => {
     init({ dir }).then(() => {
       process.chdir(dir)

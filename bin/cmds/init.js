@@ -11,6 +11,8 @@ module.exports = {
       .demandOption('dir', 'You must enter a project name')
   },
   handler: function(argv) {
-    require('../../src/tasks').init(argv)
+    require('../../src/tasks')
+      .init(argv)
+      .catch(() => {})
   },
 }

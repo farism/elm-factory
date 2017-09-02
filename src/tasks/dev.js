@@ -13,15 +13,7 @@ const proxy = require('http-proxy-middleware')
 const tmp = require('tmp')
 
 const defaults = require('../defaults').dev
-const {
-  installPackages,
-  spinnerStart,
-  spinnerNext,
-  spinnerSucceed,
-  spinnerFail,
-  spacer,
-  validateParam,
-} = require('./utils')
+const { installPackages, spacer, validateParam } = require('./utils')
 
 const parseProxies = (delimiter, proxies) => {
   validateParam('array', 'proxies', proxies)
@@ -280,19 +272,26 @@ const dev = options => {
 
   // CLI spinner
   const spinner = ora()
-
-  spinner.text = 'elm dependencies are being installed'
+  const spinnerSpacer = () =>
+    spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+  spinner.text = 'elm-package install is starting`'
   spinner.start()
 
   // the cli task
   return (
     // first install packages using elm-package
     installPackages()
+      .catch(e => {
+        spinnerSpacer()
+        spinner.fail('elm-package install has failed')
+        spinnerSpacer()
+        throw e
+      })
       // then start elm-reactor
       .then(output => {
-        spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
-        spinner.succeed('elm dependencies are now installed')
-        spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+        spinnerSpacer()
+        spinner.succeed('elm-package install has completed')
+        spinnerSpacer()
         spinner.text = 'elm-reactor is starting'
         spinner.start()
 
@@ -301,7 +300,7 @@ const dev = options => {
       // then start browser-sync
       .then(() => {
         spinner.succeed('elm-reactor is now started')
-        spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+        spinnerSpacer()
         spinner.text = 'browser-sync is starting'
         spinner.start()
 
@@ -317,7 +316,7 @@ const dev = options => {
       })
       .then(({ bs, port }) => {
         spinner.succeed('browser-sync is now started')
-        spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+        spinnerSpacer()
         spinner.text = 'css is now compiling'
         spinner.start()
 
@@ -326,20 +325,20 @@ const dev = options => {
             // then we want to build the css (before we start watching)
             // finally we start watching
             .then(() => {
-              spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+              spinnerSpacer()
               spinner.succeed('css has been compiled')
-              spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+              spinnerSpacer()
               spinner.succeed(
                 `elm-factory is ready on http://${opts.host}:${port}`
               )
-              spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+              spinnerSpacer()
 
               return watch(bs, opts.main, opts.stylesheets, tmpDir.name)
             })
         )
       })
       .catch(e => {
-        spinnerFail(e, spinner)
+        spnner.fail()
         throw e
       })
   )

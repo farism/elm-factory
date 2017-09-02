@@ -17,14 +17,7 @@ const urljoin = require('url-join')
 const xxh = require('xxhashjs')
 
 const defaults = require('../defaults').build
-const {
-  installPackages,
-  spinnerNext,
-  spinnerSucceed,
-  spinnerFail,
-  spacer,
-  validateParam,
-} = require('./utils')
+const { installPackages, spacer, validateParam } = require('./utils')
 
 const getHash = contents =>
   xxh
@@ -53,7 +46,7 @@ const buildCss = (
   validateParam('string', 'outputPath', outputPath)
   validateParam('string', 'publicPath', publicPath)
   validateParam('boolean', 'minify', minify, false)
-  // validateParam('string', 'cwd', cwd, false)
+  validateParam('string', 'cwd', cwd, false)
 
   return new Promise((resolve, reject) => {
     pumpify(
@@ -135,16 +128,29 @@ const build = options => {
 
   // CLI spinner
   const spinner = ora()
-
+  const spinnerSpacer = () =>
+    spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
   spinner.text = 'old builds are now being cleaned'
   spinner.start()
 
   return del(opts.outputPath)
-    .then(() => installPackages())
     .then(() => {
-      spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+      spinnerSpacer()
       spinner.succeed('old builds cleaned')
-      spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+      spinnerSpacer()
+      spinner.text = 'elm-package install is starting'
+      spinner.start()
+
+      installPackages().catch(e => {
+        spinnerSpacer()
+        spinner.fail('elm-package install has failed')
+        spinnerSpacer()
+        throw e
+      })
+    })
+    .then(() => {
+      spinner.succeed('elm-package install has completed')
+      spinnerSpacer()
       spinner.text = 'css is now compiling'
       spinner.start()
 
@@ -153,23 +159,38 @@ const build = options => {
         opts.outputPath,
         opts.publicPath,
         opts.cwd
-      )
+      ).catch(e => {
+        spinnerSpacer()
+        spinner.fail('css compilation has failed')
+        spinnerSpacer()
+        throw e
+      })
     })
     .then(() => {
-      spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+      spinnerSpacer()
       spinner.succeed('css has been compiled')
-      spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+      spinnerSpacer()
       spinner.text = 'main application is now compiling'
       spinner.start()
 
-      return buildMain(opts.main, opts.outputPath, opts.publicPath, opts.cwd)
+      return buildMain(
+        opts.main,
+        opts.outputPath,
+        opts.publicPath,
+        opts.cwd
+      ).catch(e => {
+        spinnerSpacer()
+        spinner.fail('main application compilation has failed')
+        spinnerSpacer()
+        throw e
+      })
     })
     .then(() => {
-      spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+      spinnerSpacer()
       spinner.succeed('main application has been compiled')
-      spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+      spinnerSpacer()
     })
-    .catch(e => spinnerFail(e, spinner))
+    .catch(e => {})
 }
 
 module.exports = {

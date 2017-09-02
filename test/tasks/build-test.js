@@ -17,7 +17,7 @@ import { checkParam } from './utils-test'
 
 chai.use(chaifs)
 
-describe.only('BUILD TASK', () => {
+describe('BUILD TASK', () => {
   const dir = path.join(__dirname, 'tmp')
   let outputPath = ''
   let tmpCleanup = () => {}
@@ -87,12 +87,12 @@ describe.only('BUILD TASK', () => {
   describe('buildCss', function() {
     this.timeout(6000000)
 
-    describe.only('params', () => {
+    describe('params', () => {
       checkParam('string', 'stylesheets', buildCss)([1])
       checkParam('string', 'outputPath', buildCss)([' ', 1])
       checkParam('string', 'publicPath', buildCss)([' ', ' ', 1])
-      checkParam('boolean', 'minify', buildCss)([' ', ' ', ' ', 'stub'])
-      // checkParam('string', 'cwd', buildCss)([' ', ' ', ' ', true, 1])
+      checkParam('boolean', 'minify', buildCss, false)([' ', ' ', ' ', ' '])
+      checkParam('string', 'cwd', buildCss, false)([' ', ' ', ' ', true, 1])
     })
 
     it('builds into the correct outputPath', done => {
@@ -168,6 +168,14 @@ describe.only('BUILD TASK', () => {
 
   describe('buildMain', function() {
     this.timeout(6000000)
+
+    describe('params', () => {
+      checkParam('string', 'main', buildMain)([1])
+      checkParam('string', 'outputPath', buildMain)([' ', 1])
+      checkParam('string', 'publicPath', buildMain)([' ', ' ', 1])
+      checkParam('boolean', 'minify', buildMain, false)([' ', ' ', ' ', ' '])
+      checkParam('string', 'cwd', buildMain, false)([' ', ' ', ' ', true, 1])
+    })
 
     it('builds into the correct outputPath', done => {
       buildMain(
