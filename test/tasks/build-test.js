@@ -13,10 +13,11 @@ import {
 } from '../../src/tasks/build'
 import { init } from '../../src/tasks/init'
 import { build as defaults } from '../../src/defaults'
+import { checkParam } from './utils-test'
 
 chai.use(chaifs)
 
-describe('BUILD TASK', () => {
+describe.only('BUILD TASK', () => {
   const dir = path.join(__dirname, 'tmp')
   let outputPath = ''
   let tmpCleanup = () => {}
@@ -85,6 +86,14 @@ describe('BUILD TASK', () => {
 
   describe('buildCss', function() {
     this.timeout(6000000)
+
+    describe.only('params', () => {
+      checkParam('string', 'stylesheets', buildCss)([1])
+      checkParam('string', 'outputPath', buildCss)([' ', 1])
+      checkParam('string', 'publicPath', buildCss)([' ', ' ', 1])
+      checkParam('boolean', 'minify', buildCss)([' ', ' ', ' ', 'stub'])
+      // checkParam('string', 'cwd', buildCss)([' ', ' ', ' ', true, 1])
+    })
 
     it('builds into the correct outputPath', done => {
       buildCss(

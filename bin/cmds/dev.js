@@ -15,6 +15,8 @@ module.exports = {
       argv.proxy = [argv.proxy]
     }
 
-    require('../../src/tasks').dev(argv)
+    require('../../src/tasks')
+      .dev(argv)
+      .catch(() => {})
   },
 }

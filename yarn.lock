@@ -1555,7 +1555,7 @@ duplexer2@0.0.2:
   dependencies:
     readable-stream "~1.1.9"
 
-duplexify@^3.5.0:
+duplexify@^3.1.2, duplexify@^3.5.0:
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/duplexify/-/duplexify-3.5.1.tgz#4e1516be68838bc90a49994f0b39a6e5960befcd"
   dependencies:
@@ -1622,7 +1622,7 @@ encodeurl@~1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/encodeurl/-/encodeurl-1.0.1.tgz#79e3d58655346909fe6f0f45a5de68103b294d20"
 
-end-of-stream@^1.0.0:
+end-of-stream@^1.0.0, end-of-stream@^1.1.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.0.tgz#7a90d833efda6cfa6eac0f4949dbb0fad3a63206"
   dependencies:
@@ -1869,7 +1869,14 @@ find-cache-dir@^0.1.1:
     mkdirp "^0.5.1"
     pkg-dir "^1.0.0"
 
-find-elm-dependencies@1.0.1, find-elm-dependencies@^1.0.1:
+find-elm-dependencies@1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/find-elm-dependencies/-/find-elm-dependencies-1.0.2.tgz#737adc0ce34dfde0c3bf85f568658555329e4953"
+  dependencies:
+    firstline "1.2.0"
+    lodash "4.14.2"
+
+find-elm-dependencies@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/find-elm-dependencies/-/find-elm-dependencies-1.0.1.tgz#d78c89ff39f23dc64e175871c8e856e635d48860"
   dependencies:
@@ -2259,12 +2266,13 @@ gulp-any-template@^0.3.1:
     underscore.template "^0.1.7"
     vinyl "^2.1.0"
 
-gulp-elm-basic@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/gulp-elm-basic/-/gulp-elm-basic-0.1.0.tgz#2cd27f99669bb912233c43a2e6d915e0eab4ea63"
+gulp-elm-basic@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/gulp-elm-basic/-/gulp-elm-basic-0.3.0.tgz#53ebf96fe6c7163e39ea705edf5073677b87cd4b"
   dependencies:
     node-elm-compiler "^4.3.2"
     through2 "^2.0.3"
+    tmp "^0.0.33"
     vinyl "^2.1.0"
 
 gulp-elm-css@^0.1.0:
@@ -3756,11 +3764,11 @@ node-elm-compiler@2.3.2:
     temp "^0.8.3"
 
 node-elm-compiler@^4.3.2:
-  version "4.3.2"
-  resolved "https://registry.yarnpkg.com/node-elm-compiler/-/node-elm-compiler-4.3.2.tgz#ff8deccb19c29c037af964f37e7c49b6efce1c5e"
+  version "4.3.3"
+  resolved "https://registry.yarnpkg.com/node-elm-compiler/-/node-elm-compiler-4.3.3.tgz#44e48e8679876bf2f5bd8820dd15734ff3a28caf"
   dependencies:
     cross-spawn "4.0.0"
-    find-elm-dependencies "1.0.1"
+    find-elm-dependencies "1.0.2"
     lodash "4.14.2"
     temp "^0.8.3"
 
@@ -3954,7 +3962,7 @@ on-finished@~2.3.0:
   dependencies:
     ee-first "1.1.1"
 
-once@^1.3.0, once@^1.3.3, once@^1.4.0:
+once@^1.3.0, once@^1.3.1, once@^1.3.3, once@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/once/-/once-1.4.0.tgz#583b1aa775961d4b113ac17d9c50baef9dd76bd1"
   dependencies:
@@ -4609,6 +4617,21 @@ pug@^2.0.0-rc.3:
     pug-parser "^3.0.1"
     pug-runtime "^2.0.3"
     pug-strip-comments "^1.0.2"
+
+pump@^1.0.0:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/pump/-/pump-1.0.2.tgz#3b3ee6512f94f0e575538c17995f9f16990a5d51"
+  dependencies:
+    end-of-stream "^1.1.0"
+    once "^1.3.1"
+
+pumpify@^1.3.5:
+  version "1.3.5"
+  resolved "https://registry.yarnpkg.com/pumpify/-/pumpify-1.3.5.tgz#1b671c619940abcaeac0ad0e3a3c164be760993b"
+  dependencies:
+    duplexify "^3.1.2"
+    inherits "^2.0.1"
+    pump "^1.0.0"
 
 punycode@^1.4.1:
   version "1.4.1"
