@@ -1,6 +1,5 @@
 const anyTemplate = require('gulp-any-template')
 const browserSync = require('browser-sync')
-const chalk = require('chalk')
 const check = require('check-types')
 const elmCss = require('elm-css')
 const execa = require('execa')
@@ -14,18 +13,7 @@ const proxy = require('http-proxy-middleware')
 const tmp = require('tmp')
 
 const defaults = require('../defaults').dev
-const addTask = require('./').addTask
-
-const spacer = () => console.info(`${chalk.grey('-'.repeat(50))}`)
-
-const invalidParam = (type, name) =>
-  `parameter \`${name}\` expected \`${type}\``
-
-const validateParam = (type, name, value, required = true) => {
-  const checker = required ? check.assert : check.assert.maybe
-
-  return checker[type](value, invalidParam(type, name))
-}
+const { installPackages, spacer, validateParam } = require('./utils')
 
 const parseProxies = (delimiter, proxies) => {
   validateParam('array', 'proxies', proxies)
@@ -60,9 +48,6 @@ const getDepTree = entry => {
   return findAllDependencies(entry).then(deps => [entry, ...deps])
 }
 
-const defaultHtmlCompiler = () =>
-  Promise.resolve('incompatible html template...')
-
 const loadHtmlCompiler = file => {
   validateParam('string', 'file', file)
 
@@ -83,14 +68,26 @@ const loadHtmlCompiler = file => {
   })
 }
 
-const installPackages = (cwd = process.cwd()) => {
-  validateParam('string', 'cwd', cwd)
-
-  return new Promise((resolve, reject) => {
-    execa('elm-package', ['install', '--yes'], { cwd, stdio: 'inherit' })
-      .then(() => resolve())
-      .catch(e => reject(e))
-  })
+const htmlCompiler = html => (request, response, next) => {
+  if (path.extname(request.url) === '.elm') {
+    loadHtmlCompiler(html)
+      .then(compiler =>
+        compiler({
+          environment: 'development',
+          request,
+        })
+      )
+      .then(compiledHtml => {
+        response.write(compiledHtml)
+        response.end()
+      })
+      .catch(e => {
+        response.write(e)
+        response.end()
+      })
+  } else {
+    next()
+  }
 }
 
 const startReactor = (
@@ -133,10 +130,10 @@ const startReactor = (
       exit(1)
     })
 
-    reactor.stderr.on('data', d => {
+    reactor.stderr.on('data', data => {
       reactor.stderr.on('data', () => {})
-      if (d.toString().includes('Address already in use')) {
-        reject({ close })
+      if (data.toString().includes('Address already in use')) {
+        reject({ close, message: data.toString() })
       } else {
         resolve({ close })
       }
@@ -182,27 +179,7 @@ const startBrowserSync = (
           ...customProxies,
           nocache(),
           proxy('/_compile', { target: reactor, logLevel }),
-          (request, response, next) => {
-            if (path.extname(request.url) === '.elm') {
-              loadHtmlCompiler(html)
-                .then(compiler =>
-                  compiler({
-                    environment: 'development',
-                    request,
-                  })
-                )
-                .then(compiledHtml => {
-                  response.write(compiledHtml)
-                  response.end()
-                })
-                .catch(e => {
-                  response.write(e)
-                  response.end()
-                })
-            } else {
-              next()
-            }
-          },
+          htmlCompiler(html),
           proxy('/', { target: reactor, logLevel }),
         ],
       },
@@ -290,38 +267,41 @@ const watch = (bs, main, stylesheets, dir) => {
 const dev = options => {
   const opts = Object.assign({}, defaults, options)
 
-  // tmpDir for css output
+  // tmp dir for generated files
   const tmpDir = tmp.dirSync({ unsafeCleanup: true })
 
   // CLI spinner
-  const steps = [
-    'installing elm dependencies into /elm-stuff',
-    'starting elm-reactor',
-    'starting elm-factory',
-    'compiling css',
-  ]
-
-  const spinner = ora({ spinner: 'bouncingBar' })
-  spinner.text = steps[0]
+  const spinner = ora()
+  const spinnerSpacer = () =>
+    spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+  spinner.text = 'elm-package install is starting`'
+  spinner.start()
 
   // the cli task
   return (
     // first install packages using elm-package
     installPackages()
+      .catch(e => {
+        spinnerSpacer()
+        spinner.fail('elm-package install has failed')
+        spinnerSpacer()
+        throw e
+      })
       // then start elm-reactor
-      .then(() => {
-        spinner.succeed(steps[0])
-        spacer()
-        spinner.text = steps[1]
+      .then(output => {
+        spinnerSpacer()
+        spinner.succeed('elm-package install has completed')
+        spinnerSpacer()
+        spinner.text = 'elm-reactor is starting'
         spinner.start()
 
         return startReactor(opts.reactorHost, opts.reactorPort)
       })
       // then start browser-sync
       .then(() => {
-        spinner.succeed(steps[1])
-        spacer()
-        spinner.text = steps[2]
+        spinner.succeed('elm-reactor is now started')
+        spinnerSpacer()
+        spinner.text = 'browser-sync is starting'
         spinner.start()
 
         return startBrowserSync(
@@ -335,9 +315,9 @@ const dev = options => {
         )
       })
       .then(({ bs, port }) => {
-        spinner.succeed(steps[2])
-        spacer()
-        spinner.text = steps[3]
+        spinner.succeed('browser-sync is now started')
+        spinnerSpacer()
+        spinner.text = 'css is now compiling'
         spinner.start()
 
         return (
@@ -345,32 +325,30 @@ const dev = options => {
             // then we want to build the css (before we start watching)
             // finally we start watching
             .then(() => {
-              spinner.succeed(steps[3])
-              spacer()
-              spinner.succeed(`ready to go! http://${opts.host}:${port}`)
+              spinnerSpacer()
+              spinner.succeed('css has been compiled')
+              spinnerSpacer()
+              spinner.succeed(
+                `elm-factory is ready on http://${opts.host}:${port}`
+              )
+              spinnerSpacer()
 
               return watch(bs, opts.main, opts.stylesheets, tmpDir.name)
             })
         )
       })
       .catch(e => {
-        spinner.fail()
-        // console.error(e)
-        throw new Error(e)
+        spnner.fail()
+        throw e
       })
   )
 }
 
 module.exports = {
-  spacer,
-  invalidParam,
-  validateParam,
   parseProxies,
   createProxies,
   getDepTree,
-  defaultHtmlCompiler,
   loadHtmlCompiler,
-  installPackages,
   startReactor,
   startBrowserSync,
   createWatcher,

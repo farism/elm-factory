@@ -24,7 +24,9 @@ const dev = {
   proxyRewrite: true,
 }
 
-const init = {}
+const init = {
+  force: false,
+}
 
 module.exports = {
   build,

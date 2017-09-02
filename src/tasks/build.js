@@ -6,15 +6,18 @@ const elmExtractAssets = require('gulp-elm-extract-assets')
 const flatten = require('gulp-flatten')
 const gulp = require('gulp')
 const gulpif = require('gulp-if')
+const ora = require('ora')
 const path = require('path')
 const postcss = require('gulp-postcss')
 const postcssUrl = require('postcss-url')
+const pumpify = require('pumpify')
 const rev = require('gulp-rev-all')
 const uglify = require('gulp-uglify')
 const urljoin = require('url-join')
 const xxh = require('xxhashjs')
 
 const defaults = require('../defaults').build
+const { installPackages, spacer, validateParam } = require('./utils')
 
 const getHash = contents =>
   xxh
@@ -38,40 +41,44 @@ const buildCss = (
   publicPath,
   minify = true,
   cwd = process.cwd()
-) =>
-  new Promise((resolve, reject) => {
-    gulp
-      .src(stylesheets, { base: cwd })
-      .pipe(elmCss({ cwd }))
-      .pipe(
-        postcss([
-          postcssUrl({
-            url: 'copy',
-            basePath: process.cwd(),
-            assetsPath: outputPath,
-            useHash: true,
-            hashOptions: {
-              method: getHash,
-            },
-          }),
-          postcssUrl({
-            url: asset => getPublicPath(publicPath, asset.url),
-          }),
-          minify ? cssnano() : contents => contents,
-        ])
-      )
-      .pipe(
-        rev.revision({
-          fileNameManifest: 'css-manifest.json',
-          transformFilename: getTransformedFilename,
-        })
-      )
-      .pipe(gulp.dest(outputPath))
-      .pipe(rev.manifestFile())
-      .pipe(gulp.dest(outputPath))
+) => {
+  validateParam('string', 'stylesheets', stylesheets)
+  validateParam('string', 'outputPath', outputPath)
+  validateParam('string', 'publicPath', publicPath)
+  validateParam('boolean', 'minify', minify, false)
+  validateParam('string', 'cwd', cwd, false)
+
+  return new Promise((resolve, reject) => {
+    pumpify(
+      gulp.src(stylesheets, { base: cwd }),
+      elmCss({ cwd }),
+      postcss([
+        postcssUrl({
+          url: 'copy',
+          basePath: process.cwd(),
+          assetsPath: outputPath,
+          useHash: true,
+          hashOptions: {
+            method: getHash,
+          },
+        }),
+        postcssUrl({
+          url: asset => getPublicPath(publicPath, asset.url),
+        }),
+        minify ? cssnano() : contents => contents,
+      ]),
+      rev.revision({
+        fileNameManifest: 'css-manifest.json',
+        transformFilename: getTransformedFilename,
+      }),
+      gulp.dest(outputPath),
+      rev.manifestFile(),
+      gulp.dest(outputPath)
+    )
       .on('error', reject)
       .on('finish', resolve)
   })
+}
 
 const buildMain = (
   main,
@@ -79,50 +86,111 @@ const buildMain = (
   publicPath,
   minify = true,
   cwd = process.cwd()
-) =>
-  new Promise((resolve, reject) => {
-    gulp
-      .src(main)
-      .pipe(elm({ cwd }))
-      .pipe(elmExtractAssets({ cwd, tag: 'AssetUrl' }))
-      .pipe(
-        rev.revision({
-          dontUpdateReference: [path.basename(main).replace('.elm', '.js')],
-          fileNameManifest: 'js-manifest.json',
-          replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
-            const filename = newReference.split('/').pop()
-            const newPath = getPublicPath(publicPath, filename)
+) => {
+  validateParam('string', 'main', main)
+  validateParam('string', 'outputPath', outputPath)
+  validateParam('string', 'publicPath', publicPath)
+  validateParam('boolean', 'minify', minify, false)
+  validateParam('string', 'cwd', cwd, false)
 
-            fragment.contents = fragment.contents.replace(
-              replaceRegExp,
-              `$1${newPath}$3$4`
-            )
-          },
-          transformFilename: getTransformedFilename,
-        })
-      )
-      .pipe(flatten())
-      .pipe(
-        gulpif(file => minify && path.extname(file.path) === '.js', uglify())
-      )
-      .pipe(gulp.dest(outputPath))
-      .pipe(rev.manifestFile())
-      .pipe(gulp.dest(outputPath))
+  return new Promise((resolve, reject) => {
+    pumpify(
+      gulp.src(main),
+      elm({ cwd }),
+      elmExtractAssets({ cwd, tag: 'AssetUrl' }),
+      rev.revision({
+        dontUpdateReference: [path.basename(main).replace('.elm', '.js')],
+        fileNameManifest: 'js-manifest.json',
+        replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
+          const filename = newReference.split('/').pop()
+          const newPath = getPublicPath(publicPath, filename)
+
+          fragment.contents = fragment.contents.replace(
+            replaceRegExp,
+            `$1${newPath}$3$4`
+          )
+        },
+        transformFilename: getTransformedFilename,
+      }),
+      flatten(),
+      gulpif(file => minify && path.extname(file.path) === '.js', uglify()),
+      gulp.dest(outputPath),
+      rev.manifestFile(),
+      gulp.dest(outputPath)
+    )
       .on('error', reject)
       .on('finish', resolve)
   })
+}
 
 const build = options => {
   const opts = Object.assign({}, defaults, options)
 
+  // CLI spinner
+  const spinner = ora()
+  const spinnerSpacer = () =>
+    spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+  spinner.text = 'old builds are now being cleaned'
+  spinner.start()
+
   return del(opts.outputPath)
-    .then(() =>
-      buildCss(opts.stylesheets, opts.outputPath, opts.publicPath, opts.cwd)
-    )
-    .then(() =>
-      buildMain(opts.main, opts.outputPath, opts.publicPath, opts.cwd)
-    )
-    .catch(console.error)
+    .then(() => {
+      spinnerSpacer()
+      spinner.succeed('old builds cleaned')
+      spinnerSpacer()
+      spinner.text = 'elm-package install is starting'
+      spinner.start()
+
+      installPackages().catch(e => {
+        spinnerSpacer()
+        spinner.fail('elm-package install has failed')
+        spinnerSpacer()
+        throw e
+      })
+    })
+    .then(() => {
+      spinner.succeed('elm-package install has completed')
+      spinnerSpacer()
+      spinner.text = 'css is now compiling'
+      spinner.start()
+
+      return buildCss(
+        opts.stylesheets,
+        opts.outputPath,
+        opts.publicPath,
+        opts.cwd
+      ).catch(e => {
+        spinnerSpacer()
+        spinner.fail('css compilation has failed')
+        spinnerSpacer()
+        throw e
+      })
+    })
+    .then(() => {
+      spinnerSpacer()
+      spinner.succeed('css has been compiled')
+      spinnerSpacer()
+      spinner.text = 'main application is now compiling'
+      spinner.start()
+
+      return buildMain(
+        opts.main,
+        opts.outputPath,
+        opts.publicPath,
+        opts.cwd
+      ).catch(e => {
+        spinnerSpacer()
+        spinner.fail('main application compilation has failed')
+        spinnerSpacer()
+        throw e
+      })
+    })
+    .then(() => {
+      spinnerSpacer()
+      spinner.succeed('main application has been compiled')
+      spinnerSpacer()
+    })
+    .catch(e => {})
 }
 
 module.exports = {

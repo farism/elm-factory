@@ -8,5 +8,10 @@ module.exports = {
     dir: {
       description: 'the project directory',
     },
+    f: {
+      alias: 'force',
+      description: 'ignore existing files',
+      default: defaults.force,
+    },
   },
 }

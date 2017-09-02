@@ -13,6 +13,7 @@ import {
 } from '../../src/tasks/build'
 import { init } from '../../src/tasks/init'
 import { build as defaults } from '../../src/defaults'
+import { checkParam } from './utils-test'
 
 chai.use(chaifs)
 
@@ -22,7 +23,7 @@ describe('BUILD TASK', () => {
   let tmpCleanup = () => {}
 
   before(done => {
-    init({ dir }).then(() => {
+    init({ dir, force: true }).then(() => {
       process.chdir(dir)
       done()
     })
@@ -39,52 +40,16 @@ describe('BUILD TASK', () => {
     tmpCleanup()
   })
 
-  describe('helpers', () => {
-    describe('getHash', () => {
-      it('given a buffer, generates an xxh hash', () => {
-        expect(getHash(Buffer('elm-factory'))).to.eql('f1526942')
-      })
-    })
-    describe('getPublicPath', () => {
-      it('given a publicPath and a filename, generates the correct path', () => {
-        expect(getPublicPath('a', 'c.png')).to.eql('/a/c.png')
-        expect(getPublicPath('/a/', 'c.png')).to.eql('/a/c.png')
-        expect(getPublicPath('a/', '/c.png')).to.eql('/a/c.png')
-        expect(getPublicPath('/a', 'b/c.png')).to.eql('/a/c.png')
-        expect(getPublicPath('/a/', 'b/c.png')).to.eql('/a/c.png')
-        expect(getPublicPath('a/', '/b/c.png')).to.eql('/a/c.png')
-        expect(getPublicPath('/a/b', 'b/c/d.png')).to.eql('/a/b/d.png')
-        expect(getPublicPath('/a/b', 'b/c/d.png')).to.eql('/a/b/d.png')
-        expect(getPublicPath('a/b/', '/b/c/d.png')).to.eql('/a/b/d.png')
-        expect(getPublicPath('http://foo.bar/', '/a.png')).to.eql(
-          'http://foo.bar/a.png'
-        )
-        expect(getPublicPath('http://foo.bar/', 'a/b.png')).to.eql(
-          'http://foo.bar/b.png'
-        )
-      })
-    })
-    describe('getTransformedFilename', () => {
-      it('given a vinyl file, generates a hashed filename', () => {
-        expect(
-          getTransformedFilename({
-            path: 'a.png',
-            contents: Buffer('a'),
-          })
-        ).to.eql('550d7456.png')
-
-        expect(
-          getTransformedFilename({
-            path: 'b.jpg',
-            contents: Buffer('b'),
-          })
-        ).to.eql('a20cadbf.jpg')
-      })
-    })
-  })
-
   describe('buildCss', function() {
     this.timeout(6000000)
+
+    describe('params', () => {
+      checkParam('string', 'stylesheets', buildCss)([1])
+      checkParam('string', 'outputPath', buildCss)([' ', 1])
+      checkParam('string', 'publicPath', buildCss)([' ', ' ', 1])
+      checkParam('boolean', 'minify', buildCss, false)([' ', ' ', ' ', ' '])
+      checkParam('string', 'cwd', buildCss, false)([' ', ' ', ' ', true, 1])
+    })
 
     it('builds into the correct outputPath', done => {
       buildCss(
@@ -159,6 +124,14 @@ describe('BUILD TASK', () => {
 
   describe('buildMain', function() {
     this.timeout(6000000)
+
+    describe('params', () => {
+      checkParam('string', 'main', buildMain)([1])
+      checkParam('string', 'outputPath', buildMain)([' ', 1])
+      checkParam('string', 'publicPath', buildMain)([' ', ' ', 1])
+      checkParam('boolean', 'minify', buildMain, false)([' ', ' ', ' ', ' '])
+      checkParam('string', 'cwd', buildMain, false)([' ', ' ', ' ', true, 1])
+    })
 
     it('builds into the correct outputPath', done => {
       buildMain(
