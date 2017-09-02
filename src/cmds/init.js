@@ -10,7 +10,7 @@ module.exports = {
     },
     f: {
       alias: 'force',
-      description: 'force initialization by ignoring existing files',
+      description: 'ignore existing files',
       default: defaults.force,
     },
   },

@@ -8,7 +8,7 @@ import { checkParam } from './utils-test'
 
 chai.use(chaifs)
 
-describe.only('INIT TASK', () => {
+describe('INIT TASK', () => {
   let dir
 
   beforeEach(() => {
