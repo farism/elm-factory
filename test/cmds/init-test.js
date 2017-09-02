@@ -9,6 +9,11 @@ describe('$ elm-factory init', () => {
       dir: {
         description: 'the project directory',
       },
+      f: {
+        alias: 'force',
+        description: 'force initialization by ignoring existing files',
+        default: defaults.force,
+      },
     })
   })
 })

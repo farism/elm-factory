@@ -28,6 +28,8 @@ describe('defaults', () => {
   })
 
   it('should have the correct init defaults', () => {
-    expect(init).to.eql({})
+    expect(init).to.eql({
+      force: false
+    })
   })
 })
