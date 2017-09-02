@@ -83,5 +83,7 @@ const init = (options = {}) => {
 }
 
 module.exports = {
+  checkIsEmpty,
+  copy,
   init,
 }
