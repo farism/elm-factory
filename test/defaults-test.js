@@ -15,7 +15,6 @@ describe('defaults', () => {
 
   it('should have the correct dev defaults', () => {
     expect(dev).to.eql({
-      main: './src/Main.elm',
       stylesheets: './src/Stylesheets.elm',
       html: './index.ejs',
       host: '127.0.0.1',

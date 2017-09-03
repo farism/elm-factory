@@ -3,6 +3,7 @@ import chaifs from 'chai-fs'
 import chaiAsPromised from 'chai-as-promised'
 import fs from 'fs'
 import http from 'http'
+import mute from 'mute'
 import path from 'path'
 import portscanner from 'portscanner'
 import request from 'request-promise-native'
@@ -17,7 +18,6 @@ import {
   startReactor,
   startBrowserSync,
   createWatcher,
-  watch,
   dev,
 } from '../../src/tasks/dev'
 import { invalidParam } from '../../src/tasks/utils'
@@ -350,7 +350,8 @@ describe('DEV TASK', function() {
     })
   })
 
-  describe('watch mode', () => {
+  describe('createWatcher', () => {
+    const fn = () => {}
     let bs
     let spyWatch
     let spyOn
@@ -363,83 +364,47 @@ describe('DEV TASK', function() {
       bs = { watch: spyWatch }
     })
 
-    describe('createWatcher', () => {
-      const fn = () => {}
-
-      describe('params', () => {
-        checkParam('function', 'onChange', createWatcher)([' '])
-        checkParam('function', 'onDeps', createWatcher)([fn, ' '])
-        checkParam('function', 'filter', createWatcher)([fn, fn, ' '])
-        checkParam('object', 'bs', createWatcher)([fn, fn, fn, ' '])
-        checkParam('string', 'entry', createWatcher)([fn, fn, fn, {}, 1])
-      })
-
-      it('returns a promise', () => {
-        expect(createWatcher(fn, fn, fn, bs, ' ').catch(() => {})).to.be.a(
-          'promise'
-        )
-      })
-      it('fails on bad entry', () => {
-        return expect(createWatcher(fn, fn, fn, bs, ' ')).to.eventually.be
-          .rejected
-      })
-      it('resolves on valid entry', () => {
-        return expect(createWatcher(fn, fn, fn, bs, defaults.main))
-          .to.eventually.be.an('object')
-          .with.property('close')
-      })
-      it('resolves on valid entry', () => {
-        return expect(createWatcher(fn, fn, fn, bs, defaults.stylesheets))
-          .to.eventually.be.an('object')
-          .with.property('close')
-      })
-      it('bs.watch is called', done => {
-        createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
-          expect(spyWatch.called).to.eql(true)
-          done()
-        })
-      })
-      it('watcher.on is called', done => {
-        createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
-          expect(spyOn.called).to.eql(true)
-          done()
-        })
-      })
+    describe('params', () => {
+      checkParam('function', 'onChange', createWatcher)([' '])
+      checkParam('function', 'onDeps', createWatcher)([fn, ' '])
+      checkParam('function', 'filter', createWatcher)([fn, fn, ' '])
+      checkParam('object', 'bs', createWatcher)([fn, fn, fn, ' '])
+      checkParam('string', 'entry', createWatcher)([fn, fn, fn, {}, 1])
     })
 
-    describe('watch', () => {
-      describe('params', () => {
-        checkParam('object', 'bs', watch)([' '])
-        checkParam('string', 'main', watch)([{}, 1])
-        checkParam('string', 'stylesheets', watch)([{}, ' ', 1])
-        checkParam('string', 'dir', watch)([{}, ' ', ' ', 1])
+    it('returns a promise', () => {
+      expect(createWatcher(fn, fn, fn, bs, ' ').catch(() => {})).to.be.a(
+        'promise'
+      )
+    })
+    it('fails on bad entry', () => {
+      return expect(createWatcher(fn, fn, fn, bs, ' ')).to.eventually.be
+        .rejected
+    })
+    it('resolves on valid entry', () => {
+      return expect(createWatcher(fn, fn, fn, bs, defaults.stylesheets))
+        .to.eventually.be.an('object')
+        .with.property('close')
+    })
+    it('bs.watch is called', done => {
+      createWatcher(fn, fn, fn, bs, defaults.stylesheets).then(() => {
+        expect(spyWatch.called).to.eql(true)
+        done()
       })
-
-      it('returns a promise', () => {
-        expect(watch({}, ' ', ' ', ' ').catch(() => {})).to.be.a('promise')
-      })
-      it('rejects invalid entry paths', () => {
-        return expect(watch({}, ' ', ' ', ' ')).to.eventually.be.rejected
-      })
-      it('resolves valid entry paths with two watchers', () => {
-        const promise = watch(bs, defaults.main, defaults.stylesheets, ' ')
-
-        return Promise.all([
-          promise.should.eventually.be.fulfilled,
-          promise.should.eventually.have.a.nested.property('[0].close'),
-          promise.should.eventually.have.a.nested.property('[1].close'),
-        ])
+    })
+    it('watcher.on is called', done => {
+      createWatcher(fn, fn, fn, bs, defaults.stylesheets).then(() => {
+        expect(spyOn.called).to.eql(true)
+        done()
       })
     })
   })
 
   describe('dev', () => {
     let promise
-
     before(() => {
       promise = dev(defaults)
     })
-
     it('fails', () => {
       return expect(dev({ reactorPort: 'string' })).to.eventually.be.rejected
     })

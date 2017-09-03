@@ -6,7 +6,6 @@ const elmExtractAssets = require('gulp-elm-extract-assets')
 const flatten = require('gulp-flatten')
 const gulp = require('gulp')
 const gulpif = require('gulp-if')
-const ora = require('ora')
 const path = require('path')
 const postcss = require('gulp-postcss')
 const postcssUrl = require('postcss-url')
@@ -17,7 +16,10 @@ const urljoin = require('url-join')
 const xxh = require('xxhashjs')
 
 const defaults = require('../defaults').build
-const { installPackages, spacer, validateParam } = require('./utils')
+const { initializeSpinner, installPackages, validateParam } = require('./utils')
+
+// global reference to CLI spinner
+const spinner = initializeSpinner()
 
 const getHash = contents =>
   xxh
@@ -127,32 +129,20 @@ const build = options => {
   const opts = Object.assign({}, defaults, options)
 
   // CLI spinner
-  const spinner = ora()
-  const spinnerSpacer = () =>
-    spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
-  spinner.text = 'old builds are now being cleaned'
-  spinner.start()
+  spinner.next('old builds are being cleaned')
 
   return del(opts.outputPath)
     .then(() => {
-      spinnerSpacer()
       spinner.succeed('old builds cleaned')
-      spinnerSpacer()
-      spinner.text = 'elm-package install is starting'
-      spinner.start()
+      spinner.next('elm-package install is starting')
 
-      installPackages().catch(e => {
-        spinnerSpacer()
-        spinner.fail('elm-package install has failed')
-        spinnerSpacer()
-        throw e
+      return installPackages().catch(e => {
+        throw 'elm-package install has failed'
       })
     })
     .then(() => {
       spinner.succeed('elm-package install has completed')
-      spinnerSpacer()
-      spinner.text = 'css is now compiling'
-      spinner.start()
+      spinner.next('css is now compiling')
 
       return buildCss(
         opts.stylesheets,
@@ -160,18 +150,12 @@ const build = options => {
         opts.publicPath,
         opts.cwd
       ).catch(e => {
-        spinnerSpacer()
-        spinner.fail('css compilation has failed')
-        spinnerSpacer()
-        throw e
+        throw 'stylesheets failed to compile'
       })
     })
     .then(() => {
-      spinnerSpacer()
       spinner.succeed('css has been compiled')
-      spinnerSpacer()
-      spinner.text = 'main application is now compiling'
-      spinner.start()
+      spinner.next('main application is now compiling')
 
       return buildMain(
         opts.main,
@@ -179,18 +163,19 @@ const build = options => {
         opts.publicPath,
         opts.cwd
       ).catch(e => {
-        spinnerSpacer()
-        spinner.fail('main application compilation has failed')
-        spinnerSpacer()
-        throw e
+        throw 'main application failed to compile'
       })
     })
     .then(() => {
-      spinnerSpacer()
+      spinner.space()
       spinner.succeed('main application has been compiled')
-      spinnerSpacer()
+      spinner.space()
     })
-    .catch(e => {})
+    .catch(e => {
+      spinner.space()
+      spinner.fail(e)
+      spinner.space()
+    })
 }
 
 module.exports = {

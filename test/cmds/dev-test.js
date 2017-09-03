@@ -6,11 +6,6 @@ import { dev } from '../../src/cmds'
 describe('$ elm-factory dev', () => {
   it('should expose the correct CLI options', () => {
     expect(dev.options).to.eql({
-      m: {
-        alias: 'main',
-        description: 'main entry file',
-        default: defaults.main,
-      },
       s: {
         alias: 'stylesheets',
         description: 'stylesheets entry file',
@@ -48,8 +43,8 @@ describe('$ elm-factory dev', () => {
       },
       'proxy-rewrite': {
         description: 'rewrite proxy paths',
-        default: defaults.proxyRewrite
-      }
+        default: defaults.proxyRewrite,
+      },
     })
   })
 })

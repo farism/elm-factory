@@ -2,12 +2,14 @@ const anyTemplate = require('gulp-any-template')
 const filter = require('gulp-filter')
 const fs = require('fs')
 const gulp = require('gulp')
-const ora = require('ora')
 const path = require('path')
 const pumpify = require('pumpify')
 const rename = require('gulp-rename')
 
-const { spacer, validateParam } = require('./utils')
+const { initializeSpinner, validateParam } = require('./utils')
+
+// global reference to CLI spinner
+const spinner = initializeSpinner()
 
 const isEmpty = dir => {
   validateParam('string', 'dir', dir)
@@ -46,36 +48,25 @@ const copy = dir => {
 const init = (options = {}) => {
   validateParam('object', 'options', options)
 
-  // CLI spinner
-  const spinner = ora()
-  const spinnerSpacer = () =>
-    spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
-  const spinnerFail = text => {}
-  spinner.text = 'initializing your project'
-  spinner.start()
+  spinner.next('initializing your project')
 
   return isEmpty(options.dir)
     .then(empty => {
       if (options.force || empty) {
-        return copy(options.dir).catch(e => {
-          spinnerSpacer()
-          spinner.fail(e)
-          spinnerSpacer()
-          throw e
-        })
+        return copy(options.dir)
       } else {
-        spinnerSpacer()
-        spinner.fail('directory already exists and has children')
-        spinnerSpacer()
-        throw new Error()
+        throw 'directory already exists and has children'
       }
     })
     .then(() => {
-      spinnerSpacer()
-      spinner.succeed(`project created!`)
-      spinnerSpacer()
+      spinner.succeed('project created!')
+      spinner.space()
       spinner.stopAndPersist({ symbol: '$ ', text: `cd ${options.dir}` })
-      spinnerSpacer()
+      spinner.space()
+    })
+    .catch(e => {
+      spinner.fail(e, false)
+      spinner.space()
     })
 }
 

@@ -8,9 +8,11 @@ import sinon from 'sinon'
 import tmp from 'tmp'
 
 import {
+  spacer,
   invalidParam,
   validateParam,
   installPackages,
+  initializeSpinner,
 } from '../../src/tasks/utils'
 import { init } from '../../src/tasks/init'
 
@@ -97,6 +99,72 @@ describe('UTILS', function() {
           tmpDir.removeCallback()
           done()
         })
+    })
+  })
+
+  describe('initializeSpinner', () => {
+    let spinner
+    let space
+    let next
+    let succeed
+    let fail
+    let stopAndPersist
+    let start
+
+    beforeEach(() => {
+      succeed = sinon.spy()
+      fail = sinon.spy()
+      stopAndPersist = sinon.spy()
+      start = sinon.spy()
+      spinner = initializeSpinner({ succeed, fail, stopAndPersist, start })
+      space = sinon.spy(spinner.space)
+      next = sinon.spy(spinner.next)
+    })
+
+    it('returns an object', () => {
+      expect(spinner)
+        .to.be.an('object')
+        .with.all.keys(
+          'space',
+          'inner',
+          'succeed',
+          'next',
+          'fail',
+          'stopAndPersist'
+        )
+    })
+    it('#space() inner stopAndPersist a spacer', () => {
+      spinner.space()
+      expect(stopAndPersist.calledWith({ symbol: spacer(), text: ' ' })).to.eql(
+        true
+      )
+    })
+    it('#succeed() inserts a spacer and calls inner succeed', () => {
+      spinner.succeed('foo')
+      expect(succeed.callCount).to.eql(1)
+    })
+    it('#next() inserts a spacer, sets text, and restarts spinner', () => {
+      spinner.next('bar')
+      expect(stopAndPersist.callCount).to.eql(1)
+      expect(spinner.inner.text).to.eql('bar')
+      expect(spinner.inner.start.callCount).to.eql(1)
+    })
+    it('#fail() handles an object or string', () => {
+      expect(() => spinner.fail('foo')).to.throw()
+      expect(fail.calledWith('foo')).to.eql(true)
+      expect(() => spinner.fail({ message: 'bar' })).to.throw()
+      expect(fail.calledWith('bar')).to.eql(true)
+      expect(() => spinner.fail({ message: 'ping' })).to.throw()
+      expect(fail.calledWith('ping'))
+    })
+    it('#fail() inserts a spacer and calls inner fail', () => {})
+    it('#fail() rethrows by default', () => {
+      expect(() => spinner.fail()).to.throw()
+      expect(() => spinner.fail('', false)).to.not.throw()
+    })
+    it('#stopAndPersist() calls inner stopAndPersist', () => {
+      spinner.stopAndPersist()
+      expect(stopAndPersist.callCount).to.eql(1)
     })
   })
 })

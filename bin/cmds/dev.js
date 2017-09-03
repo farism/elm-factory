@@ -14,9 +14,8 @@ module.exports = {
     if (typeof argv.proxy === 'string') {
       argv.proxy = [argv.proxy]
     }
-
     require('../../src/tasks')
       .dev(argv)
-      .catch(() => {})
+      .catch(e => {})
   },
 }

@@ -13,7 +13,6 @@ const build = {
 }
 
 const dev = {
-  main,
   stylesheets,
   html,
   host,
