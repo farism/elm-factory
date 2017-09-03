@@ -3,6 +3,7 @@ import chaifs from 'chai-fs'
 import chaiAsPromised from 'chai-as-promised'
 import fs from 'fs'
 import http from 'http'
+import mute from 'mute'
 import path from 'path'
 import portscanner from 'portscanner'
 import request from 'request-promise-native'
@@ -57,7 +58,7 @@ const assertIncludes = (str = '', response = '') =>
     `response is missing string '${str}'`
   )
 
-describe.only('DEV TASK', function() {
+describe('DEV TASK', function() {
   before(done => {
     init({ dir, force: true }).then(() => {
       process.chdir(dir)
@@ -381,23 +382,18 @@ describe.only('DEV TASK', function() {
         .rejected
     })
     it('resolves on valid entry', () => {
-      return expect(createWatcher(fn, fn, fn, bs, defaults.main))
-        .to.eventually.be.an('object')
-        .with.property('close')
-    })
-    it('resolves on valid entry', () => {
       return expect(createWatcher(fn, fn, fn, bs, defaults.stylesheets))
         .to.eventually.be.an('object')
         .with.property('close')
     })
     it('bs.watch is called', done => {
-      createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
+      createWatcher(fn, fn, fn, bs, defaults.stylesheets).then(() => {
         expect(spyWatch.called).to.eql(true)
         done()
       })
     })
     it('watcher.on is called', done => {
-      createWatcher(fn, fn, fn, bs, defaults.main).then(() => {
+      createWatcher(fn, fn, fn, bs, defaults.stylesheets).then(() => {
         expect(spyOn.called).to.eql(true)
         done()
       })
@@ -406,11 +402,9 @@ describe.only('DEV TASK', function() {
 
   describe('dev', () => {
     let promise
-
     before(() => {
       promise = dev(defaults)
     })
-
     it('fails', () => {
       return expect(dev({ reactorPort: 'string' })).to.eventually.be.rejected
     })

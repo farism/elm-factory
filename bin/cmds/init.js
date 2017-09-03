@@ -13,6 +13,6 @@ module.exports = {
   handler: function(argv) {
     require('../../src/tasks')
       .init(argv)
-      .catch(() => {})
+      .catch(e => {})
   },
 }

@@ -70,6 +70,7 @@
     "husky": "^0.14.3",
     "lint-staged": "^4.0.4",
     "mocha": "^3.5.0",
+    "mute": "^2.0.6",
     "nyc": "^11.1.0",
     "portscanner": "^2.1.1",
     "request-promise-native": "^1.0.4",

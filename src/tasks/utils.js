@@ -45,26 +45,27 @@ const installPackages = (cwd = process.cwd()) => {
   })
 }
 
-const initializeSpinner = () => {
-  const spinner = ora()
-  const space = () => spinner.stopAndPersist({ symbol: spacer(), text: ' ' })
+const initializeSpinner = spinner => {
+  const inner = spinner || ora()
 
   return {
-    space,
+    inner,
+    space: () => inner.stopAndPersist({ symbol: spacer(), text: ' ' }),
     next: text => {
-      space()
-      spinner.text = text
-      spinner.start()
+      inner.stopAndPersist({ symbol: spacer(), text: ' ' })
+      inner.text = text
+      inner.start()
     },
     succeed: text => {
-      spinner.succeed(text)
+      inner.succeed(text)
     },
     fail: (e, rethrow = true) => {
-      spinner.fail((e.message || e).trim())
+      inner.fail((e.message || e).trim())
       if (rethrow) {
         throw e
       }
     },
+    stopAndPersist: opts => spinner.stopAndPersist(opts),
   }
 }
 

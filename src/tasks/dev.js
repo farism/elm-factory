@@ -16,7 +16,6 @@ const {
   exists,
   initializeSpinner,
   installPackages,
-  spacer,
   validateParam,
 } = require('./utils')
 
@@ -98,6 +97,7 @@ const htmlCompiler = (bs, html) => (request, response, next) => {
       .catch(e => {
         response.write(e)
         response.end()
+        throw e
       })
       .then(() =>
         createWatcher(
@@ -106,10 +106,7 @@ const htmlCompiler = (bs, html) => (request, response, next) => {
           dep => !stylesheetsDeps.includes(dep),
           bs,
           path.join(process.cwd(), request.url)
-        ).catch(e => {
-          console.error('=============')
-          console.error(e)
-        })
+        )
       )
   } else {
     next()
@@ -241,30 +238,43 @@ const createWatcher = (onChange, onDeps, filter, bs, entry) => {
       .then(deps => {
         onDeps(deps)
 
-        console.log(deps)
-
         const watcher = bs.watch(['!elm-stuff', ...deps])
 
-        // watcher.on('change', file => {
-        //   if (filter(file)) {
-        //     // stop watching temporarily
-        //     watcher && watcher.close()
-        //
-        //     // trigger on change
-        //     onChange(file)
-        //
-        //     // start watching again
-        //     createWatcher(onChange, onDeps, filter, bs, entry)
-        //   }
-        // })
+        watcher.on('change', file => {
+          if (filter(file)) {
+            // stop watching temporarily
+            watcher && watcher.close()
+
+            // trigger on change
+            onChange(file)
+
+            // start watching again
+            createWatcher(onChange, onDeps, filter, bs, entry)
+          }
+        })
 
         resolve(watcher)
       })
-      .catch(e => {
-        throw new Error(`could not find ${entry}`)
-      })
+      .catch(reject)
   )
 }
+
+const compileCss = (stylesheets, dir) =>
+  elmCss(process.cwd(), stylesheets, dir)
+    .then(() => {
+      setTimeout(() => {
+        spinner.space()
+        spinner.succeed('css has been compiled')
+        spinner.space()
+      })
+    })
+    .catch(e => {
+      setTimeout(() => {
+        spinner.space()
+        spinner.fail(`elm-css ${e.message}`, false)
+        spinner.space()
+      })
+    })
 
 const dev = options => {
   const opts = Object.assign({}, defaults, options)
@@ -283,9 +293,7 @@ const dev = options => {
         spinner.succeed('elm-package install has completed')
         spinner.next('elm-reactor is starting')
 
-        return startReactor(opts.reactorHost, opts.reactorPort).catch(e => {
-          spinner.fail(e)
-        })
+        return startReactor(opts.reactorHost, opts.reactorPort)
       })
       // then start browser-sync
       .then(() => {
@@ -304,34 +312,28 @@ const dev = options => {
           spinner.fail(e)
         })
       })
-      .then(bs => {
+      .then(({ bs, port }) => {
         spinner.succeed('browser-sync is now started')
 
         return Promise.all([
-          Promise.resolve(bs.port),
+          Promise.resolve(port),
           // check if our stylesheet exists
           exists(opts.stylesheets)
             .then(() => {
               // compile stylesheet
               spinner.next('css is now compiling')
 
-              return elmCss(
-                process.cwd(),
-                opts.stylesheets,
-                tmpDir.name
-              ).catch(() => {})
+              return compileCss(opts.stylesheets, tmpDir.name)
             })
             .then(() => {
               // create stylesheet watcher
-              spinner.succeed('css has been compiled')
-
               return createWatcher(
-                file => elmCss(process.cwd(), opts.stylesheets, tmpDir.name),
+                file => compileCss(opts.stylesheets, tmpDir.name),
                 deps => (stylesheetsDeps = deps),
                 () => true,
                 bs,
                 opts.stylesheets
-              ).catch(() => {})
+              )
             })
             .catch(e => {
               spinner.space()
@@ -340,12 +342,13 @@ const dev = options => {
         ])
       })
       .then(port => {
-        spinner.space()
         spinner.succeed(`ready! http://${opts.host}:${opts.port}`)
+        spinner.space()
       })
       .catch(e => {
+        spinner.fail(e, false)
         spinner.space()
-        spinner.fail(e)
+        throw e
       })
   )
 }
