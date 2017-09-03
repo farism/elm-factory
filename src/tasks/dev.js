@@ -5,7 +5,7 @@ const elmCss = require('elm-css')
 const execa = require('execa')
 const findAllDependencies = require('find-elm-dependencies').findAllDependencies
 const fkill = require('fkill')
-const fs = require('fs')
+const fs = require('fs-extra')
 const nocache = require('nocache')
 const path = require('path')
 const proxy = require('http-proxy-middleware')
@@ -62,27 +62,61 @@ const loadHtmlCompiler = file => {
   validateParam('string', 'file', file)
 
   return new Promise((resolve, reject) => {
-    fs.readFile(file, (err, contents) => {
-      if (err) {
-        reject(err)
-      }
+    fs
+      .pathExists(file)
+      .then(() => fs.readFile(file))
+      .then((contents) => {
+        const compiler = anyTemplate.compiler({ path: file, contents })
 
-      const compiler = anyTemplate.compiler({ path: file, contents })
-
-      if (compiler) {
-        resolve(compiler)
-      } else {
-        reject(new Error('html template format unsupported'))
-      }
-    })
+        if (compiler) {
+          resolve(compiler)
+        } else {
+          reject(new Error('html template format unsupported'))
+        }
+      })
+      .catch(reject)
   })
+}
+
+const createWatcher = (onChange, onDeps, filter, bs, entry) => {
+  validateParam('function', 'onChange', onChange)
+  validateParam('function', 'onDeps', onDeps)
+  validateParam('function', 'filter', filter)
+  validateParam('object', 'bs', bs)
+  validateParam('string', 'entry', entry)
+
+  return new Promise((resolve, reject) =>
+    getDepTree(entry)
+      .then(deps => {
+        onDeps(deps)
+
+        const watcher = bs.watch(['!elm-stuff', ...deps])
+
+        watcher.on('change', file => {
+          if (filter(file)) {
+            // stop watching temporarily
+            watcher && watcher.close()
+
+            // trigger on change
+            onChange(file)
+
+            // start watching again
+            createWatcher(onChange, onDeps, filter, bs, entry)
+          }
+        })
+
+        resolve(watcher)
+      })
+      .catch(reject)
+  )
 }
 
 const htmlCompiler = (bs, html) => (request, response, next) => {
   if (path.extname(request.url) === '.elm') {
     return loadHtmlCompiler(html)
       .catch(e => {
-        spinner(e)
+        spinner.fail(e, false)
+        throw e
       })
       .then(compiler =>
         compiler({
@@ -94,11 +128,6 @@ const htmlCompiler = (bs, html) => (request, response, next) => {
         response.write(compiledHtml)
         response.end()
       })
-      .catch(e => {
-        response.write(e)
-        response.end()
-        throw e
-      })
       .then(() =>
         createWatcher(
           () => bs.reload(),
@@ -108,6 +137,9 @@ const htmlCompiler = (bs, html) => (request, response, next) => {
           path.join(process.cwd(), request.url)
         )
       )
+      .catch(e => {
+        next()
+      })
   } else {
     next()
   }
@@ -226,53 +258,18 @@ const startBrowserSync = (
   })
 }
 
-const createWatcher = (onChange, onDeps, filter, bs, entry) => {
-  validateParam('function', 'onChange', onChange)
-  validateParam('function', 'onDeps', onDeps)
-  validateParam('function', 'filter', filter)
-  validateParam('object', 'bs', bs)
-  validateParam('string', 'entry', entry)
-
-  return new Promise((resolve, reject) =>
-    getDepTree(entry)
-      .then(deps => {
-        onDeps(deps)
-
-        const watcher = bs.watch(['!elm-stuff', ...deps])
-
-        watcher.on('change', file => {
-          if (filter(file)) {
-            // stop watching temporarily
-            watcher && watcher.close()
-
-            // trigger on change
-            onChange(file)
-
-            // start watching again
-            createWatcher(onChange, onDeps, filter, bs, entry)
-          }
-        })
-
-        resolve(watcher)
-      })
-      .catch(reject)
-  )
-}
-
 const compileCss = (stylesheets, dir) =>
   elmCss(process.cwd(), stylesheets, dir)
     .then(() => {
       setTimeout(() => {
         spinner.space()
         spinner.succeed('css has been compiled')
-        spinner.space()
       })
     })
     .catch(e => {
       setTimeout(() => {
         spinner.space()
         spinner.fail(`elm-css ${e.message}`, false)
-        spinner.space()
       })
     })
 
@@ -280,77 +277,68 @@ const dev = options => {
   const opts = Object.assign({}, defaults, options)
   const tmpDir = tmp.dirSync({ unsafeCleanup: true })
 
+  spinner.space()
   spinner.next('elm-package install is starting')
 
-  return (
-    // first install packages using elm-package
-    installPackages()
-      .catch(e => {
+  return installPackages()
+    .catch(e => {
+      spinner.fail(e)
+    })
+    .then(output => {
+      spinner.succeed('elm-package install has completed')
+      spinner.next('elm-reactor is starting')
+
+      return startReactor(opts.reactorHost, opts.reactorPort)
+    })
+    .then(() => {
+      spinner.succeed('elm-reactor is now started')
+      spinner.next('browser-sync is starting')
+
+      return startBrowserSync(
+        opts.host,
+        opts.port,
+        `http://${opts.reactorHost}:${opts.reactorPort}`,
+        opts.html,
+        tmpDir.name,
+        opts.proxy,
+        opts.proxyRewrite
+      ).catch(e => {
         spinner.fail(e)
       })
-      // then start elm-reactor
-      .then(output => {
-        spinner.succeed('elm-package install has completed')
-        spinner.next('elm-reactor is starting')
+    })
+    .then(({ bs, port }) => {
+      spinner.succeed('browser-sync is now started')
 
-        return startReactor(opts.reactorHost, opts.reactorPort)
-      })
-      // then start browser-sync
-      .then(() => {
-        spinner.succeed('elm-reactor is now started')
-        spinner.next('browser-sync is starting')
+      return Promise.all([
+        Promise.resolve(port),
+        fs
+          .readFile(opts.stylesheets)
+          .then(() => {
+            spinner.next('css is now compiling')
 
-        return startBrowserSync(
-          opts.host,
-          opts.port,
-          `http://${opts.reactorHost}:${opts.reactorPort}`,
-          opts.html,
-          tmpDir.name,
-          opts.proxy,
-          opts.proxyRewrite
-        ).catch(e => {
-          spinner.fail(e)
-        })
-      })
-      .then(({ bs, port }) => {
-        spinner.succeed('browser-sync is now started')
-
-        return Promise.all([
-          Promise.resolve(port),
-          // check if our stylesheet exists
-          exists(opts.stylesheets)
-            .then(() => {
-              // compile stylesheet
-              spinner.next('css is now compiling')
-
-              return compileCss(opts.stylesheets, tmpDir.name)
-            })
-            .then(() => {
-              // create stylesheet watcher
-              return createWatcher(
-                file => compileCss(opts.stylesheets, tmpDir.name),
-                deps => (stylesheetsDeps = deps),
-                () => true,
-                bs,
-                opts.stylesheets
-              )
-            })
-            .catch(e => {
-              spinner.space()
-              spinner.fail(e, false)
-            }),
-        ])
-      })
-      .then(port => {
-        spinner.succeed(`ready! http://${opts.host}:${opts.port}`)
-        spinner.space()
-      })
-      .catch(e => {
-        spinner.fail(e, false)
-        spinner.space()
-        throw e
-      })
-  )
+            return compileCss(opts.stylesheets, tmpDir.name)
+          })
+          .then(() => {
+            return createWatcher(
+              file => compileCss(opts.stylesheets, tmpDir.name),
+              deps => (stylesheetsDeps = deps),
+              () => true,
+              bs,
+              opts.stylesheets
+            )
+          })
+          .catch(e => {
+            spinner.fail(e, false)
+          }),
+      ])
+    })
+    .then(port => {
+      spinner.succeed(`ready! http://${opts.host}:${opts.port}`)
+    })
+    .catch(e => {
+      spinner.fail(e, false)
+      throw e
+    })
 }
 
 module.exports = {
@@ -358,8 +346,8 @@ module.exports = {
   createProxies,
   getDepTree,
   loadHtmlCompiler,
+  createWatcher,
   startReactor,
   startBrowserSync,
-  createWatcher,
   dev,
 }

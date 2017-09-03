@@ -1,11 +1,12 @@
 const anyTemplate = require('gulp-any-template')
 const filter = require('gulp-filter')
-const fs = require('fs')
+const fs = require('fs-extra')
 const gulp = require('gulp')
 const path = require('path')
 const pumpify = require('pumpify')
 const rename = require('gulp-rename')
 
+const defaults = require('../defaults').init
 const { initializeSpinner, validateParam } = require('./utils')
 
 // global reference to CLI spinner
@@ -15,9 +16,12 @@ const isEmpty = dir => {
   validateParam('string', 'dir', dir)
 
   return new Promise((resolve, reject) => {
-    fs.readdir(dir, function(err, files) {
-      resolve(files ? files.length === 0 : true)
-    })
+    fs
+      .readdir(dir)
+      .then(files => {
+        resolve(files ? files.length === 0 : true)
+      })
+      .catch(() => resolve(true))
   })
 }
 
@@ -48,6 +52,7 @@ const copy = dir => {
 const init = (options = {}) => {
   validateParam('object', 'options', options)
 
+  spinner.space()
   spinner.next('initializing your project')
 
   return isEmpty(options.dir)
@@ -60,13 +65,10 @@ const init = (options = {}) => {
     })
     .then(() => {
       spinner.succeed('project created!')
-      spinner.space()
       spinner.stopAndPersist({ symbol: '$ ', text: `cd ${options.dir}` })
-      spinner.space()
     })
     .catch(e => {
       spinner.fail(e, false)
-      spinner.space()
     })
 }
 

@@ -2,7 +2,6 @@ import chai, { assert, expect } from 'chai'
 import chaifs from 'chai-fs'
 import chaiAsPromised from 'chai-as-promised'
 import check from 'check-types'
-import fs from 'fs'
 import path from 'path'
 import sinon from 'sinon'
 import tmp from 'tmp'
@@ -107,16 +106,24 @@ describe('UTILS', function() {
     let space
     let next
     let succeed
+    let warn
     let fail
     let stopAndPersist
     let start
 
     beforeEach(() => {
       succeed = sinon.spy()
+      warn = sinon.spy()
       fail = sinon.spy()
       stopAndPersist = sinon.spy()
       start = sinon.spy()
-      spinner = initializeSpinner({ succeed, fail, stopAndPersist, start })
+      spinner = initializeSpinner({
+        succeed,
+        warn,
+        fail,
+        stopAndPersist,
+        start,
+      })
       space = sinon.spy(spinner.space)
       next = sinon.spy(spinner.next)
     })
@@ -125,10 +132,11 @@ describe('UTILS', function() {
       expect(spinner)
         .to.be.an('object')
         .with.all.keys(
-          'space',
           'inner',
-          'succeed',
+          'space',
           'next',
+          'succeed',
+          'warn',
           'fail',
           'stopAndPersist'
         )
@@ -139,15 +147,18 @@ describe('UTILS', function() {
         true
       )
     })
+    it('#next() sets inner text and calls inner start', () => {
+      spinner.next('bar')
+      expect(spinner.inner.text).to.eql('bar')
+      expect(spinner.inner.start.callCount).to.eql(1)
+    })
     it('#succeed() inserts a spacer and calls inner succeed', () => {
       spinner.succeed('foo')
       expect(succeed.callCount).to.eql(1)
     })
-    it('#next() inserts a spacer, sets text, and restarts spinner', () => {
-      spinner.next('bar')
-      expect(stopAndPersist.callCount).to.eql(1)
-      expect(spinner.inner.text).to.eql('bar')
-      expect(spinner.inner.start.callCount).to.eql(1)
+    it('#warn() inserts a spacer and calls inner warn', () => {
+      spinner.warn('foo')
+      expect(warn.callCount).to.eql(1)
     })
     it('#fail() handles an object or string', () => {
       expect(() => spinner.fail('foo')).to.throw()
@@ -164,7 +175,7 @@ describe('UTILS', function() {
     })
     it('#stopAndPersist() calls inner stopAndPersist', () => {
       spinner.stopAndPersist()
-      expect(stopAndPersist.callCount).to.eql(1)
+      expect(stopAndPersist.callCount).to.eql(2)
     })
   })
 })

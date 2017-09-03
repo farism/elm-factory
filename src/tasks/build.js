@@ -129,6 +129,7 @@ const build = options => {
   const opts = Object.assign({}, defaults, options)
 
   // CLI spinner
+  spinner.space()
   spinner.next('old builds are being cleaned')
 
   return del(opts.outputPath)
@@ -169,12 +170,11 @@ const build = options => {
     .then(() => {
       spinner.space()
       spinner.succeed('main application has been compiled')
-      spinner.space()
     })
     .catch(e => {
       spinner.space()
-      spinner.fail(e)
-      spinner.space()
+      spinner.fail(e, false)
+      throw e
     })
 }
 
