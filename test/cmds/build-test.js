@@ -31,6 +31,11 @@ describe('$ elm-factory build', () => {
         description: 'absolute path for static assets',
         default: defaults.publicPath,
       },
+      a: {
+        alias: 'asset-tag',
+        description: 'the tag to use for extracting assets',
+        default: defaults.assetTag,
+      },
     })
   })
 })

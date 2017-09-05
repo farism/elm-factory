@@ -292,7 +292,7 @@ const dev = options => {
     })
     .then(() => {
       spinner.succeed('elm-reactor is now started')
-      spinner.next('browser-sync is starting')
+      spinner.next('elm-factory is starting')
 
       return startBrowserSync(
         opts.host,
@@ -307,7 +307,7 @@ const dev = options => {
       })
     })
     .then(({ bs, port }) => {
-      spinner.succeed('browser-sync is now started')
+      spinner.succeed('elm-factory is now started')
 
       return Promise.all([
         Promise.resolve(port),

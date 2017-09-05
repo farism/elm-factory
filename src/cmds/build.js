@@ -18,7 +18,7 @@ module.exports = {
     t: {
       alias: 'html',
       description: 'optional html template file',
-      default: '',
+      default: defaults.html,
     },
     o: {
       alias: 'output-path',
@@ -29,6 +29,19 @@ module.exports = {
       alias: 'public-path',
       description: 'absolute path for static assets',
       default: defaults.publicPath,
+    },
+    a: {
+      alias: 'asset-tag',
+      description: 'the tag to use for extracting assets',
+      default: defaults.assetTag,
+    },
+    revision: {
+      description: 'cache bust assets with a hash',
+      default: defaults.revision,
+    },
+    minify: {
+      description: 'minify the *.css and *.js files',
+      default: defaults.minify,
     },
   },
 }

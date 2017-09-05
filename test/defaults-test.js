@@ -7,9 +7,12 @@ describe('defaults', () => {
     expect(build).to.eql({
       main: './src/Main.elm',
       stylesheets: './src/Stylesheets.elm',
-      html: undefined,
+      html: './index.ejs',
       outputPath: 'build',
-      publicPath: '/public/',
+      publicPath: '',
+      assetTag: 'AssetUrl',
+      revision: true,
+      minify: true,
     })
   })
 
@@ -23,12 +26,14 @@ describe('defaults', () => {
       reactorPort: 8001,
       proxy: [],
       proxyRewrite: true,
+      revision: true,
+      minify: true,
     })
   })
 
   it('should have the correct init defaults', () => {
     expect(init).to.eql({
-      force: false
+      force: false,
     })
   })
 })

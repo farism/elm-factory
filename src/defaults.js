@@ -7,9 +7,12 @@ const port = 8000
 const build = {
   main,
   stylesheets,
-  html: undefined,
+  html,
   outputPath: 'build',
-  publicPath: '/public/',
+  publicPath: '',
+  assetTag: 'AssetUrl',
+  revision: true,
+  minify: true,
 }
 
 const dev = {
