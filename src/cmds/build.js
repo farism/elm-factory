@@ -3,7 +3,7 @@ const defaults = require('../../src/defaults').build
 module.exports = {
   name: 'build',
   command: 'build [options]',
-  description: 'builds an elm-factory for production',
+  description: 'builds an elm-factory project for production',
   options: {
     m: {
       alias: 'main',

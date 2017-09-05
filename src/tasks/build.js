@@ -225,7 +225,11 @@ const buildMain = (
         if (minify) {
           const result = uglify.minify(js)
 
-          result.error ? reject(result.error) : resolve(result.code)
+          if (result.error) {
+            reject(result.error)
+          } else {
+            resolve(result.code)
+          }
         } else {
           resolve(js)
         }
