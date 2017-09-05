@@ -228,6 +228,7 @@ const buildMain = (
   validateParam('string', 'main', main)
   validateParam('string', 'outputPath', outputPath)
   validateParam('string', 'publicPath', publicPath)
+  validateParam('string', 'assetTag', assetTag)
   validateParam('boolean', 'minify', minify, false)
   validateParam('string', 'cwd', cwd, false)
 
@@ -236,10 +237,12 @@ const buildMain = (
     const replacer = url => `${assetTag}('${urljoin(publicPath, url)}')`
     const transformer = js =>
       new Promise((resolve, reject) => {
-        try {
-          resolve(minify ? uglify2.minify(js).result : js)
-        } catch (e) {
-          reject(e)
+        if (minify) {
+          const result = uglify2.minify(js)
+
+          result.error ? reject(result.error) : resolve(result.code)
+        } else {
+          resolve(js)
         }
       })
 

@@ -17,7 +17,7 @@ import { checkParam } from './utils-test'
 
 chai.use(chaifs)
 
-describe('BUILD TASK', () => {
+describe.only('BUILD TASK', () => {
   const dir = path.join(__dirname, 'tmp')
   let outputPath = ''
   let cleanup = () => {}
@@ -49,10 +49,10 @@ describe('BUILD TASK', () => {
 
     describe('params', () => {
       checkParam('string', 'stylesheets', buildCss)([1])
-      checkParam('string', 'outputPath', buildCss)([' ', 1])
-      checkParam('string', 'publicPath', buildCss)([' ', ' ', 1])
-      checkParam('boolean', 'minify', buildCss, false)([' ', ' ', ' ', ' '])
-      checkParam('string', 'cwd', buildCss, false)([' ', ' ', ' ', true, 1])
+      checkParam('string', 'outputPath', buildCss)(['', 1])
+      checkParam('string', 'publicPath', buildCss)(['', '', 1])
+      checkParam('boolean', 'minify', buildCss, false)(['', '', '', ''])
+      checkParam('string', 'cwd', buildCss, false)(['', '', '', true, 1])
     })
 
     it('builds into the correct outputPath', done => {
@@ -112,13 +112,14 @@ describe('BUILD TASK', () => {
 
     describe('params', () => {
       checkParam('string', 'main', buildMain)([1])
-      checkParam('string', 'outputPath', buildMain)([' ', 1])
-      checkParam('string', 'publicPath', buildMain)([' ', ' ', 1])
-      checkParam('boolean', 'minify', buildMain, false)([' ', ' ', ' ', ' '])
-      checkParam('string', 'cwd', buildMain, false)([' ', ' ', ' ', true, 1])
+      checkParam('string', 'outputPath', buildMain)(['', 1])
+      checkParam('string', 'publicPath', buildMain)(['', '', 1])
+      checkParam('string', 'assetTag', buildMain)(['', '', '', 1])
+      checkParam('boolean', 'minify', buildMain, false)(['', '', '', '', ''])
+      checkParam('string', 'cwd', buildMain, false)(['', '', '', '', true, 1])
     })
 
-    it.only('builds into the correct outputPath', done => {
+    it('builds into the correct outputPath', done => {
       buildMain(
         defaults.main,
         outputPath,
@@ -131,16 +132,16 @@ describe('BUILD TASK', () => {
           expect(outputPath)
             .to.be.a.directory()
             .with.deep.files([
-              'd50146ff.js',
-              'f083965f.png',
+              'css3.f083965f.png',
               'js-manifest.json',
+              'Main.81a15f67.js',
             ])
 
           done()
         })
         .catch(done)
     })
-    it('does no extract if assetTag is invalid', done => {
+    it('does not extract if assetTag is invalid', done => {
       buildMain(
         defaults.main,
         outputPath,
@@ -152,11 +153,7 @@ describe('BUILD TASK', () => {
         .then(() => {
           expect(outputPath)
             .to.be.a.directory()
-            .with.deep.files([
-              'd50146ff.js',
-              'f083965f.png',
-              'js-manifest.json',
-            ])
+            .with.deep.files(['Main.d50146ff.js', 'js-manifest.json'])
 
           done()
         })
@@ -174,9 +171,9 @@ describe('BUILD TASK', () => {
           expect(outputPath)
             .to.be.a.directory()
             .with.deep.files([
-              'd50146ff.js',
-              'f083965f.png',
+              'css3.f083965f.png',
               'js-manifest.json',
+              'Main.5ff6a009.js',
             ])
 
           done()
@@ -192,13 +189,9 @@ describe('BUILD TASK', () => {
         true
       )
         .then(() => {
-          expect(outputPath)
-            .to.be.a.directory()
-            .with.deep.files([
-              'js-manifest.json',
-              'd50146ff.js',
-              'f083965f.png',
-            ])
+          expect(`${outputPath}/Main.a65d340f.js`)
+            .to.be.a.file()
+            .and.not.have.contents('\n')
 
           done()
         })
@@ -215,7 +208,7 @@ describe('BUILD TASK', () => {
         .then(() => {
           expect(`${outputPath}/js-manifest.json`)
             .to.be.a.file()
-            .with.contents('{\n  "Main.js": "d50146ff.js"\n}')
+            .with.contents('{\n  "Main.js": "Main.81a15f67.js"\n}\n')
 
           done()
         })
