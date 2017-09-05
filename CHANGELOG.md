@@ -1,3 +1,8 @@
+#### 0.7.1
+- remove .gitignore from scaffold since npm does weird renaming stuff
+- use gulp-if instead of gulp-filter which wasnt using correct file paths
+- use _.merge for CLI options to avoid undefined overwriting actual values
+
 #### 0.7.0
 #### Elm Factory has an official domain now! http://elm-factory.io/
 ###### changes
