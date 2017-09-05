@@ -17,7 +17,7 @@ import { checkParam } from './utils-test'
 
 chai.use(chaifs)
 
-describe.only('BUILD TASK', () => {
+describe('BUILD TASK', () => {
   const dir = path.join(__dirname, 'tmp')
   let outputPath = ''
   let cleanup = () => {}

@@ -35,10 +35,6 @@ module.exports = {
       description: 'the tag to use for extracting assets',
       default: defaults.assetTag,
     },
-    revision: {
-      description: 'cache bust assets with a hash',
-      default: defaults.revision,
-    },
     minify: {
       description: 'minify the *.css and *.js files',
       default: defaults.minify,

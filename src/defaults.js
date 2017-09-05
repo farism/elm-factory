@@ -11,7 +11,6 @@ const build = {
   outputPath: 'build',
   publicPath: '',
   assetTag: 'AssetUrl',
-  revision: true,
   minify: true,
 }
 

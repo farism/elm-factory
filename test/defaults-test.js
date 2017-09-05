@@ -11,7 +11,6 @@ describe('defaults', () => {
       outputPath: 'build',
       publicPath: '',
       assetTag: 'AssetUrl',
-      revision: true,
       minify: true,
     })
   })
@@ -26,8 +25,6 @@ describe('defaults', () => {
       reactorPort: 8001,
       proxy: [],
       proxyRewrite: true,
-      revision: true,
-      minify: true,
     })
   })
 

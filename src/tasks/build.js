@@ -3,31 +3,16 @@ const asyncReplace = require('async-replace')
 const autoprefixer = require('autoprefixer')
 const check = require('check-types')
 const cssnano = require('cssnano')
-const cssUseref = require('gulp-css-useref')
-const debug = require('gulp-debug')
-const elm = require('gulp-elm-basic')
-const elm2 = require('node-elm-compiler')
-const elmCss = require('gulp-elm-css')
-const elmCss2 = require('elm-css')
-const elmExtractAssets = require('gulp-elm-extract-assets')
-const flatten = require('gulp-flatten')
+const elm = require('node-elm-compiler')
+const elmCss = require('elm-css')
 const fs = require('fs-extra')
-const gulp = require('gulp')
-const gulpif = require('gulp-if')
 const path = require('path')
-const postcss = require('gulp-postcss')
-const postcss2 = require('postcss')
+const postcss = require('postcss')
 const postcssUrl = require('postcss-url')
-const pumpify = require('pumpify')
-const rename = require('gulp-rename')
-const rev = require('gulp-rev-all')
-const rev2 = require('gulp-rev')
-const uglify = require('gulp-uglify')
+const uglify = require('uglify-js')
 const urljoin = require('url-join')
 const xxh = require('xxhashjs')
-const tmp = require('tmp')
-const tmp2 = require('tmp-promise')
-const uglify2 = require('uglify-js')
+const tmp = require('tmp-promise')
 
 const defaults = require('../defaults').build
 const { initializeSpinner, installPackages, validateParam } = require('./utils')
@@ -145,17 +130,17 @@ const buildCss = (
           plugins.push(cssnano)
         }
 
-        postcss2(plugins)
+        postcss(plugins)
           .process(css, {})
           .then(result => resolve(result.css))
           .catch(reject)
       })
 
-    tmp2
+    tmp
       .dir({ unsafeCleanup: true })
       .then(dir =>
         // compile the stylesheet file
-        elmCss2(cwd, stylesheets, dir.path)
+        elmCss(cwd, stylesheets, dir.path)
           // read css file names
           .then(() => fs.readdir(dir.path))
           // write the bundle for each file
@@ -198,7 +183,7 @@ const elmCompile = (outDir, file, cwd = process.cwd()) => {
       path.basename(file).replace('.elm', '.js')
     )
 
-    elm2
+    elm
       .compile(path.join(cwd, file), {
         output: newFile,
         cwd: cwd,
@@ -238,7 +223,7 @@ const buildMain = (
     const transformer = js =>
       new Promise((resolve, reject) => {
         if (minify) {
-          const result = uglify2.minify(js)
+          const result = uglify.minify(js)
 
           result.error ? reject(result.error) : resolve(result.code)
         } else {
@@ -246,7 +231,7 @@ const buildMain = (
         }
       })
 
-    tmp2
+    tmp
       .dir({ unsafeCleanup: true })
       .then(dir =>
         // compile the elm file
