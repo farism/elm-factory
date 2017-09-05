@@ -7,7 +7,8 @@ export default Object.keys(cmds).map(function(key) {
     const opt = cmd.options[optKey]
 
     return {
-      name: `${optKey}${opt.alias ? ', --' + opt.alias : ''}`,
+      key: optKey,
+      alias: opt.alias,
       description: opt.description,
       default: opt.default,
     }

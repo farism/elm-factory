@@ -30,19 +30,20 @@ export default function CLIDoc({ doc }) {
         ? <i>No Options</i>
         : <BashBlock fullWidth>
             {doc.options.map(opt => {
-              const stringOrNot =
-                typeof opt.default === 'string'
-                  ? `"${opt.default}"`
-                  : opt.default
+              console.log(opt.default)
+
+              const flag = !opt.alias ? `--${opt.key}` : `-${opt.key}`
+
+              const alias = opt.alias ? `, --${opt.alias}` : ''
 
               const defaultOrRequired =
                 typeof opt.default !== 'undefined'
-                  ? `default: ${stringOrNot}`
+                  ? `default: ${JSON.stringify(opt.default)}`
                   : 'required'
 
               return (
                 <span key={opt.name}>
-                  <Line value={`-${opt.name}`} />
+                  <Line value={`${flag}${alias}`} />
                   <Comment
                     value={`${opt.description} [${defaultOrRequired}]`}
                   />

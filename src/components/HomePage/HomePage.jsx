@@ -26,9 +26,6 @@ export default function HomePage() {
       </SubtronSection>
       <PrimarySection>
         <BashBlock>
-          <Comment value="Global elm installation is required" />
-          <Line value="npm install -g elm" />
-          <Gap />
           <Comment value="Recommended to install elm-factory globally" />
           <Line value="npm install -g elm-factory" />
           <Gap />
@@ -43,8 +40,11 @@ export default function HomePage() {
           <Line value="elm-factory build --public-path=http://cdn123.com/assets" />
         </BashBlock>
         <h3 style={{ textAlign: 'center' }}>
-          Ready for a closer look?{' '}
-          <Link to="/cli">Dive into the CLI documentation</Link>
+          Ready for a closer look? Dive into the{' '}
+          <Link to="/guide/getting-started">
+            Getting started, in depth
+          </Link>{' '}
+          guide or the <Link to="/cli">CLI documentation</Link>
         </h3>
       </PrimarySection>
       <SecondarySection>

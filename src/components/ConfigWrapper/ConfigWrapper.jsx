@@ -11,19 +11,19 @@ import styles from '../PageWrapper/PageWrapper.scss'
 const docs = [{ label: 'Overview', href: '/config' }]
 
 const example = {
-  main: './src/Main.elm',
   stylesheets: './src/Stylesheets.elm',
   build: {
+    main: './src/Main.elm',
     output: 'build',
     publicPath: 'public',
-    template: './src/index.prod.ejs',
+    html: './src/index.prod.ejs',
   },
   dev: {
-    template: './src/index.dev.ejs',
     host: '127.0.0.1',
     port: 8000,
     reactorHost: '127.0.0.1',
     reactorPort: 8001,
+    html: './src/index.dev.ejs',
   },
 }
 
