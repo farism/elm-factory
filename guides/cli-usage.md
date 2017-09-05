@@ -14,7 +14,9 @@ Options:
   --version  Show version number                                       [boolean]
   --help     Show help                                                 [boolean]
 ```
+
 ### init
+
 ```
 $ elm-factory init --help
 
@@ -26,6 +28,7 @@ Options:
   --dir        the project directory                                  [required]
   -f, --force  ignore existing files                            [default: false]
 ```
+
 ### build
 
 ```
@@ -43,7 +46,6 @@ Options:
   -p, --public-path  absolute path for static assets               [default: ""]
   -a, --asset-tag    the tag to use for extracting assets  [default: "AssetUrl"]
   --minify           minify the *.css and *.js files             [default: true]
-
 ```
 
 ### dev
