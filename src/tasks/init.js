@@ -1,8 +1,8 @@
 const _ = require('lodash')
 const anyTemplate = require('gulp-any-template')
-const filter = require('gulp-filter')
 const fs = require('fs-extra')
 const gulp = require('gulp')
+const gulpif = require('gulp-if')
 const path = require('path')
 const pumpify = require('pumpify')
 const rename = require('gulp-rename')
@@ -30,19 +30,15 @@ const copy = dir => {
   validateParam('string', 'dir', dir)
 
   return new Promise((resolve, reject) => {
-    const packageJson = filter(['**/*.json.ejs'], { restore: true })
+    const ejs = file => file.path.includes('.json.ejs')
 
     pumpify(
       gulp.src([
         path.resolve(__dirname, '../tmpl/boilerplate/**/*'),
         path.resolve(__dirname, '../tmpl/boilerplate/**/.*'),
       ]),
-      packageJson,
-      anyTemplate({ name: dir.split('/').pop() }),
-      rename(path => {
-        path.extname = ''
-      }),
-      packageJson.restore,
+      gulpif(ejs, anyTemplate({ name: dir.split('/').pop() })),
+      gulpif(ejs, rename(file => (file.extname = ''))),
       gulp.dest(dir)
     )
       .on('error', reject)
