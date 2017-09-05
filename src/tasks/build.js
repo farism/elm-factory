@@ -311,21 +311,21 @@ const build = options => {
 
   // CLI spinner
   spinner.space()
-  spinner.next('old builds are being cleaned')
+  spinner.next('cleaning old builds...')
 
   return fs
     .emptyDir(opts.outputPath)
     .then(() => {
-      spinner.succeed('old builds cleaned')
-      spinner.next('elm-package install is starting')
+      spinner.succeed('cleaned old builds')
+      spinner.next('installing elm-packages')
 
       return installPackages().catch(e => {
-        throw 'elm-package install has failed'
+        throw 'installing elm-package failed'
       })
     })
     .then(() => {
-      spinner.succeed('elm-package install has completed')
-      spinner.next('compiling css')
+      spinner.succeed('installed elm-packages')
+      spinner.next('compiling stylesheets...')
 
       return buildCss(
         opts.stylesheets,
@@ -334,12 +334,12 @@ const build = options => {
         opts.minify,
         opts.cwd
       ).catch(e => {
-        throw 'stylesheets failed to compile'
+        throw 'compiling stylesheets failed'
       })
     })
     .then(cssManifest => {
-      spinner.succeed('compiling css complete')
-      spinner.next('compiling js')
+      spinner.succeed('compiled stylesheets')
+      spinner.next('compiling main application...')
 
       return buildMain(
         opts.main,
@@ -354,13 +354,13 @@ const build = options => {
           jsManifest,
         }))
         .catch(e => {
-          throw 'js failed to compile'
+          throw 'compiling main application failed'
         })
     })
     .then(({ cssManifest, jsManifest }) => {
       spinner.space()
-      spinner.succeed('main application has been compiled')
-      spinner.next('html is now compiling')
+      spinner.succeed('compiled main application')
+      spinner.next('compiling html templates...')
 
       return buildHtml(
         opts.html,
@@ -374,7 +374,7 @@ const build = options => {
       })
     })
     .then(() => {
-      spinner.succeed('html has been compiled')
+      spinner.succeed('compiled html')
     })
     .catch(e => {
       console.log(e)
