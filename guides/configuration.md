@@ -11,18 +11,18 @@ Each CLI option is available is a configuration option. Shared options may be de
   "build": {
     "main": "",
     "stylesheets": "",
-    "template": "",
+    "html": "",
     "outputPath": "",
     "publicPath": ""
   },
   "dev": {
     "main": "",
     "stylesheets": "",
-    "template": "",
+    "html": "",
     "host": "",
     "port": "",
     "reactorHost": "",
-    "reactorPort": ""
+    "reactorPort": "",
   }
 }
 ```
@@ -30,17 +30,16 @@ Each CLI option is available is a configuration option. Shared options may be de
 ## Example
 ```json
 {
-  "main": "./src/MyApp.elm",
   "stylesheets": "./src/Styles.elm",
   "build": {
-    "template": "./src/index.prod.ejs",
+    "main": "./src/MyApp.elm",
+    "html": "./src/index.prod.ejs",
     "outputPath": "./dist",
-    "publicPath": "http://somecdn.com"
+    "publicPath": "http://somecdn.com",
   },
   "dev": {
-    "main": "./src/Sandbox.elm",
-    "template": "./src/index.dev.ejs",
-    "port": "3000"
+    "html": "./src/index.dev.ejs",
+    "port": "3000",
   }
 }
 ```
