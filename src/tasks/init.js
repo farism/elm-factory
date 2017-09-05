@@ -1,3 +1,4 @@
+const _ = require('lodash')
 const anyTemplate = require('gulp-any-template')
 const filter = require('gulp-filter')
 const fs = require('fs-extra')

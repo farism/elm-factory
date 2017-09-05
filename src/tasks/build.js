@@ -1,3 +1,4 @@
+const _ = require('lodash')
 const anyTemplate = require('gulp-any-template')
 const asyncReplace = require('async-replace')
 const autoprefixer = require('autoprefixer')
@@ -299,7 +300,7 @@ const buildHtml = (
 }
 
 const build = options => {
-  const opts = Object.assign({}, defaults, options)
+  const opts = _.merge(defaults, options)
 
   // CLI spinner
   spinner.space()

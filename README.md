@@ -51,11 +51,11 @@ Project configuration is available through an `.elmfactoryrc` or `.elmfactoryrc.
 {
   "main": "src/MyApp.elm",
   "build": {
-    "template": "index.prod.hbs"
+    "html": "index.prod.hbs"
   },
   "dev": {
     "port": 3000,
-    "template": "index.dev.hbs"
+    "html": "index.dev.hbs"
   }
 }
 ```
@@ -70,8 +70,8 @@ Please see the [configuration page](https://github.com/farism/elm-factory/blob/m
 - `node-elm-compiler` for compiling production builds
 - `elm-css` for managing stylesheets and extracting css assets
 - `gulp` for orchestrating CLI tasks
-- `rev-all` for production mode cache-busting
-- `uglifyjs` for production mode minification
+- `postcss` for css processing and minification
+- `uglifyjs` for js minification
 
 ### Contributing
 
