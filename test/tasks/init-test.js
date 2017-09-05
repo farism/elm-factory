@@ -47,7 +47,6 @@ describe('INIT TASK', () => {
         expect(dir.name)
           .to.be.a.directory()
           .with.deep.files([
-            '.gitignore',
             'elm-package.json',
             'index.ejs',
             'package.json',
