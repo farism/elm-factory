@@ -7,9 +7,11 @@ describe('defaults', () => {
     expect(build).to.eql({
       main: './src/Main.elm',
       stylesheets: './src/Stylesheets.elm',
-      html: undefined,
+      html: './index.ejs',
       outputPath: 'build',
-      publicPath: '/public/',
+      publicPath: '',
+      assetTag: 'AssetUrl',
+      minify: true,
     })
   })
 
@@ -28,7 +30,7 @@ describe('defaults', () => {
 
   it('should have the correct init defaults', () => {
     expect(init).to.eql({
-      force: false
+      force: false,
     })
   })
 })

@@ -1,4 +1,3 @@
-const chalk = require('chalk')
 const check = require('check-types')
 const execa = require('execa')
 const ora = require('ora')
@@ -8,7 +7,13 @@ const spacer = (count = 50) => '-'.repeat(count)
 const invalidParam = (type, name) =>
   `parameter \`${name}\` expected \`${type}\``
 
-const validateParam = (type, name, value, required = true) => {
+const validateParam = (
+  type,
+  name,
+  value,
+  required = true,
+  prototype = Object.prototype
+) => {
   const checker = required ? check.assert : check.assert.maybe
 
   return checker[type](value, invalidParam(type, name))

@@ -6,7 +6,7 @@ An all-in-one, zero-configuration CLI tool for developing, building, and deployi
 
 Elm is an awesome language. It has a lot of great individual tooling. However, using them all together in some type of workflow can be a bit tedious. On top of that, some of the tools (e.g. `elm-reactor`) lack some basic features that would make them into more full-fledged developer tools.
 
-This is where `Elm Factory` comes in. One of the goals of this project was to not deviate too much from the exiting elm-tooling ecoystem. It is essentially a CLI tool that is a thin wrapper over a few core libraries while exposing additional functionality, and with only a few basic commands:
+This is where `Elm Factory` comes in. One of the goals of this project was to not deviate too much from the existing elm tooling ecoystem. It is essentially a CLI tool that is a thin wrapper over a few core libraries while exposing additional functionality, and with only a few basic commands:
 
 - `init` to scaffold new Elm projects
 - `dev` to start up an express server to proxy elm-reactor
@@ -38,7 +38,6 @@ elm-factory dev --port=3000 --template=index.dev.hbs
 # Build the project for production
 
 elm-factory build --output-path=dist --template=index.prod.hbs
-
 ```
 
 Please see the [cli usage](https://github.com/farism/elm-factory/blob/master/guides/cli-usage.md) for a full list of options
@@ -47,6 +46,7 @@ Please see the [cli usage](https://github.com/farism/elm-factory/blob/master/gui
 ### Configuration
 
 Project configuration is available through an `.elmfactoryrc` or `.elmfactoryrc.json` file:
+
 ```json
 {
   "main": "src/MyApp.elm",
@@ -62,15 +62,14 @@ Project configuration is available through an `.elmfactoryrc` or `.elmfactoryrc.
 
 Please see the [configuration page](https://github.com/farism/elm-factory/blob/master/guides/configuration.md) for a full list of options
 
-### Underlying Libraries
+### Underlying Packages
 
-- `gulp` for orchestrating CLI tasks
 - `elm-reactor` for on-the-fly compilation
-- `express` server for custom templates
-- `livereload` for css injection and browser refresh
-- `elm-css` for managing stylesheets and extracting css assets
+- `browser-sync` for proxying and livereload
 - `find-elm-dependencies` for dev mode watching
 - `node-elm-compiler` for compiling production builds
+- `elm-css` for managing stylesheets and extracting css assets
+- `gulp` for orchestrating CLI tasks
 - `rev-all` for production mode cache-busting
 - `uglifyjs` for production mode minification
 
@@ -79,5 +78,6 @@ Please see the [configuration page](https://github.com/farism/elm-factory/blob/m
 Ideas and code contributions are welcome! In lieu of a styleguide, this project uses [prettier](https://github.com/prettier/prettier), [husky](https://github.com/typicode/husky), and [lint-staged](https://github.com/okonet/lint-staged) to maintain code style. If you have any questions, just ask.
 
 ### Related projects
-[elm-live](https://github.com/tomekwi/elm-live)
-[elm-webpack-starter](https://github.com/jiwhiz/elm-bootstrap-webpack-starter)
+- [elm-live](https://github.com/tomekwi/elm-live)
+- [elm-webpack-loader](https://github.com/elm-community/elm-webpack-loader)
+- [elm-webpack-starter](https://github.com/jiwhiz/elm-bootstrap-webpack-starter)
