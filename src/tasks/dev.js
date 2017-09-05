@@ -1,3 +1,4 @@
+const _ = require('lodash')
 const anyTemplate = require('gulp-any-template')
 const browserSync = require('browser-sync')
 const check = require('check-types')
@@ -274,7 +275,7 @@ const compileCss = (stylesheets, dir) =>
     })
 
 const dev = options => {
-  const opts = Object.assign({}, defaults, options)
+  const opts = _.merge(defaults, options)
   const tmpDir = tmp.dirSync({ unsafeCleanup: true })
 
   spinner.space()
