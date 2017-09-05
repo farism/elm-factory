@@ -107,7 +107,7 @@ describe('BUILD TASK', () => {
     })
   })
 
-  describe.only('buildMain', function() {
+  describe('buildMain', function() {
     this.timeout(60000)
 
     describe('params', () => {
@@ -118,7 +118,7 @@ describe('BUILD TASK', () => {
       checkParam('string', 'cwd', buildMain, false)([' ', ' ', ' ', true, 1])
     })
 
-    it('builds into the correct outputPath', done => {
+    it.only('builds into the correct outputPath', done => {
       buildMain(
         defaults.main,
         outputPath,

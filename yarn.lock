@@ -3834,7 +3834,7 @@ node-elm-compiler@2.3.2:
     lodash "3.10.1"
     temp "^0.8.3"
 
-node-elm-compiler@^4.3.2:
+node-elm-compiler@^4.3.2, node-elm-compiler@^4.3.3:
   version "4.3.3"
   resolved "https://registry.yarnpkg.com/node-elm-compiler/-/node-elm-compiler-4.3.3.tgz#44e48e8679876bf2f5bd8820dd15734ff3a28caf"
   dependencies:
@@ -5772,7 +5772,7 @@ uglify-js@^2.6, uglify-js@^2.6.1:
   optionalDependencies:
     uglify-to-browserify "~1.0.0"
 
-uglify-js@^3.0.5:
+uglify-js@^3.0.28, uglify-js@^3.0.5:
   version "3.0.28"
   resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.0.28.tgz#96b8495f0272944787b5843a1679aa326640d5f7"
   dependencies:

@@ -6,6 +6,7 @@ const cssnano = require('cssnano')
 const cssUseref = require('gulp-css-useref')
 const debug = require('gulp-debug')
 const elm = require('gulp-elm-basic')
+const elm2 = require('node-elm-compiler')
 const elmCss = require('gulp-elm-css')
 const elmCss2 = require('elm-css')
 const elmExtractAssets = require('gulp-elm-extract-assets')
@@ -26,23 +27,17 @@ const urljoin = require('url-join')
 const xxh = require('xxhashjs')
 const tmp = require('tmp')
 const tmp2 = require('tmp-promise')
+const uglify2 = require('uglify-js')
 
 const defaults = require('../defaults').build
 const { initializeSpinner, installPackages, validateParam } = require('./utils')
 
+const LOCAL_ASSET_URL = '(?!http|data)(.*)'
 const JS_MANIFEST_FILE = 'js-manifest.json'
 const CSS_MANIFEST_FILE = 'css-manifest.json'
 
 // global reference to CLI spinner
 const spinner = initializeSpinner()
-
-const getPublicPath = (publicPath, filename) =>
-  publicPath.startsWith('http')
-    ? urljoin(publicPath, path.basename(filename))
-    : path.join('/', publicPath, path.basename(filename))
-
-const getTransformedFilename = (file, hash) =>
-  `${getHash(file.contents)}${path.extname(file.path)}`
 
 const getHash = contents =>
   xxh
@@ -67,6 +62,7 @@ const writeAsset = (outDir, file) => {
     return fs
       .outputFile(path.join(outDir, newFile), contents)
       .then(() => newFile)
+      .catch(console.error)
   })
 }
 
@@ -139,7 +135,7 @@ const buildCss = (
   validateParam('string', 'cwd', cwd, false)
 
   return new Promise((resolve, reject) => {
-    const matcher = /url\((?!http|data)(.*)\)/g
+    const matcher = new RegExp(`url\\(${LOCAL_ASSET_URL}\\)`, 'g')
     const replacer = url => `url(${urljoin(publicPath, url)})`
     const transformer = css =>
       new Promise((resolve, reject) => {
@@ -158,11 +154,11 @@ const buildCss = (
     tmp2
       .dir({ unsafeCleanup: true })
       .then(dir =>
-        // write css files
+        // compile the stylesheet file
         elmCss2(cwd, stylesheets, dir.path)
           // read css file names
           .then(() => fs.readdir(dir.path))
-          // read css file contents
+          // write the bundle for each file
           .then(files =>
             Promise.all(
               files.map(file =>
@@ -177,12 +173,47 @@ const buildCss = (
               )
             )
           )
+          // write the manifest
           .then(manifests =>
-            writeManifest(path.join(outputPath, 'css-manifest.json'), manifests)
+            writeManifest(path.join(outputPath, CSS_MANIFEST_FILE), manifests)
           )
-          .then(resolve)
+          // cleanup and resolve with manifest object
+          .then(manifest => {
+            dir.cleanup()
+            resolve(manifest)
+          })
       )
       .catch(console.error)
+  })
+}
+
+const elmCompile = (outDir, file, cwd = process.cwd()) => {
+  validateParam('string', 'outDir', outDir)
+  validateParam('string', 'file', file)
+  validateParam('string', 'cwd', cwd)
+
+  return new Promise((resolve, reject) => {
+    const newFile = path.join(
+      outDir,
+      path.basename(file).replace('.elm', '.js')
+    )
+
+    elm2
+      .compile(path.join(cwd, file), {
+        output: newFile,
+        cwd: cwd,
+        yes: true,
+        processOpts: {
+          stdio: 'inherit',
+        },
+      })
+      .on('close', exitCode => {
+        if (exitCode === 0) {
+          resolve(newFile)
+        } else {
+          reject('node-elm-compiler Errored with exit code 1')
+        }
+      })
   })
 }
 
@@ -191,90 +222,87 @@ const buildMain = (
   outputPath,
   publicPath,
   assetTag,
-  revision = true,
   minify = true,
   cwd = process.cwd()
 ) => {
   validateParam('string', 'main', main)
   validateParam('string', 'outputPath', outputPath)
   validateParam('string', 'publicPath', publicPath)
-  validateParam('string', 'assetTag', assetTag)
-  validateParam('boolean', 'revision', revision, false)
   validateParam('boolean', 'minify', minify, false)
   validateParam('string', 'cwd', cwd, false)
 
   return new Promise((resolve, reject) => {
-    pumpify([
-      gulp.src(main),
-      elm({ cwd }),
-      elmExtractAssets({ cwd, tag: assetTag }),
-      rev.revision({
-        dontUpdateReference: [path.basename(main).replace('.elm', '.js')],
-        fileNameManifest: JS_MANIFEST_FILE,
-        replacer: (fragment, replaceRegExp, newReference, referencedFile) => {
-          const filename = newReference.split('/').pop()
-          const newPath = getPublicPath(publicPath, filename)
+    const matcher = new RegExp(`${assetTag}\\('${LOCAL_ASSET_URL}'\\)`, 'g')
+    const replacer = url => `${assetTag}('${urljoin(publicPath, url)}')`
+    const transformer = js =>
+      new Promise((resolve, reject) => {
+        try {
+          resolve(minify ? uglify2.minify(js).result : js)
+        } catch (e) {
+          reject(e)
+        }
+      })
 
-          fragment.contents = fragment.contents.replace(
-            replaceRegExp,
-            `$1${newPath}$3$4`
+    tmp2
+      .dir({ unsafeCleanup: true })
+      .then(dir =>
+        // compile the elm file
+        elmCompile(dir.path, main, cwd)
+          // write the bundle
+          .then(file =>
+            writeBundle(outputPath, matcher, replacer, transformer, file, cwd)
           )
-        },
-        transformFilename: revision ? getTransformedFilename : name => name,
-      }),
-      flatten(),
-      gulpif(file => minify && path.extname(file.path) === '.js', uglify()),
-      gulp.dest(outputPath),
-      rev.manifestFile(),
-      gulp.dest(outputPath),
-    ])
-      .on('error', reject)
-      .on('finish', resolve)
+          // write the manifest
+          .then(manifest =>
+            writeManifest(path.join(outputPath, JS_MANIFEST_FILE), [manifest])
+          )
+          // cleanup and resolve with manifest object
+          .then(manifest => {
+            dir.cleanup()
+            resolve(manifest)
+          })
+      )
+      .catch(console.error)
   })
 }
 
-const loadManifest = file => {
-  validateParam('string', 'file', file)
-
-  return new Promise((resolve, reject) => {
-    fs
-      .readFile(file)
-      .then(contents => resolve(JSON.parse(contents.toString())))
-      .catch(e => console.error(e))
-  })
-}
-
-const buildHtml = (html, outputPath, publicPath, cwd = process.cwd()) => {
+const buildHtml = (
+  html,
+  outputPath,
+  publicPath,
+  cssManifest,
+  jsManifest,
+  cwd = process.cwd()
+) => {
   validateParam('string', 'html', html)
   validateParam('string', 'outputPath', outputPath)
   validateParam('string', 'publicPath', publicPath)
+  validateParam('object', 'cssManifest', cssManifest)
+  validateParam('object', 'jsManifest', jsManifest)
   validateParam('string', 'cwd', cwd, false)
 
   return new Promise((resolve, reject) => {
-    try {
-      Promise.all([
-        loadManifest(path.join(cwd, outputPath, JS_MANIFEST_FILE)),
-        loadManifest(path.join(cwd, outputPath, CSS_MANIFEST_FILE)),
-      ]).then(([jsManifest, cssManifest]) => {
-        pumpify(
-          gulp.src(html),
-          anyTemplate({
-            title: 'My Application',
-            environment: 'production',
-            jsManifest,
-            cssManifest,
-            outputPath,
-            publicPath,
-          }),
-          rename('index.html'),
-          gulp.dest(outputPath)
-        )
-          .on('error', reject)
-          .on('finish', resolve)
-      })
-    } catch (e) {
-      console.log(e)
-    }
+    fs.readFile(path.join(cwd, html)).then(contents => {
+      const compiler = anyTemplate.compiler({ path: html, contents })
+
+      if (compiler) {
+        compiler({
+          title: 'My Application',
+          environment: 'production',
+          jsManifest,
+          cssManifest,
+          outputPath,
+          publicPath,
+        })
+          .then(result =>
+            fs.outputFile(path.join(outputPath, 'index.html'), result)
+          )
+          .then(resolve)
+          .catch(reject)
+      } else {
+        reject(`*${path.extname(html)} template not supported`)
+      }
+    })
   })
 }
 
@@ -285,92 +313,79 @@ const build = options => {
   spinner.space()
   spinner.next('old builds are being cleaned')
 
-  return (
-    fs
-      .emptyDir(opts.outputPath)
-      .then(() => {
-        spinner.succeed('old builds cleaned')
-        spinner.next('elm-package install is starting')
+  return fs
+    .emptyDir(opts.outputPath)
+    .then(() => {
+      spinner.succeed('old builds cleaned')
+      spinner.next('elm-package install is starting')
 
-        return installPackages().catch(e => {
-          throw 'elm-package install has failed'
-        })
+      return installPackages().catch(e => {
+        throw 'elm-package install has failed'
       })
-      .then(() => {
-        spinner.succeed('elm-package install has completed')
-        spinner.next('compiling')
+    })
+    .then(() => {
+      spinner.succeed('elm-package install has completed')
+      spinner.next('compiling css')
 
-        return buildCss(
-          opts.stylesheets,
-          opts.outputPath,
-          opts.publicPath,
-          opts.minify,
-          opts.cwd
-        ).catch(e => {
-          throw 'stylesheets failed to compile'
+      return buildCss(
+        opts.stylesheets,
+        opts.outputPath,
+        opts.publicPath,
+        opts.minify,
+        opts.cwd
+      ).catch(e => {
+        throw 'stylesheets failed to compile'
+      })
+    })
+    .then(cssManifest => {
+      spinner.succeed('compiling css complete')
+      spinner.next('compiling js')
+
+      return buildMain(
+        opts.main,
+        opts.outputPath,
+        opts.publicPath,
+        opts.assetTag,
+        opts.minify,
+        opts.cwd
+      )
+        .then(jsManifest => ({
+          cssManifest,
+          jsManifest,
+        }))
+        .catch(e => {
+          throw 'js failed to compile'
         })
+    })
+    .then(({ cssManifest, jsManifest }) => {
+      spinner.space()
+      spinner.succeed('main application has been compiled')
+      spinner.next('html is now compiling')
+
+      return buildHtml(
+        opts.html,
+        opts.outputPath,
+        opts.publicPath,
+        cssManifest,
+        jsManifest,
+        opts.cwd
+      ).catch(e => {
+        throw 'html failed to compile'
       })
-      // .then(() => {
-      //   spinner.succeed('elm-package install has completed')
-      //   spinner.next('css is now compiling')
-      //
-      //   return buildCss(
-      //     opts.stylesheets,
-      //     opts.outputPath,
-      //     opts.publicPath,
-      //     opts.revision,
-      //     opts.minify,
-      //     opts.cwd
-      //   ).catch(e => {
-      //     throw 'stylesheets failed to compile'
-      //   })
-      // })
-      // .then(() => {
-      //   spinner.space()
-      //   spinner.succeed('css has been compiled')
-      //   spinner.next('main application is now compiling')
-      //
-      //   return buildMain(
-      //     opts.main,
-      //     opts.outputPath,
-      //     opts.publicPath,
-      //     opts.assetTag,
-      //     true,
-      //     opts.cwd
-      //   ).catch(e => {
-      //     throw 'main application failed to compile'
-      //   })
-      // })
-      // .then(() => {
-      //   spinner.space()
-      //   spinner.succeed('main application has been compiled')
-      //   spinner.next('html is now compiling')
-      //
-      //   return buildHtml(
-      //     opts.html,
-      //     opts.outputPath,
-      //     opts.publicPath,
-      //     opts.cwd
-      //   ).catch(e => {
-      //     throw 'html failed to compile'
-      //   })
-      // })
-      // .then(() => {
-      //   spinner.succeed('html has been compiled')
-      // })
-      .catch(e => {
-        console.log(e)
-        spinner.space()
-        spinner.fail(e, false)
-        throw e
-      })
-  )
+    })
+    .then(() => {
+      spinner.succeed('html has been compiled')
+    })
+    .catch(e => {
+      console.log(e)
+      spinner.space()
+      spinner.fail(e, false)
+      throw e
+    })
 }
 
 module.exports = {
   getHash,
-  getPublicPath,
-  getTransformedFilename,
   buildCss,
   buildMain,
   build,
