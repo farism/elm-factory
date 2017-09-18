@@ -54,7 +54,7 @@
     "uglify-js": "^3.0.28",
     "url-join": "^2.0.2",
     "xxhashjs": "^0.2.1",
-    "yargs": "^8.0.2"
+    "yargs": "^9.0.1"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
