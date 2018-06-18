@@ -34,7 +34,7 @@
     "elm-css": "^0.6.1",
     "execa": "^0.8.0",
     "find-elm-dependencies": "^1.0.1",
-    "find-up": "^2.1.0",
+    "find-up": "^3.0.0",
     "fkill": "^5.0.0",
     "fs-extra": "^4.0.1",
     "gulp": "^3.9.1",
