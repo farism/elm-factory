@@ -46,7 +46,7 @@
     "nocache": "^2.0.0",
     "node-elm-compiler": "^4.3.3",
     "ora": "^1.3.0",
-    "postcss": "^6.0.10",
+    "postcss": "^7.0.0",
     "postcss-url": "^7.1.2",
     "pumpify": "^1.3.5",
     "run-sequence": "^2.1.0",
