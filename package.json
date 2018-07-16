@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "async-replace": "^1.0.1",
-    "autoprefixer": "^7.1.3",
+    "autoprefixer": "^9.0.0",
     "browser-sync": "^2.18.13",
     "check-types": "^7.3.0",
     "cssnano": "^3.10.0",
